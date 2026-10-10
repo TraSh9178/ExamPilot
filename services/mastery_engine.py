@@ -35,6 +35,7 @@ def calculate_topic_stats(
                 {"correct": 0, "attempted": 0},
             )
 
+    processed_attempts: set[tuple[str, str]] = set()
     for attempt in attempts:
         session = sessions_by_id.get(attempt.session_id)
         if session is None:
@@ -47,6 +48,20 @@ def calculate_topic_stats(
             raise ValueError(
                 f"Attempt references unknown question ID: {attempt.question_id}"
             )
+
+        if attempt.question_id not in session.question_ids:
+            raise ValueError(
+                f"Attempt question ID {attempt.question_id} is not part of "
+                f"session {attempt.session_id}"
+            )
+
+        attempt_key = (attempt.session_id, attempt.question_id)
+        if attempt_key in processed_attempts:
+            raise ValueError(
+                f"Duplicate attempt for session {attempt.session_id} and "
+                f"question {attempt.question_id}"
+            )
+        processed_attempts.add(attempt_key)
 
         topic_stats = stats[(question.topic_id, session.mode)]
         topic_stats["attempted"] += 1

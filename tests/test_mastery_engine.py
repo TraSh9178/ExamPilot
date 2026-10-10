@@ -30,6 +30,7 @@ def questions() -> list[Question]:
 def sessions() -> list[ExamSession]:
     return [
         ExamSession(session_id="mock-session", mode="mock", question_ids=["q-a1"]),
+        ExamSession(session_id="mock-session-2", mode="mock", question_ids=["q-a1"]),
         ExamSession(session_id="topic-session", mode="topic", question_ids=["q-a1"]),
     ]
 
@@ -46,7 +47,7 @@ def test_calculate_topic_stats_separates_modes_and_counts_multiple_attempts(
             is_correct=True,
         ),
         AttemptResult(
-            session_id="mock-session",
+            session_id="mock-session-2",
             question_id="q-a1",
             selected_index=1,
             is_correct=False,
@@ -77,6 +78,44 @@ def test_calculate_topic_stats_separates_modes_and_counts_multiple_attempts(
         attempted=1,
         accuracy=0,
     )
+
+
+def test_calculate_topic_stats_rejects_duplicate_attempt_in_same_session(
+    questions: list[Question],
+    sessions: list[ExamSession],
+) -> None:
+    attempts = [
+        AttemptResult(
+            session_id="mock-session",
+            question_id="q-a1",
+            selected_index=0,
+            is_correct=True,
+        ),
+        AttemptResult(
+            session_id="mock-session",
+            question_id="q-a1",
+            selected_index=1,
+            is_correct=False,
+        ),
+    ]
+
+    with pytest.raises(ValueError, match="Duplicate attempt"):
+        calculate_topic_stats(attempts, sessions, questions)
+
+
+def test_calculate_topic_stats_rejects_attempt_for_question_outside_session(
+    questions: list[Question],
+    sessions: list[ExamSession],
+) -> None:
+    attempt = AttemptResult(
+        session_id="mock-session",
+        question_id="q-b1",
+        selected_index=1,
+        is_correct=True,
+    )
+
+    with pytest.raises(ValueError, match="not part of session"):
+        calculate_topic_stats([attempt], sessions, questions)
 
 
 def test_calculate_topic_stats_includes_unattempted_topics_for_both_modes(
