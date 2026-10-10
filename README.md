@@ -1,5 +1,7 @@
 # ExamPilot
-AI-powered exam preparation platform for any subject
+
+AI-powered exam preparation platform for any subject.
+
 ## Shared Data Contract — v1.0
 
 ExamPilot uses a shared Pydantic data contract.
