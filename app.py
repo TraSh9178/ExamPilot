@@ -98,30 +98,38 @@ st.write("Turn course materials into focused exam practice.")
 if "current_course" not in st.session_state:
     st.session_state.current_course = None
 
-if st.button("Load demo course"):
-    sample_path = (
-        Path(__file__).resolve().parent / "data" / "sample_course.json"
-    )
-
-    try:
-        course = StudyPackage.model_validate_json(
-            sample_path.read_text(encoding="utf-8")
-        )
-    except (OSError, ValueError) as error:
-        st.error(f"Could not load the demo course: {error}")
-    else:
-        st.session_state.current_course = course
-
 # Keep the course setup panel open across page reruns.
 if "show_course_setup" not in st.session_state:
     st.session_state.show_course_setup = False
 
-if st.button("Create course"):
-    st.session_state.show_course_setup = True
+demo_column, create_column = st.columns(2)
+
+with demo_column:
+    if st.button("Load demo course", use_container_width=True):
+        sample_path = (
+            Path(__file__).resolve().parent / "data" / "sample_course.json"
+        )
+
+        try:
+            course = StudyPackage.model_validate_json(
+                sample_path.read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError) as error:
+            st.error(f"Could not load the demo course: {error}")
+        else:
+            st.session_state.current_course = course
+
+with create_column:
+    if st.button("Create course", use_container_width=True):
+        st.session_state.show_course_setup = True
 
 if st.session_state.show_course_setup:
     with st.container(border=True):
         st.subheader("Create a course")
+
+        if st.button("Close setup"):
+            st.session_state.show_course_setup = False
+            st.rerun()
 
         st.text_input(
             "Course name",
