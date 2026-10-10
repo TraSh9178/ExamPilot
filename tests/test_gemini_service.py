@@ -1,5 +1,6 @@
 import json
 from copy import deepcopy
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -7,6 +8,7 @@ from google.genai.errors import APIError
 
 from models.schemas import Question, Relationship, StudyPackage, Topic
 from services import gemini_service
+from services.document_service import extract_document
 
 
 FAKE_API_KEY = "test-gemini-key-never-real"
@@ -1063,3 +1065,33 @@ def test_generate_relationships_connection_error_is_safe(monkeypatch):
     assert result["error_code"] == "GENERATION_ERROR"
     assert FAKE_API_KEY not in str(result)
     assert private_message not in str(result)
+
+
+def test_missing_key_fallback_and_sample_course_schema(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    def fail_if_client_created(**kwargs):
+        pytest.fail("Client must not be created without an API key")
+
+    monkeypatch.setattr(gemini_service.genai, "Client", fail_if_client_created)
+
+    document = extract_document(
+        b"Locally authored fallback test material.",
+        "fallback_test.txt",
+    )
+    result = gemini_service.generate_topics(
+        document,
+        "fallback-test",
+        "Fallback Test",
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "MISSING_API_KEY"
+
+    project_root = Path(__file__).resolve().parents[1]
+    sample_path = project_root / "data" / "sample_course.json"
+    sample_data = json.loads(sample_path.read_text(encoding="utf-8"))
+    sample_package = StudyPackage.model_validate(sample_data)
+
+    assert sample_package.topics
+    assert sample_package.questions
