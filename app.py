@@ -157,3 +157,7 @@ else:
                 f"{len(course.topics)} topics · "
                 f"{len(course.questions)} practice questions"
             )
+            st.page_link(
+                "pages/1_Study_Hub.py",
+                label="Open course",
+            )
