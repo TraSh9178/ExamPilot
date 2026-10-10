@@ -7,6 +7,53 @@ from models.schemas import StudyPackage
 
 st.set_page_config(page_title="ExamPilot", layout="wide")
 
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #F8FBFF;
+        color: #102044;
+    }
+
+    [data-testid="stHeader"] {
+        background-color: #F8FBFF;
+    }
+
+    h1, h2, h3, p {
+        color: #102044;
+    }
+
+    [data-testid="stCaptionContainer"] p {
+        color: #526581;
+    }
+
+    .stButton > button {
+        background-color: #2166DB;
+        color: white;
+        border: 1px solid #2166DB;
+        border-radius: 12px;
+    }
+
+    .stButton > button p {
+        color: white;
+    }
+
+    .stButton > button:hover {
+        background-color: #184FAE;
+        color: white;
+        border-color: #184FAE;
+    }
+
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: white;
+        border-color: #DCE6F4 !important;
+        border-radius: 16px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("ExamPilot")
 st.write("Turn course materials into focused exam practice.")
 
@@ -34,8 +81,12 @@ course = st.session_state.current_course
 if course is None:
     st.info("Load the demo course to get started.")
 else:
-    st.write(course.course_name)
-    st.caption(
-        f"{len(course.topics)} topics · "
-        f"{len(course.questions)} practice questions"
-    )
+    card_column, _ = st.columns([1, 1])
+    with card_column:
+        with st.container(border=True):
+            st.caption("Demo course")
+            st.subheader(course.course_name)
+            st.caption(
+                f"{len(course.topics)} topics · "
+                f"{len(course.questions)} practice questions"
+            )
