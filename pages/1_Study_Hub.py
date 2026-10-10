@@ -76,8 +76,14 @@ confirmed_topic_ids = st.session_state.get(confirmed_key)
 if confirmed_topic_ids:
     topic_count = len(confirmed_topic_ids)
     topic_label = "topic" if topic_count == 1 else "topics"
+
     st.success(
         f"Exam scope confirmed: {topic_count} {topic_label}."
+    )
+
+    st.page_link(
+        "pages/2_Practice_Center.py",
+        label="Go to Practice Center",
     )
 else:
     st.info("Confirm your topic selection before starting an exam.")
