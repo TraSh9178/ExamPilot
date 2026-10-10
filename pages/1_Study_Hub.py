@@ -1,5 +1,7 @@
 import streamlit as st
 
+from models.schemas import StudyPackage
+from services.gemini_service import generate_questions
 
 st.set_page_config(
     page_title="Study Hub | ExamPilot",
@@ -81,9 +83,69 @@ if confirmed_topic_ids:
         f"Exam scope confirmed: {topic_count} {topic_label}."
     )
 
-    st.page_link(
-        "pages/2_Practice_Center.py",
-        label="Go to Practice Center",
+    document = st.session_state.get(
+        f"course_document_{course.course_id}"
     )
+
+    if document is not None:
+        st.caption(
+            "Generate candidate questions from your material "
+            "using only the confirmed topics. "
+            "AI-generated questions may contain errors."
+        )
+
+        if st.button("Generate questions"):
+            with st.spinner("Generating questions..."):
+                generated = generate_questions(
+                    document,
+                    course,
+                    list(confirmed_topic_ids),
+                )
+
+            if not generated["ok"]:
+                st.error(generated["message"])
+            else:
+                try:
+                    updated_course = StudyPackage.model_validate(
+                        generated["package"]
+                    )
+                except ValueError as error:
+                    st.error(
+                        f"Could not load generated questions: {error}"
+                    )
+                else:
+                    st.session_state.current_course = updated_course
+                    st.session_state[
+                        f"course_stage_{course.course_id}"
+                    ] = "questions_generated"
+
+                    # Previous practice used the old question set.
+                    st.session_state.pop(
+                        f"active_practice_{course.course_id}",
+                        None,
+                    )
+                    st.rerun()
+
+    available_count = sum(
+        question.topic_id in confirmed_topic_ids
+        for question in course.questions
+    )
+
+    st.caption(
+        f"Available questions in confirmed scope: {available_count}"
+    )
+
+    if available_count:
+        st.page_link(
+            "pages/2_Practice_Center.py",
+            label="Go to Practice Center",
+        )
+    elif document is not None:
+        st.info(
+            "Generate questions for the confirmed scope "
+            "before starting practice."
+        )
+    else:
+        st.info("No questions are available in the confirmed scope.")
 else:
     st.info("Confirm your topic selection before starting an exam.")
