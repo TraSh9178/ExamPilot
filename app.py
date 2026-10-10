@@ -1,9 +1,14 @@
+from hashlib import sha256
 from pathlib import Path
 
 import streamlit as st
 
 from models.schemas import StudyPackage
+from services.document_service import extract_document
 
+from uuid import uuid4
+
+from services.gemini_service import generate_topics
 
 st.set_page_config(
     page_title="ExamPilot",
@@ -87,6 +92,34 @@ st.markdown(
         fill: currentColor !important;
         color: white !important;
     }
+    .stButton > button:disabled {
+        background-color: #E2E8F0 !important;
+        border-color: #CBD5E1 !important;
+        color: #475569 !important;
+        opacity: 1 !important;
+    }
+
+    .stButton > button:disabled p {
+        color: #475569 !important;
+    }
+    .stButton > button:not(:disabled),
+    .stButton > button:not(:disabled):hover,
+    .stButton > button:not(:disabled):focus,
+    .stButton > button:not(:disabled):focus-visible,
+    .stButton > button:not(:disabled):active {
+        background-color: #2166DB !important;
+        border-color: #2166DB !important;
+        color: #FFFFFF !important;
+    }
+
+    .stButton > button:not(:disabled) p {
+        color: #FFFFFF !important;
+    }
+
+    [data-testid="stCaptionContainer"],
+    [data-testid="stCaptionContainer"] p {
+        color: #526581 !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -137,18 +170,115 @@ if st.session_state.show_course_setup:
             key="setup_course_name",
         )
 
-        st.file_uploader(
+        uploaded_file = st.file_uploader(
             "Upload course materials",
             type=["pdf", "txt"],
             accept_multiple_files=False,
             key="setup_course_file",
         )
 
-        st.info(
-            "Preview only: document processing and AI generation "
-            "are not connected yet. No course will be created."
+        st.caption(
+            "Maximum file size: 5 MiB. "
+            "Supports UTF-8 TXT and text-based PDF. "
+            "Scanned PDFs are not supported."
         )
 
+        file_bytes = (
+            uploaded_file.getvalue()
+            if uploaded_file is not None
+            else None
+        )
+        source_key = (
+            (uploaded_file.name, sha256(file_bytes).hexdigest())
+            if uploaded_file is not None
+            else None
+        )
+
+        # Clear extracted content when the uploaded file changes.
+        if st.session_state.get("setup_document_source") != source_key:
+            st.session_state.pop("setup_document", None)
+            st.session_state["setup_document_source"] = source_key
+
+        if st.button(
+            "Extract text",
+            disabled=uploaded_file is None,
+        ):
+            with st.spinner("Extracting text..."):
+                document = extract_document(
+                    file_bytes,
+                    uploaded_file.name,
+                )
+
+            if not document["ok"]:
+                st.session_state.pop("setup_document", None)
+                st.error(document["message"])
+            else:
+                st.session_state["setup_document"] = document
+
+        document = st.session_state.get("setup_document")
+
+        if document is not None:
+            st.success("Text extracted successfully.")
+            
+            extracted_text = document["text"]
+
+            st.caption(
+                f"Extracted text: {len(extracted_text):,} characters"
+            )
+
+            with st.expander("Preview extracted text"):
+                st.text(extracted_text)
+
+            course_name = st.session_state.get(
+                "setup_course_name", ""
+            ).strip()
+
+            st.caption(
+                "Generate topics sends the extracted material to Gemini. "
+                "Review the generated topics before confirming exam scope."
+            )
+
+            if st.button(
+                "Generate topics",
+                disabled=not course_name,
+            ):
+                course_id = str(uuid4())
+
+                with st.spinner("Generating topics..."):
+                    generated = generate_topics(
+                        document=document,
+                        course_id=course_id,
+                        course_name=course_name,
+                    )
+
+                if not generated["ok"]:
+                    st.error(generated["message"])
+                else:
+                    try:
+                        new_course = StudyPackage.model_validate(
+                            generated["package"]
+                        )
+                    except ValueError as error:
+                        st.error(
+                            f"Could not load generated topics: {error}"
+                        )
+                    else:
+                        # Retain the material for later question generation.
+                        st.session_state[
+                            f"course_document_{new_course.course_id}"
+                        ] = document
+                        st.session_state[
+                            f"course_stage_{new_course.course_id}"
+                        ] = "topics_only"
+                        st.session_state.current_course = new_course
+
+                        st.success(
+                            "Topics generated. Review them in Study Hub, "
+                            "then confirm your exam scope."
+                        )
+
+            if not course_name:
+                st.info("Enter a course name to enable topic generation.")
 st.subheader("My courses")
 
 course = st.session_state.current_course
@@ -159,7 +289,12 @@ else:
     card_column, _ = st.columns([1, 1])
     with card_column:
         with st.container(border=True):
-            st.caption("Demo course")
+            stage = st.session_state.get(
+                f"course_stage_{course.course_id}"
+            )
+            st.caption(
+                "Generated course" if stage else "Demo course"
+            )
             st.subheader(course.course_name)
             st.caption(
                 f"{len(course.topics)} topics · "
