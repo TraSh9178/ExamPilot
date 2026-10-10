@@ -49,6 +49,30 @@ st.markdown(
         border-color: #DCE6F4 !important;
         border-radius: 16px;
     }
+    [data-testid="stTextInput"] input {
+    background-color: white;
+    color: #102044;
+    border: 1px solid #DCE6F4;
+    }
+
+    [data-testid="stTextInput"] input::placeholder {
+        color: #526581;
+    }
+
+    [data-testid="stFileUploaderDropzone"] {
+        background-color: #EDF5FF;
+        border: 1px dashed #8CB4ED;
+    }
+
+    [data-testid="stFileUploaderDropzone"] button {
+        background-color: white;
+        border: 1px solid #2166DB;
+        color: #2166DB;
+    }
+
+    [data-testid="stFileUploaderDropzone"] button p {
+        color: #2166DB;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -73,6 +97,35 @@ if st.button("Load demo course"):
         st.error(f"Could not load the demo course: {error}")
     else:
         st.session_state.current_course = course
+
+# Keep the course setup panel open across page reruns.
+if "show_course_setup" not in st.session_state:
+    st.session_state.show_course_setup = False
+
+if st.button("Create course"):
+    st.session_state.show_course_setup = True
+
+if st.session_state.show_course_setup:
+    with st.container(border=True):
+        st.subheader("Create a course")
+
+        st.text_input(
+            "Course name",
+            placeholder="e.g. Introduction to Biology",
+            key="setup_course_name",
+        )
+
+        st.file_uploader(
+            "Upload course materials",
+            type=["pdf", "txt"],
+            accept_multiple_files=False,
+            key="setup_course_file",
+        )
+
+        st.info(
+            "Preview only: document processing and AI generation "
+            "are not connected yet. No course will be created."
+        )
 
 st.subheader("My courses")
 
