@@ -3,6 +3,21 @@ from collections.abc import Sequence
 from models.schemas import AttemptResult, ExamSession, Question, TopicStats
 
 
+def get_mastery_status(stats: TopicStats) -> str:
+    """Classify mastery using the confirmed evidence-count and accuracy thresholds."""
+    if stats.attempted == 0:
+        return "unattempted"
+    if stats.attempted < 3:
+        return "insufficient_evidence"
+    if stats.accuracy is None:
+        raise ValueError("accuracy is required when attempted is at least 3")
+    if stats.accuracy < 60:
+        return "weak"
+    if stats.accuracy < 80:
+        return "developing"
+    return "mastered"
+
+
 def calculate_topic_stats(
     attempts: Sequence[AttemptResult],
     sessions: Sequence[ExamSession],

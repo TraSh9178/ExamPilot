@@ -1,7 +1,7 @@
 import pytest
 
 from models.schemas import AttemptResult, ExamSession, Question, TopicStats
-from services.mastery_engine import calculate_topic_stats
+from services.mastery_engine import calculate_topic_stats, get_mastery_status
 
 
 @pytest.fixture
@@ -123,3 +123,44 @@ def test_calculate_topic_stats_rejects_attempt_with_unknown_question(
 
     with pytest.raises(ValueError, match="unknown question ID"):
         calculate_topic_stats([attempt], sessions, [])
+
+
+@pytest.mark.parametrize(
+    ("attempted", "accuracy", "expected_status"),
+    [
+        (0, None, "unattempted"),
+        (1, 100, "insufficient_evidence"),
+        (2, 100, "insufficient_evidence"),
+        (3, 59.99, "weak"),
+        (3, 60, "developing"),
+        (3, 79.99, "developing"),
+        (3, 80, "mastered"),
+    ],
+)
+def test_get_mastery_status_uses_attempt_count_and_accuracy_thresholds(
+    attempted: int,
+    accuracy: float | None,
+    expected_status: str,
+) -> None:
+    stats = TopicStats(
+        topic_id="topic-a",
+        mode="mock",
+        correct=0,
+        attempted=attempted,
+        accuracy=accuracy,
+    )
+
+    assert get_mastery_status(stats) == expected_status
+
+
+def test_get_mastery_status_rejects_missing_accuracy_with_enough_attempts() -> None:
+    stats = TopicStats(
+        topic_id="topic-a",
+        mode="mock",
+        correct=0,
+        attempted=3,
+        accuracy=None,
+    )
+
+    with pytest.raises(ValueError, match="accuracy is required"):
+        get_mastery_status(stats)
