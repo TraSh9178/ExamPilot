@@ -28,10 +28,8 @@ history = st.session_state.get(history_key, {})
 
 if not history:
     st.info("Submit a practice session to see your performance.")
-    st.page_link(
-        "pages/2_Practice_Center.py",
-        label="Go to Practice Center",
-    )
+    if st.button("Go to Practice Center", type="primary"):
+        st.switch_page("pages/2_Practice_Center.py")
     st.stop()
 
 sessions = [
@@ -127,7 +125,5 @@ st.caption(
 )
 st.caption("Records are retained only in the current browser session.")
 
-st.page_link(
-    "pages/2_Practice_Center.py",
-    label="Go to Practice Center",
-)
+if st.button("Go to Practice Center", type="primary"):
+    st.switch_page("pages/2_Practice_Center.py")

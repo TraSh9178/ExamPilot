@@ -44,6 +44,12 @@ st.subheader("Confirm exam scope")
 # Keep scope confirmation separate for each course.
 scope_key = f"scope_selection_{course.course_id}"
 confirmed_key = f"confirmed_scope_{course.course_id}"
+# Restore the selection when returning from another page.
+if scope_key not in st.session_state:
+    st.session_state[scope_key] = list(
+        st.session_state.get(confirmed_key, [])
+    )
+
 
 selected_topic_ids = st.multiselect(
     "Choose topics for your exam",
@@ -53,7 +59,6 @@ selected_topic_ids = st.multiselect(
         for topic in course.topics
         if topic.id == topic_id
     ),
-    default=[],
     key=scope_key,
 )
 
@@ -61,7 +66,7 @@ selected_topic_ids = st.multiselect(
 if st.session_state.get(confirmed_key) != selected_topic_ids:
     st.session_state.pop(confirmed_key, None)
 
-if st.button("Confirm exam scope"):
+if st.button("Confirm exam scope", type="primary"):
     valid_topic_ids = {topic.id for topic in course.topics}
 
     if not selected_topic_ids:
@@ -136,10 +141,8 @@ if confirmed_topic_ids:
     )
 
     if available_count:
-        st.page_link(
-            "pages/2_Practice_Center.py",
-            label="Go to Practice Center",
-        )
+        if st.button("Go to Practice Center", type="primary"):
+            st.switch_page("pages/2_Practice_Center.py")
     elif document is not None:
         st.info(
             "Generate questions for the confirmed scope "

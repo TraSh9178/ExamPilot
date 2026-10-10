@@ -24,7 +24,8 @@ confirmed_topic_ids = st.session_state.get(confirmed_key)
 
 if not confirmed_topic_ids:
     st.warning("Confirm your exam scope in Study Hub first.")
-    st.page_link("pages/1_Study_Hub.py", label="Go to Study Hub")
+    if st.button("Change exam scope", type="primary"):
+        st.switch_page("pages/1_Study_Hub.py")
     st.stop()
 
 # Validate the confirmed scope before offering practice settings.
@@ -43,10 +44,8 @@ st.caption("Confirmed exam scope")
 for confirmed_topic_id in confirmed_topic_ids:
     st.write(f"• {topic_names[confirmed_topic_id]}")
 
-st.page_link(
-    "pages/1_Study_Hub.py",
-    label="Change exam scope",
-)
+if st.button("Change exam scope", type="primary"):
+    st.switch_page("pages/1_Study_Hub.py")
 
 mode_label = st.radio(
     "Practice mode",
@@ -93,7 +92,7 @@ if (
 ):
     st.session_state.pop(practice_key, None)
 
-if st.button("Start practice"):
+if st.button("Start practice", type="primary"):
     try:
         exam = create_exam(
             package=course,
@@ -144,7 +143,7 @@ if active_practice is not None:
             )
 
     if not submitted:
-        if st.button("Submit answers"):
+        if st.button("Submit answers", type="primary"):
             selected_answers = {
                 question.id: st.session_state.get(
                     f"answer_{session.session_id}_{question.id}"

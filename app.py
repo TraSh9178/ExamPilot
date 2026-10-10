@@ -219,7 +219,7 @@ if st.session_state.show_course_setup:
 
         if document is not None:
             st.success("Text extracted successfully.")
-            
+
             extracted_text = document["text"]
 
             st.caption(
@@ -300,7 +300,5 @@ else:
                 f"{len(course.topics)} topics · "
                 f"{len(course.questions)} practice questions"
             )
-            st.page_link(
-                "pages/1_Study_Hub.py",
-                label="Open course",
-            )
+            if st.button("Open course", type="primary"):
+                st.switch_page("pages/1_Study_Hub.py")
