@@ -46,23 +46,28 @@ def package() -> StudyPackage:
 
 
 def test_create_exam_limits_questions_to_confirmed_topics(package: StudyPackage) -> None:
-    session, questions, warning = create_exam(
+    result = create_exam(
         package, "mock", 1, ["topic-b", "topic-a"]
     )
+    session = result["session"]
+    questions = result["questions"]
 
     assert isinstance(session, ExamSession)
+    assert set(result) == {"session", "questions", "warning"}
     assert session.mode == "mock"
     assert session.question_ids == ["q2"]
     assert [question.id for question in questions] == ["q2"]
-    assert warning is None
+    assert result["warning"] is None
 
 
 def test_create_mock_exam_rotates_across_confirmed_topics_without_duplicates(
     package: StudyPackage,
 ) -> None:
-    session, questions, warning = create_exam(
+    result = create_exam(
         package, "mock", 3, ["topic-a", "topic-b"]
     )
+    session = result["session"]
+    questions = result["questions"]
 
     assert [question.topic_id for question in questions] == [
         "topic-a",
@@ -71,20 +76,22 @@ def test_create_mock_exam_rotates_across_confirmed_topics_without_duplicates(
     ]
     assert session.question_ids == ["q1", "q2", "q3"]
     assert len(session.question_ids) == len(set(session.question_ids))
-    assert warning is None
+    assert result["warning"] is None
 
 
 def test_create_exam_topic_mode_can_narrow_to_a_confirmed_topic(
     package: StudyPackage,
 ) -> None:
-    session, questions, warning = create_exam(
+    result = create_exam(
         package, "topic", 5, ["topic-a", "topic-b"], topic_id="topic-b"
     )
+    session = result["session"]
+    questions = result["questions"]
 
     assert session.question_ids == ["q2"]
     assert [question.id for question in questions] == ["q2"]
-    assert warning is not None
-    assert "only 1 are available" in warning
+    assert result["warning"] is not None
+    assert "only 1 are available" in result["warning"]
 
 
 @pytest.mark.parametrize(
@@ -134,14 +141,16 @@ def test_create_exam_rejects_confirmed_scope_without_available_questions(
 def test_grade_exam_counts_unanswered_questions_and_returns_question_results(
     package: StudyPackage,
 ) -> None:
-    session, questions, _ = create_exam(package, "mock", 3, ["topic-a", "topic-b"])
+    exam = create_exam(package, "mock", 3, ["topic-a", "topic-b"])
+    session = exam["session"]
+    questions = exam["questions"]
 
-    result = grade_exam(session, questions, {"q1": 1, "q2": 2, "q3": None})
+    result = grade_exam(session, questions, {"q1": 1, "q2": 2})
 
     assert result["session_id"] == session.session_id
     assert result["correct_count"] == 1
     assert result["total_count"] == 3
-    assert result["accuracy"] == pytest.approx(100 / 3)
+    assert result["accuracy"] == 33.33
     attempts = result["attempts"]
     assert [attempt.question_id for attempt in attempts] == ["q1", "q2", "q3"]
     assert [attempt.is_correct for attempt in attempts] == [True, False, False]
@@ -157,7 +166,9 @@ def test_grade_exam_counts_unanswered_questions_and_returns_question_results(
 def test_grade_exam_rejects_answers_outside_session_and_invalid_indices(
     package: StudyPackage,
 ) -> None:
-    session, questions, _ = create_exam(package, "mock", 1, ["topic-a"])
+    exam = create_exam(package, "mock", 1, ["topic-a"])
+    session = exam["session"]
+    questions = exam["questions"]
 
     with pytest.raises(ValueError, match="outside the session"):
         grade_exam(session, questions, {"unknown": 0})
@@ -167,10 +178,15 @@ def test_grade_exam_rejects_answers_outside_session_and_invalid_indices(
         grade_exam(session, questions, {"q1": True})
 
 
-def test_grade_exam_requires_an_entry_for_every_session_question(
+def test_grade_exam_treats_missing_answer_as_unanswered(
     package: StudyPackage,
 ) -> None:
-    session, questions, _ = create_exam(package, "mock", 2, ["topic-a", "topic-b"])
+    exam = create_exam(package, "mock", 2, ["topic-a", "topic-b"])
+    session = exam["session"]
+    questions = exam["questions"]
 
-    with pytest.raises(ValueError, match="missing question ID"):
-        grade_exam(session, questions, {"q1": 1})
+    result = grade_exam(session, questions, {"q1": 1})
+
+    assert result["attempts"][1].selected_index is None
+    assert result["question_results"][1]["selected_index"] is None
+    assert result["question_results"][1]["is_correct"] is False

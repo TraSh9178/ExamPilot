@@ -14,6 +14,12 @@ class QuestionReview(TypedDict):
     explanation: str
 
 
+class ExamCreationResult(TypedDict):
+    session: ExamSession
+    questions: list[Question]
+    warning: str | None
+
+
 class ExamGradeResult(TypedDict):
     session_id: str
     attempts: list[AttemptResult]
@@ -29,7 +35,7 @@ def create_exam(
     requested_count: int,
     confirmed_topic_ids: Sequence[str],
     topic_id: str | None = None,
-) -> tuple[ExamSession, list[Question], str | None]:
+) -> ExamCreationResult:
     """Create an exam limited to the topics explicitly confirmed by the user."""
     if mode not in ("mock", "topic"):
         raise ValueError("mode must be 'mock' or 'topic'")
@@ -116,7 +122,11 @@ def create_exam(
         mode=mode,
         question_ids=[question.id for question in selected_questions],
     )
-    return session, selected_questions, warning
+    return {
+        "session": session,
+        "questions": selected_questions,
+        "warning": warning,
+    }
 
 
 def grade_exam(
@@ -141,17 +151,6 @@ def grade_exam(
             f"selected_answers contains question ID(s) outside the session: "
             f"{unknown_answer_ids}"
         )
-    missing_answer_ids = [
-        question_id
-        for question_id in session.question_ids
-        if question_id not in selected_answers
-    ]
-    if missing_answer_ids:
-        raise ValueError(
-            f"selected_answers is missing question ID(s) from the session: "
-            f"{missing_answer_ids}; use None for unanswered questions"
-        )
-
     attempts: list[AttemptResult] = []
     question_results: list[QuestionReview] = []
     correct_count = 0
@@ -189,7 +188,7 @@ def grade_exam(
         )
 
     total_count = len(questions)
-    accuracy = correct_count / total_count * 100 if total_count else 0.0
+    accuracy = round(correct_count / total_count * 100, 2) if total_count else 0.0
     return {
         "session_id": session.session_id,
         "attempts": attempts,
