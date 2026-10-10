@@ -135,6 +135,11 @@ def grade_exam(
     selected_answers: Mapping[str, int | None],
 ) -> ExamGradeResult:
     """Grade an exam and return per-question attempts, review, and percentage."""
+    if not session.question_ids:
+        raise ValueError("Cannot grade an exam session without question IDs")
+    if not questions:
+        raise ValueError("Cannot grade an exam without questions")
+
     question_ids = [question.id for question in questions]
     if len(question_ids) != len(set(question_ids)):
         raise ValueError("questions must not contain duplicate question IDs")

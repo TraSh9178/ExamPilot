@@ -190,3 +190,17 @@ def test_grade_exam_treats_missing_answer_as_unanswered(
     assert result["attempts"][1].selected_index is None
     assert result["question_results"][1]["selected_index"] is None
     assert result["question_results"][1]["is_correct"] is False
+
+
+def test_grade_exam_rejects_session_without_question_ids() -> None:
+    session = ExamSession(session_id="empty-session", mode="mock", question_ids=[])
+
+    with pytest.raises(ValueError, match="without question IDs"):
+        grade_exam(session, [], {})
+
+
+def test_grade_exam_rejects_empty_questions(package: StudyPackage) -> None:
+    session = ExamSession(session_id="empty-questions", mode="mock", question_ids=["q1"])
+
+    with pytest.raises(ValueError, match="without questions"):
+        grade_exam(session, [], {})
