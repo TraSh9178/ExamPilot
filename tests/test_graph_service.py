@@ -6,6 +6,7 @@ import pytest
 import json
 
 from models.schemas import StudyPackage
+import services.graph_service as graph_service
 from services.graph_service import build_graph, get_node_color
 
 
@@ -67,6 +68,36 @@ def test_mock_and_topic_modes_are_separate():
 
     assert mock_result == {"t1": "weak"}
     assert topic_result == {"t1": "mastered"}
+
+def test_status_by_topic_delegates_to_mastery_engine(monkeypatch):
+    stats = [
+        TopicStats(
+            topic_id="t1",
+            mode="mock",
+            correct=1,
+            attempted=4,
+            accuracy=25.0,
+        ),
+        TopicStats(
+            topic_id="t2",
+            mode="topic",
+            correct=4,
+            attempted=4,
+            accuracy=100.0,
+        ),
+    ]
+    classified = []
+
+    def classify(item):
+        classified.append(item)
+        return "developing"
+
+    monkeypatch.setattr(graph_service, "get_mastery_status", classify)
+
+    result = get_status_by_topic(stats, "mock")
+
+    assert result == {"t1": "developing"}
+    assert classified == [stats[0]]
 
 def test_duplicate_topic_stats_rejected():
     stats = [
