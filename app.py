@@ -5,7 +5,11 @@ import streamlit as st
 from models.schemas import StudyPackage
 
 
-st.set_page_config(page_title="ExamPilot", layout="wide")
+st.set_page_config(
+    page_title="ExamPilot",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 st.markdown(
     """
@@ -72,6 +76,16 @@ st.markdown(
 
     [data-testid="stFileUploaderDropzone"] button p {
         color: #2166DB;
+    }
+    [data-testid="stExpandSidebarButton"] button {
+        background-color: #2166DB !important;
+        color: white !important;
+        border: 1px solid #2166DB !important;
+    }
+
+    [data-testid="stExpandSidebarButton"] button svg {
+        fill: currentColor !important;
+        color: white !important;
     }
     </style>
     """,
