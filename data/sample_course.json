@@ -1,0 +1,81 @@
+
+{
+  "course_id": "econ101",
+  "course_name": "Introduction to Microeconomics",
+  "topics": [
+    {
+      "id": "supply_demand",
+      "name": "Supply and Demand",
+      "summary": "Supply and demand determine market equilibrium price and quantity.",
+      "source_pages": []
+    },
+    {
+      "id": "elasticity",
+      "name": "Price Elasticity of Demand",
+      "summary": "Price elasticity of demand measures how responsive quantity demanded is to changes in price.",
+      "source_pages": []
+    },
+    {
+      "id": "price_controls",
+      "name": "Price Controls",
+      "summary": "Binding price ceilings can create shortages, while binding price floors can create surpluses.",
+      "source_pages": []
+    }
+  ],
+  "relationships": [
+    {
+      "from_topic": "supply_demand",
+      "to_topic": "elasticity",
+      "type": "related"
+    },
+    {
+      "from_topic": "supply_demand",
+      "to_topic": "price_controls",
+      "type": "related"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q001",
+      "topic_id": "supply_demand",
+      "question": "If demand increases while supply remains unchanged, what happens to equilibrium price and quantity?",
+      "options": [
+        "Both decrease",
+        "Both increase",
+        "Price increases and quantity decreases",
+        "Price decreases and quantity increases"
+      ],
+      "correct_index": 1,
+      "explanation": "A rightward demand shift increases both equilibrium price and equilibrium quantity, assuming an upward-sloping supply curve.",
+      "source_pages": []
+    },
+    {
+      "id": "q002",
+      "topic_id": "elasticity",
+      "question": "If the absolute value of price elasticity of demand is greater than 1, demand is:",
+      "options": [
+        "Perfectly inelastic",
+        "Unit elastic",
+        "Elastic",
+        "Inelastic"
+      ],
+      "correct_index": 2,
+      "explanation": "Demand is elastic when the absolute value of price elasticity of demand exceeds 1.",
+      "source_pages": []
+    },
+    {
+      "id": "q003",
+      "topic_id": "price_controls",
+      "question": "What is the typical effect of a binding price ceiling in a competitive market?",
+      "options": [
+        "A shortage",
+        "A surplus",
+        "No effect on quantity demanded",
+        "A guaranteed increase in producer surplus"
+      ],
+      "correct_index": 0,
+      "explanation": "A binding price ceiling is below equilibrium, causing quantity demanded to exceed quantity supplied.",
+      "source_pages": []
+    }
+  ]
+}
