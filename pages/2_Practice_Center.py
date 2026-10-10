@@ -163,6 +163,18 @@ if active_practice is not None:
             else:
                 active_practice["result"] = result
                 st.session_state[practice_key] = active_practice
+
+                # Store each graded session once, separately by course.
+                history_key = f"practice_history_{course.course_id}"
+                history = st.session_state.setdefault(history_key, {})
+
+                history[session.session_id] = {
+                    "session": session,
+                    "questions": questions.copy(),
+                    "attempts": result["attempts"].copy(),
+                    "result": result,
+                }
+
                 st.rerun()
 
     if "result" in active_practice:
@@ -203,3 +215,8 @@ if active_practice is not None:
                 ]
                 st.write(f"Correct answer: {correct_answer}")
                 st.write(review["explanation"])
+# Show the number of graded sessions saved for this course.
+history_key = f"practice_history_{course.course_id}"
+history = st.session_state.get(history_key, {})
+
+st.caption(f"Saved practice sessions: {len(history)}")
