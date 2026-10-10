@@ -1,4 +1,5 @@
 from models.schemas import TopicStats
+from services.mastery_engine import get_mastery_status
 
 from models.schemas import Topic, Relationship, StudyPackage
 
@@ -91,20 +92,7 @@ def get_status_by_topic(
         if item.topic_id in status_by_topic:
             raise ValueError(f"Duplicate topic stats: {item.topic_id}")
 
-        if item.attempted == 0:
-            status = "unattempted"
-        elif item.attempted < 3:
-            status = "insufficient_evidence"
-        elif item.accuracy is None:
-            raise ValueError("Missing accuracy")
-        elif item.accuracy < 60:
-            status = "weak"
-        elif item.accuracy < 80:
-            status = "developing"
-        else:
-            status = "mastered"
-
-        status_by_topic[item.topic_id] = status
+        status_by_topic[item.topic_id] = get_mastery_status(item)
 
     return status_by_topic
 
