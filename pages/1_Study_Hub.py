@@ -100,6 +100,7 @@ if confirmed_topic_ids:
         )
 
         if st.button("Generate questions"):
+        if st.button("Generate questions", type="primary"):
             with st.spinner("Generating questions..."):
                 generated = generate_questions(
                     document,

@@ -74,14 +74,15 @@ st.markdown(
     }
 
     [data-testid="stFileUploaderDropzone"] button {
-        background-color: white;
-        border: 1px solid #2166DB;
-        color: #2166DB;
+        background-color: #2166DB !important;
+        border: 1px solid #2166DB !important;
+        color: white !important;
     }
 
     [data-testid="stFileUploaderDropzone"] button p {
-        color: #2166DB;
+        color: white !important;
     }
+    
     [data-testid="stExpandSidebarButton"] button {
         background-color: #2166DB !important;
         color: white !important;
