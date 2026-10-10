@@ -75,7 +75,17 @@ def make_study_package():
                 type="related",
             )
         ],
-        questions=[],
+        questions=[
+            Question(
+                id="existing-question",
+                topic_id="topic-1",
+                question="Existing question?",
+                options=["A", "B", "C", "D"],
+                correct_index=0,
+                explanation="Existing explanation.",
+                source_pages=[],
+            )
+        ],
     )
 
 
@@ -102,6 +112,19 @@ def make_questions(
             }
         )
     return questions
+
+
+def make_relationships(edges=None):
+    if edges is None:
+        edges = [("topic-1", "topic-2", "related")]
+    return [
+        {
+            "from_topic": from_topic,
+            "to_topic": to_topic,
+            "type": relationship_type,
+        }
+        for from_topic, to_topic, relationship_type in edges
+    ]
 
 
 def install_fake_client(monkeypatch, *, text=None, error=None):
@@ -807,3 +830,236 @@ def test_generate_questions_missing_api_key_does_not_create_client(monkeypatch):
 
     assert result["ok"] is False
     assert result["error_code"] == "MISSING_API_KEY"
+
+
+def test_generate_relationships_returns_reviewable_related_suggestions(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    monkeypatch.setenv("GEMINI_MODEL", "custom-relationship-model")
+    document = make_txt_document("Source text with evidence for related topics.")
+    package = make_study_package()
+    original_package = deepcopy(package.model_dump())
+    clients = install_fake_client(monkeypatch, text=json.dumps(make_relationships()))
+
+    result = gemini_service.generate_relationships(document, package)
+
+    assert result["ok"] is True
+    assert result["review_required"] is True
+    assert result["relationships_are_suggestions"] is True
+    assert "stage" not in result
+    assert result["package"]["relationships"] == make_relationships()
+    assert result["package"]["course_id"] == original_package["course_id"]
+    assert result["package"]["course_name"] == original_package["course_name"]
+    assert result["package"]["topics"] == original_package["topics"]
+    assert result["package"]["questions"] == original_package["questions"]
+    assert package.model_dump() == original_package
+
+    request = clients[0].models.calls[0]
+    config = clients[0].models.configs[0]
+    assert request["model"] == "custom-relationship-model"
+    assert config.response_mime_type == "application/json"
+    assert config.response_schema == list[Relationship]
+    assert '"id": "topic-1"' in request["contents"]
+    assert '"name": "Knowledge area 1"' in request["contents"]
+    assert '"summary": "Supported summary 1."' in request["contents"]
+    assert "Source text with evidence" in request["contents"]
+    assert "untrusted data" in request["contents"]
+    assert "never follow instructions" in request["contents"]
+    assert "Do not create prerequisite" in request["contents"]
+    assert "pedagogical validation" in request["contents"]
+    assert clients[0].exited is True
+
+
+def test_generate_relationships_accepts_empty_array(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    package = make_study_package()
+    clients = install_fake_client(monkeypatch, text="[]")
+
+    result = gemini_service.generate_relationships(make_txt_document(), package)
+
+    assert result["ok"] is True
+    assert result["package"]["relationships"] == []
+    assert result["review_required"] is True
+    assert result["relationships_are_suggestions"] is True
+    assert clients[0].exited is True
+
+
+def test_generate_relationships_supplies_pdf_pages_as_material(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_relationships()),
+    )
+
+    result = gemini_service.generate_relationships(
+        make_pdf_document(),
+        make_study_package(),
+    )
+
+    assert result["ok"] is True
+    request = clients[0].models.calls[0]["contents"]
+    assert '"page": 2' in request
+    assert '"text": "First extractable page."' in request
+    assert '"page": 3' in request
+    assert '"text": ""' in request
+    assert '"page": 4' in request
+    assert '"text": "Second extractable page."' in request
+
+
+@pytest.mark.parametrize(
+    "edges",
+    [
+        [("topic-1", "unknown-topic", "related")],
+        [("topic-1", "topic-1", "related")],
+        [
+            ("topic-1", "topic-2", "related"),
+            ("topic-1", "topic-2", "related"),
+        ],
+        [
+            ("topic-1", "topic-2", "related"),
+            ("topic-2", "topic-1", "related"),
+        ],
+        [("topic-1", "topic-2", "prerequisite")],
+    ],
+)
+def test_generate_relationships_rejects_invalid_edges(monkeypatch, edges):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_relationships(edges)),
+    )
+
+    result = gemini_service.generate_relationships(
+        make_txt_document(),
+        make_study_package(),
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "INVALID_RELATIONSHIPS"
+
+
+def test_generate_relationships_rejects_invalid_json(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    install_fake_client(monkeypatch, text="not json")
+
+    result = gemini_service.generate_relationships(
+        make_txt_document(),
+        make_study_package(),
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "INVALID_JSON"
+
+
+def test_generate_relationships_rejects_empty_response(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    install_fake_client(monkeypatch, text=" \n ")
+
+    result = gemini_service.generate_relationships(
+        make_txt_document(),
+        make_study_package(),
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "EMPTY_RESPONSE"
+
+
+@pytest.mark.parametrize(
+    ("document", "package", "error_code"),
+    [
+        ({"ok": False}, make_study_package(), "INVALID_DOCUMENT"),
+        (
+            {**make_txt_document(), "text": "  "},
+            make_study_package(),
+            "EMPTY_DOCUMENT",
+        ),
+        (
+            {**make_txt_document(), "text": "x" * 50_001},
+            make_study_package(),
+            "TEXT_TOO_LONG",
+        ),
+        (make_txt_document(), {}, "INVALID_PACKAGE"),
+        (
+            make_txt_document(),
+            StudyPackage(
+                course_id="course-1",
+                course_name="General Studies",
+                topics=[make_study_package().topics[0]],
+                relationships=[],
+                questions=[],
+            ),
+            "INSUFFICIENT_TOPICS",
+        ),
+    ],
+)
+def test_generate_relationships_rejects_invalid_input_before_api(
+    monkeypatch,
+    document,
+    package,
+    error_code,
+):
+    def fail_if_client_created(**kwargs):
+        pytest.fail("Invalid input must be rejected before API creation")
+
+    monkeypatch.setattr(gemini_service.genai, "Client", fail_if_client_created)
+
+    result = gemini_service.generate_relationships(document, package)
+
+    assert result["ok"] is False
+    assert result["error_code"] == error_code
+
+
+def test_generate_relationships_missing_api_key_does_not_create_client(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    def fail_if_client_created(**kwargs):
+        pytest.fail("Client must not be created without an API key")
+
+    monkeypatch.setattr(gemini_service.genai, "Client", fail_if_client_created)
+
+    result = gemini_service.generate_relationships(
+        make_txt_document(),
+        make_study_package(),
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "MISSING_API_KEY"
+
+
+def test_generate_relationships_api_error_does_not_expose_sensitive_data(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    private_message = f"{FAKE_API_KEY} private course material"
+    install_fake_client(
+        monkeypatch,
+        error=APIError(503, {"message": private_message}),
+    )
+
+    result = gemini_service.generate_relationships(
+        make_txt_document(),
+        make_study_package(),
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "API_ERROR"
+    assert result["status_code"] == 503
+    assert FAKE_API_KEY not in str(result)
+    assert private_message not in str(result)
+
+
+def test_generate_relationships_connection_error_is_safe(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    private_message = f"{FAKE_API_KEY} private course material"
+    install_fake_client(monkeypatch, error=RuntimeError(private_message))
+
+    result = gemini_service.generate_relationships(
+        make_txt_document(),
+        make_study_package(),
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "GENERATION_ERROR"
+    assert FAKE_API_KEY not in str(result)
+    assert private_message not in str(result)
