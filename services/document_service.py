@@ -125,3 +125,17 @@ def extract_pdf(file_bytes: bytes, filename: str) -> dict:
         "pages": pages,
         "sources": sources,
     }
+
+
+def extract_document(file_bytes: bytes, filename: str) -> dict:
+    if filename.lower().endswith(".txt"):
+        return extract_txt(file_bytes, filename)
+
+    if filename.lower().endswith(".pdf"):
+        return extract_pdf(file_bytes, filename)
+
+    return {
+        "ok": False,
+        "error_code": "UNSUPPORTED_FILE_TYPE",
+        "message": "仅支持 TXT 或文字型 PDF。",
+    }

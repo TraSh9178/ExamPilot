@@ -223,3 +223,58 @@ def test_extract_pdf_text_length_limit(monkeypatch):
     assert at_limit_result["ok"] is True
     assert over_limit_result["ok"] is False
     assert over_limit_result["error_code"] == "TEXT_TOO_LONG"
+
+
+@pytest.mark.parametrize(
+    ("filename", "selected_extractor"),
+    [
+        ("notes.txt", "txt"),
+        ("NOTES.TXT", "txt"),
+        ("course.pdf", "pdf"),
+        ("COURSE.PDF", "pdf"),
+    ],
+)
+@pytest.mark.parametrize("ok", [True, False])
+def test_extract_document_dispatches_and_returns_result_unchanged(
+    monkeypatch,
+    filename,
+    selected_extractor,
+    ok,
+):
+    file_bytes = b"in-memory file bytes"
+    result = {"ok": ok, "custom_field": object()}
+    calls = []
+
+    def fake_txt(received_bytes, received_filename):
+        calls.append(("txt", received_bytes, received_filename))
+        return result
+
+    def fake_pdf(received_bytes, received_filename):
+        calls.append(("pdf", received_bytes, received_filename))
+        return result
+
+    monkeypatch.setattr(document_service, "extract_txt", fake_txt)
+    monkeypatch.setattr(document_service, "extract_pdf", fake_pdf)
+
+    extracted = document_service.extract_document(file_bytes, filename)
+
+    assert extracted is result
+    assert calls == [(selected_extractor, file_bytes, filename)]
+
+
+def test_extract_document_rejects_unsupported_type_without_calling_extractors(
+    monkeypatch,
+):
+    def fail_if_called(*args):
+        pytest.fail("An extractor must not be called for unsupported file types")
+
+    monkeypatch.setattr(document_service, "extract_txt", fail_if_called)
+    monkeypatch.setattr(document_service, "extract_pdf", fail_if_called)
+
+    result = document_service.extract_document(b"data", "notes.docx")
+
+    assert result == {
+        "ok": False,
+        "error_code": "UNSUPPORTED_FILE_TYPE",
+        "message": "仅支持 TXT 或文字型 PDF。",
+    }
