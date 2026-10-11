@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from models.schemas import AttemptResult, ExamSession, StudyPackage
+from models.schemas import AttemptResult, ExamSession, Question, StudyPackage, Topic
 from services import postgres_store
 
 
@@ -399,6 +399,168 @@ def test_save_and_load_course_validate_study_package(
     assert rejected_load.package is None
 
 
+def test_save_course_appends_new_questions_and_topics_idempotently(
+    monkeypatch: pytest.MonkeyPatch, package: StudyPackage
+) -> None:
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+    added_topic = Topic(id="topic-b", name="Topic B", summary="New summary")
+    added_question = Question(
+        id="q-new",
+        topic_id=added_topic.id,
+        question="New question",
+        options=["A", "B", "C", "D"],
+        correct_index=1,
+        explanation="New explanation",
+    )
+    incoming_package = StudyPackage(
+        course_id=package.course_id,
+        course_name=package.course_name,
+        topics=[added_topic],
+        relationships=[],
+        questions=[added_question],
+    )
+
+    assert postgres_store.save_course("demo-user", package).success is True
+    first_save = postgres_store.save_course("demo-user", incoming_package)
+    second_save = postgres_store.save_course("demo-user", incoming_package)
+    loaded = postgres_store.load_course("demo-user", package.course_id)
+
+    assert first_save.success is True
+    assert second_save.success is True
+    assert loaded.success is True
+    assert loaded.package is not None
+    assert [topic.id for topic in loaded.package.topics] == ["topic-a", "topic-b"]
+    assert [question.id for question in loaded.package.questions] == [
+        "q-0",
+        "q-1",
+        "q-2",
+        "q-new",
+    ]
+
+
+@pytest.mark.parametrize("changed_entity", ["question", "topic"])
+def test_save_course_rejects_changed_existing_ids_without_modifying_data(
+    monkeypatch: pytest.MonkeyPatch,
+    package: StudyPackage,
+    changed_entity: str,
+) -> None:
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+    assert postgres_store.save_course("demo-user", package).success is True
+    original_data = deepcopy(
+        connection.course_packages[("demo-user", package.course_id)]
+    )
+
+    if changed_entity == "question":
+        changed_question = package.questions[0].model_copy(
+            update={"question": "Reused ID with changed content"}
+        )
+        incoming_package = package.model_copy(
+            update={
+                "questions": [changed_question, *package.questions[1:]],
+            }
+        )
+        expected_message = "question ID"
+    else:
+        changed_topic = package.topics[0].model_copy(
+            update={"summary": "Reused ID with changed content"}
+        )
+        incoming_package = package.model_copy(update={"topics": [changed_topic]})
+        expected_message = "topic ID"
+
+    result = postgres_store.save_course("demo-user", incoming_package)
+
+    assert result.success is False
+    assert expected_message in result.message
+    assert connection.course_packages[("demo-user", package.course_id)] == original_data
+    assert connection.rollback_count == 1
+
+
+def test_saving_appended_course_keeps_existing_exam_history(
+    monkeypatch: pytest.MonkeyPatch, package: StudyPackage
+) -> None:
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+    session = ExamSession(
+        session_id="historical-session",
+        mode="mock",
+        question_ids=["q-0"],
+    )
+    attempt = AttemptResult(
+        session_id=session.session_id,
+        question_id="q-0",
+        selected_index=0,
+        is_correct=True,
+    )
+    appended_package = package.model_copy(
+        update={"questions": [package.questions[0]]}
+    )
+
+    assert postgres_store.save_course("demo-user", package).success is True
+    assert postgres_store.save_exam_result(
+        "demo-user", package.course_id, session, [attempt]
+    ).success is True
+    assert postgres_store.save_course("demo-user", appended_package).success is True
+
+    history = postgres_store.load_course_history("demo-user", package.course_id)
+
+    assert history.success is True
+    assert history.package is not None
+    assert [question.id for question in history.package.questions] == [
+        "q-0",
+        "q-1",
+        "q-2",
+    ]
+    assert history.sessions == [session]
+    assert history.attempts == [attempt]
+    assert history.topic_stats[0].correct == 1
+    assert history.topic_stats[0].attempted == 1
+    assert history.topic_stats[0].accuracy == 100
+    assert history.mastery_statuses[("topic-a", "mock")] == "insufficient_evidence"
+
+
+def test_write_entry_points_take_same_course_lock_before_database_access(
+    monkeypatch: pytest.MonkeyPatch, package: StudyPackage
+) -> None:
+    connection = FakeConnection()
+    connection.course_packages[("demo-user", package.course_id)] = (
+        package.model_dump(mode="json")
+    )
+    use_connection(monkeypatch, connection)
+    session = ExamSession(
+        session_id="session-1",
+        mode="mock",
+        question_ids=["q-0"],
+    )
+
+    assert postgres_store.save_course("demo-user", package).success is True
+    save_course_calls = list(connection.execute_calls)
+    connection.execute_calls.clear()
+    assert postgres_store.save_exam_result(
+        "demo-user",
+        package.course_id,
+        session,
+        make_attempts(session.session_id, session.question_ids),
+    ).success is True
+    save_exam_calls = list(connection.execute_calls)
+
+    lock_calls = [save_course_calls[0], save_exam_calls[0]]
+    normalized_lock_queries = [
+        " ".join(query.lower().split()) for query, _ in lock_calls
+    ]
+    assert all("pg_advisory_xact_lock" in query for query in normalized_lock_queries)
+    assert normalized_lock_queries[0] == normalized_lock_queries[1]
+    assert [parameters for _, parameters in lock_calls] == [
+        ("demo-user", package.course_id),
+        ("demo-user", package.course_id),
+    ]
+    assert "select package_json" in " ".join(save_course_calls[1][0].lower().split())
+    assert "select package_json" in " ".join(save_exam_calls[1][0].lower().split())
+    assert connection.enter_count == 2
+    assert connection.commit_count == 2
+
+
 def test_saving_exam_and_answers_uses_one_transaction(
     monkeypatch: pytest.MonkeyPatch, package: StudyPackage
 ) -> None:
@@ -686,6 +848,30 @@ def test_course_history_validates_models_and_recalculates_mastery(
     assert result.topic_stats[0].accuracy == 100
     assert result.mastery_statuses[("topic-a", "mock")] == "mastered"
     assert result.mastery_statuses[("topic-a", "topic")] == "unattempted"
+    assert "repeatable read" in connection.execute_calls[0][0].lower()
+
+
+def test_course_history_rejects_sessions_referencing_missing_questions(
+    monkeypatch: pytest.MonkeyPatch, package: StudyPackage
+) -> None:
+    connection = FakeConnection()
+    connection.course_packages[("demo-user", package.course_id)] = (
+        package.model_dump(mode="json")
+    )
+    connection.sessions[("demo-user", "broken-session")] = (
+        package.course_id,
+        "mock",
+        ["missing-question"],
+    )
+    use_connection(monkeypatch, connection)
+
+    result = postgres_store.load_course_history("demo-user", package.course_id)
+
+    assert result.success is False
+    assert "references questions missing" in result.message
+    assert result.sessions == []
+    assert result.attempts == []
+    assert "repeatable read" in connection.execute_calls[0][0].lower()
 
 
 @pytest.mark.parametrize(
