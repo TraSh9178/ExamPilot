@@ -29,6 +29,19 @@ class LoadCourseResult:
 
 
 @dataclass(frozen=True)
+class SavedCourseSummary:
+    course_id: str
+    course_name: str
+
+
+@dataclass(frozen=True)
+class SavedCoursesResult:
+    success: bool
+    courses: list[SavedCourseSummary]
+    message: str
+
+
+@dataclass(frozen=True)
 class CourseHistoryResult:
     success: bool
     package: StudyPackage | None
@@ -193,6 +206,47 @@ def load_course(
             False,
             None,
             "Database could not load the course. Check configuration and connection.",
+        )
+
+
+def list_saved_courses(user_id: str) -> SavedCoursesResult:
+    """List courses for a user ID supplied by the caller's trusted auth context."""
+    try:
+        validated_user_id = _validate_demo_user_id(user_id)
+        with _connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT course_id, course_name
+                FROM courses
+                WHERE demo_user_id = %s
+                ORDER BY course_id
+                """,
+                (validated_user_id,),
+            ).fetchall()
+
+        courses = [
+            SavedCourseSummary(course_id=course_id, course_name=course_name)
+            for course_id, course_name in rows
+        ]
+        return SavedCoursesResult(True, courses, "Saved courses listed.")
+
+    except _PersistenceError:
+        return SavedCoursesResult(
+            False,
+            [],
+            "Database configuration is invalid; saved courses could not be listed.",
+        )
+    except (ValueError, TypeError):
+        return SavedCoursesResult(
+            False,
+            [],
+            "User identifier is invalid; saved courses could not be listed.",
+        )
+    except psycopg.Error:
+        return SavedCoursesResult(
+            False,
+            [],
+            "Database could not list saved courses. Check the database configuration and connection.",
         )
 
 
