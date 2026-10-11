@@ -1,12 +1,11 @@
 import streamlit as st
-from streamlit_agraph import Config, Edge, Node, agraph
-
-from services.graph_service import build_graph
-from services.graph_service import apply_mastery_to_nodes
-from services.mastery_engine import (
-    calculate_topic_stats,
-    get_mastery_status,
+from components.knowledge_graph import (
+    render_knowledge_graph,
+    get_selected_topic_details,
+    render_topic_details,
 )
+from services.graph_service import build_mastery_graph
+from services.mastery_engine import calculate_topic_stats
 
 st.set_page_config(
     page_title="Knowledge Graph | ExamPilot",
@@ -63,79 +62,27 @@ try:
         sessions=sessions,
         questions=list(questions_by_id.values()),
     )
-    status_by_topic = {
-        item.topic_id: get_mastery_status(item)
-        for item in stats
-        if item.mode == mode
-    }
 except ValueError as error:
     st.error(f"Could not calculate mastery: {error}")
     st.stop()
 
-graph = build_graph(course)
-graph["nodes"] = apply_mastery_to_nodes(
-    graph["nodes"],
-    status_by_topic,
-)
+selected_node_id = render_knowledge_graph(course, stats, mode)
 
-nodes = [
-    Node(
-        id=item["id"],
-        label=item["label"].replace(" ", "\n", 1),
-        title=item["status"].replace("_", " ").title(),
-        shape="box",
-        color={
-            "background": "#FFFFFF",
-            "border": item["color"],
-            "highlight": {
-                "background": "#EDF5FF",
-                "border": "#2166DB",
-            },
-        },
-        borderWidth=3,
-        margin=18,
-        font={
-            "size": 17,
-            "color": "#102044",
-            "face": "Arial",
-        },
+details = None
+if selected_node_id is not None:
+    graph = build_mastery_graph(course, stats, mode)
+    details = get_selected_topic_details(
+        selected_node_id, course, graph
     )
-    for item in graph["nodes"]
-]
 
-edges = [
-    Edge(
-        source=item["source"],
-        target=item["target"],
-        title=item["type"],
-        color="#8CA5C7",
-        width=2,
-        arrows="to" if item["type"] == "prerequisite" else "",
-        smooth=False,
-    )
-    for item in graph["edges"]
-]
-
-config = Config(
-    width="100%",
-    height=360,
-    directed=True,
-    physics=False,
-    hierarchical=True,
-)
-
-agraph(
-    nodes=nodes,
-    edges=edges,
-    config=config,
-)
+render_topic_details(details)
 
 st.caption(
     "Drag nodes to rearrange the graph. "
     "Arrows indicate prerequisite relationships."
 )
 
-if not edges:
+if not course.relationships:
     st.info("No relationships are provided for this course.")
 
 st.caption(
