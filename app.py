@@ -1,5 +1,7 @@
 import streamlit as st
 
+from components.ai_assistant import render_ai_assistant
+
 st.set_page_config(
     page_title="ExamPilot",
     page_icon="📚",
@@ -36,4 +38,6 @@ pages = [
     ),
 ]
 
-st.navigation(pages).run()
+page = st.navigation(pages)
+render_ai_assistant()
+page.run()

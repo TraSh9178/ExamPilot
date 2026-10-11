@@ -1,5 +1,11 @@
 # UI Handoff Summary
 
+## AI assistant quick entry
+
+- **Scope:** `components/ai_assistant.py`, rendered once from `app.py` before the active page. A fixed bottom-right popover provides single-turn Q&A through the existing `ask_tutor(course.model_dump(), question)`; the Study Plan Tutor is unchanged.
+- **Behavior:** Calls the service only on explicit form submit. Input, answer, and error are keyed by `course_id`; with no course it asks the user to open one. Failures (missing key, quota, etc.) show locally. No multi-turn memory, animation, dependency, or service change.
+- **Validation:** Mocked `ask_tutor` tests; no real Gemini request was made.
+
 ## Current integration follow-up
 
 - **Owner:** A — UI
