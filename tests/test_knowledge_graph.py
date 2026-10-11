@@ -1,3 +1,5 @@
+import json
+
 from streamlit_agraph import Edge, Node
 import pytest
 from unittest.mock import Mock
@@ -206,6 +208,7 @@ def test_render_knowledge_graph_builds_config_and_returns_selection(monkeypatch)
         {
             "physics": True,
             "hierarchical": False,
+            "groups": {},
             "interaction": {
                 "dragNodes": True,
                 "zoomView": True,
@@ -214,6 +217,56 @@ def test_render_knowledge_graph_builds_config_and_returns_selection(monkeypatch)
         }
     ]
     assert agraph_calls == [(nodes, edges, config)]
+
+
+def test_render_knowledge_graph_with_isolated_topics(monkeypatch):
+    package = StudyPackage(
+        course_id="calculus",
+        course_name="Calculus I Demo",
+        topics=[
+            {
+                "id": topic_id,
+                "name": topic_name,
+                "summary": f"Summary for {topic_name}.",
+            }
+            for topic_id, topic_name in (
+                ("limits", "Limits"),
+                ("derivatives", "Derivatives"),
+                ("integrals", "Integrals"),
+            )
+        ],
+        relationships=[],
+        questions=[],
+    )
+    render_calls = []
+
+    def render(nodes, edges, config):
+        render_calls.append((nodes, edges, config))
+        return None
+
+    monkeypatch.setattr(knowledge_graph, "agraph", render)
+
+    assert knowledge_graph.render_knowledge_graph(package, [], "mock") is None
+
+    assert len(render_calls) == 1
+    nodes, edges, config = render_calls[0]
+    assert len(nodes) == 3
+    assert {node.id for node in nodes} == {
+        "limits",
+        "derivatives",
+        "integrals",
+    }
+    assert edges == []
+
+    serialized_config = json.loads(json.dumps(config.__dict__))
+    assert serialized_config["groups"] == {}
+    assert config.physics["enabled"] is True
+    assert config.layout["hierarchical"]["enabled"] is False
+    assert config.interaction == {
+        "dragNodes": True,
+        "zoomView": True,
+        "dragView": True,
+    }
 
 
 @pytest.mark.parametrize(
