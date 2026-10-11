@@ -3,6 +3,10 @@ import streamlit as st
 from models.schemas import StudyPackage
 from services.course_state import save_course
 from services.gemini_service import generate_questions
+from services.ui_adapters import (
+    PENDING_INTEGRATION_MESSAGES,
+    tutor_question_key,
+)
 from services.ui_style import apply_app_styles
 
 apply_app_styles()
@@ -158,3 +162,50 @@ if confirmed_topic_ids:
         st.info("No questions are available in the confirmed scope.")
 else:
     st.info("Confirm your topic selection before starting practice.")
+
+with st.expander("Gemini Tutor"):
+    st.caption(PENDING_INTEGRATION_MESSAGES["tutor"])
+    st.caption(f"Current course: {course.course_name}")
+    st.text_area(
+        "Your question",
+        key=tutor_question_key(course.course_id),
+        placeholder="Ask a question about this course...",
+    )
+    st.caption("Questions are not sent and no answer is generated yet.")
+    st.button(
+        "Send question",
+        key=f"tutor_send_{course.course_id}",
+        type="primary",
+        disabled=True,
+    )
+
+with st.expander("Anki flashcards"):
+    st.caption(PENDING_INTEGRATION_MESSAGES["anki"])
+    with st.container(border=True):
+        st.subheader("Card preview")
+        st.info("No flashcards are available to preview yet.")
+
+    st.caption(
+        "Download will be available when real cards and a valid file exist."
+    )
+    st.button(
+        "Download flashcards",
+        key=f"anki_download_{course.course_id}",
+        disabled=True,
+    )
+
+with st.expander("Save / Restore"):
+    st.caption(PENDING_INTEGRATION_MESSAGES["database"])
+    save_restore_columns = st.columns(2)
+    save_restore_columns[0].button(
+        "Save",
+        key=f"database_save_{course.course_id}",
+        disabled=True,
+        use_container_width=True,
+    )
+    save_restore_columns[1].button(
+        "Restore",
+        key=f"database_restore_{course.course_id}",
+        disabled=True,
+        use_container_width=True,
+    )
