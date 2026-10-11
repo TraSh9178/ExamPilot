@@ -118,7 +118,7 @@ if st.session_state.show_course_setup:
 
         uploaded_file = st.file_uploader(
             "Upload course materials",
-            type=["pdf", "pptx", "txt"],
+            type=["pdf", "pptx", "txt", "png", "jpg", "jpeg"],
             accept_multiple_files=False,
             key="setup_course_file",
             max_upload_size=5,
@@ -126,10 +126,9 @@ if st.session_state.show_course_setup:
 
         st.caption(
             "Maximum file size: 5 MiB. "
-            "Supports UTF-8 TXT, text-based PDF, and text-based PPTX; "
-            "extracted text is limited to 50,000 characters. "
-            "PPTX slide notes and image OCR, DOCX, and scanned PDF OCR "
-            "are not supported."
+            "Supports UTF-8 TXT, text-based PDF, text-based PPTX, and PNG/JPEG images (OCR via Tesseract + English language pack). "
+            "Image OCR currently verified on macOS only; Windows support pending. "
+            "PPTX slide notes, scanned PDF OCR, DOCX, and other formats are not supported."
         )
 
         file_bytes = (
