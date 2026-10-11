@@ -169,6 +169,38 @@ def test_convert_graph_data_handles_empty_graph():
     assert MIN_NODE_SIZE == 36
 
 
+def test_agraph_sends_existing_graph_data_to_bounded_component(monkeypatch):
+    nodes = [Node(id="topic-1", label="Topic 1", color="#94A3B8")]
+    edges = [Edge(source="topic-1", target="topic-2", label="Related")]
+    config = knowledge_graph.Config(height=540, width=900)
+    config.width = "100%"
+    config.layout["randomSeed"] = 47
+    calls = []
+
+    def render_component(**kwargs):
+        calls.append(kwargs)
+        return "topic-1"
+
+    monkeypatch.setattr(
+        knowledge_graph,
+        "_bounded_graph_component",
+        render_component,
+    )
+
+    result = knowledge_graph.agraph(nodes, edges, config)
+
+    assert result == "topic-1"
+    assert calls[0]["payload"] == {
+        "graph": {
+            "nodes": [node.to_dict() for node in nodes],
+            "edges": [edge.to_dict() for edge in edges],
+        },
+        "config": config.to_dict(),
+    }
+    assert calls[0]["key"] == "bounded_graph_47"
+    assert calls[0]["default"] is None
+
+
 def test_convert_graph_data_rejects_unknown_relationship_type():
     graph = {
         "nodes": [],
