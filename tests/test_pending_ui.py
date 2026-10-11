@@ -293,6 +293,29 @@ def test_tutor_answers_are_course_scoped_and_sent_only_on_form_submit(
     assert len(calls) == 1
 
 
+def test_question_generation_is_disabled_when_course_has_exam_history():
+    course = make_study_course("history-course", "History course")
+    app = AppTest.from_file(str(STUDY_PLAN_PATH))
+    app.session_state["current_course"] = course
+    app.session_state["confirmed_scope_history-course"] = [
+        "history-course-topic"
+    ]
+    app.session_state["course_document_history-course"] = {
+        "text": "Course material",
+    }
+    app.session_state["practice_history_history-course"] = {
+        "old-session": {"session": object()},
+    }
+    app.run()
+
+    assert not app.exception
+    assert app.button(key="generate_questions_history-course").disabled
+    assert any(
+        "Question generation is disabled" in item.value
+        for item in app.warning
+    )
+
+
 def test_tutor_displays_service_failure_without_retrying(monkeypatch):
     from services import gemini_service
 
