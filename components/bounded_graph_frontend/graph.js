@@ -6,6 +6,7 @@
   let network = null;
   let nodeData = null;
   let edgeData = null;
+  let sourceNodes = [];
   let renderedGraph = "";
   let selectedNode = null;
   let draggedNode = null;
@@ -44,24 +45,79 @@
     };
   }
 
+  function measureTextContext() {
+    return document.createElement("canvas").getContext("2d");
+  }
+
+  function getNodeFont(node, context) {
+    const font = typeof node.font === "object" ? node.font : {};
+    const size = Number(font.size) || 16;
+    const face = font.face || "Arial";
+    context.font = `${font.style || "normal"} ${font.weight || "normal"} ${size}px ${face}`;
+    return { size, face };
+  }
+
+  function fitNodeLabels(nodes, width) {
+    const measure = measureTextContext();
+    return nodes.map((node) => {
+      const label = String(node.label || "");
+      const font = getNodeFont(node, measure);
+      const maxWidth = Math.max(80, Math.min(width * 0.65, width - 24));
+      const lines = [];
+      let line = "";
+
+      for (const word of label.split(/\s+/)) {
+        const candidate = line ? `${line} ${word}` : word;
+        if (line && measure.measureText(candidate).width > maxWidth) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = candidate;
+        }
+      }
+      if (line) lines.push(line);
+
+      return { ...node, label: lines.join("\n") };
+    });
+  }
+
+  function getGraphMetrics(nodes) {
+    const measure = measureTextContext();
+    let maxRadius = 0;
+    let maxLabelWidth = 0;
+    let maxLabelHeight = 0;
+    for (const node of nodes) {
+      maxRadius = Math.max(maxRadius, node.size || 20);
+      const font = getNodeFont(node, measure);
+      const lines = String(node.label || "").split("\n");
+      for (const line of lines) {
+        maxLabelWidth = Math.max(maxLabelWidth, measure.measureText(line).width);
+      }
+      maxLabelHeight = Math.max(
+        maxLabelHeight,
+        lines.length * font.size * 1.2,
+      );
+    }
+    return { maxRadius, maxLabelWidth, maxLabelHeight };
+  }
+
   function getViewBounds() {
     const width = host.clientWidth;
     const height = host.clientHeight;
     const allNodes = nodeData.get();
-    const maxRadius = allNodes.reduce(
-      (largest, node) => Math.max(largest, node.size || 20),
-      0,
-    );
+    const { maxRadius, maxLabelWidth, maxLabelHeight } =
+      getGraphMetrics(allNodes);
     const padding = 6;
     const radius = Math.min(
       maxRadius,
       Math.max(0, (Math.min(width, height) - padding * 2) / 2),
     );
+    const horizontalExtent = Math.max(radius, maxLabelWidth / 2);
     return {
-      left: padding + radius,
-      right: width - padding - radius,
+      left: padding + horizontalExtent,
+      right: width - padding - horizontalExtent,
       top: padding + radius,
-      bottom: height - padding - radius,
+      bottom: height - padding - radius - maxLabelHeight,
       width,
       height,
     };
@@ -170,6 +226,72 @@
     return { position: maximum - (phase - span), velocity: -velocity };
   }
 
+  function applyGraphForces(nodes, positions, bounds, elapsed) {
+    const accelerations = new Map(
+      nodes.map((node) => [node.id, { x: 0, y: 0 }]),
+    );
+    const centerX = (bounds.left + bounds.right) / 2;
+    const centerY = (bounds.top + bounds.bottom) / 2;
+
+    for (let firstIndex = 0; firstIndex < nodes.length; firstIndex += 1) {
+      const first = nodes[firstIndex];
+      const firstPosition = positions.get(first.id);
+      const firstAcceleration = accelerations.get(first.id);
+      firstAcceleration.x += (centerX - firstPosition.x) * 0.015;
+      firstAcceleration.y += (centerY - firstPosition.y) * 0.015;
+
+      for (let secondIndex = firstIndex + 1; secondIndex < nodes.length; secondIndex += 1) {
+        const second = nodes[secondIndex];
+        const secondPosition = positions.get(second.id);
+        const deltaX = firstPosition.x - secondPosition.x;
+        const deltaY = firstPosition.y - secondPosition.y;
+        const distanceSquared = deltaX * deltaX + deltaY * deltaY;
+        if (distanceSquared < 1) continue;
+
+        const distance = Math.sqrt(distanceSquared);
+        const force = Math.min(120, 90_000 / distanceSquared);
+        const forceX = (deltaX / distance) * force;
+        const forceY = (deltaY / distance) * force;
+        firstAcceleration.x += forceX;
+        firstAcceleration.y += forceY;
+        accelerations.get(second.id).x -= forceX;
+        accelerations.get(second.id).y -= forceY;
+      }
+    }
+
+    const nodeById = new Map(nodes.map((node) => [node.id, node]));
+    for (const edge of edgeData.get()) {
+      const sourceId = edge.from || edge.source;
+      const targetId = edge.to || edge.target;
+      if (!nodeById.has(sourceId) || !nodeById.has(targetId)) continue;
+
+      const sourcePosition = positions.get(sourceId);
+      const targetPosition = positions.get(targetId);
+      const deltaX = targetPosition.x - sourcePosition.x;
+      const deltaY = targetPosition.y - sourcePosition.y;
+      const distance = Math.hypot(deltaX, deltaY);
+      if (distance < 1) continue;
+
+      const spring = Math.max(-18, Math.min(18, (distance - 160) * 0.08));
+      const forceX = (deltaX / distance) * spring;
+      const forceY = (deltaY / distance) * spring;
+      accelerations.get(sourceId).x += forceX;
+      accelerations.get(sourceId).y += forceY;
+      accelerations.get(targetId).x -= forceX;
+      accelerations.get(targetId).y -= forceY;
+    }
+
+    const damping = Math.exp(-0.4 * elapsed);
+    for (const node of nodes) {
+      if (draggedNode && draggedNode.id === node.id) continue;
+      const velocity = velocities.get(node.id) || startingVelocity(node.id);
+      const acceleration = accelerations.get(node.id);
+      velocity.x = (velocity.x + acceleration.x * elapsed) * damping;
+      velocity.y = (velocity.y + acceleration.y * elapsed) * damping;
+      velocities.set(node.id, velocity);
+    }
+  }
+
   function clampScale() {
     if (!network || !nodeData) return;
     const dimensions = getViewBounds();
@@ -198,13 +320,20 @@
       : 0;
     lastFrameTime = timestamp;
     const bounds = getViewBounds();
+    const nodes = nodeData.get();
+    const positions = new Map();
+    for (const node of nodes) {
+      const position = network.getPositions([node.id])[node.id];
+      if (position) positions.set(node.id, network.canvasToDOM(position));
+    }
 
     if (bounds.right >= bounds.left && bounds.bottom >= bounds.top) {
-      for (const node of nodeData.get()) {
-        const position = network.getPositions([node.id])[node.id];
-        if (!position) continue;
-        const point = network.canvasToDOM(position);
-        const velocity = velocities.get(node.id) || startingVelocity(node.id);
+      applyGraphForces(nodes, positions, bounds, elapsed);
+      for (const node of nodes) {
+        if (draggedNode && draggedNode.id === node.id) continue;
+        const point = positions.get(node.id);
+        if (!point) continue;
+        const velocity = velocities.get(node.id);
         const nextX = advanceAxis(
           point.x,
           velocity.x,
@@ -234,9 +363,21 @@
   }
 
   function initialPositions(nodes, seed) {
-    const columns = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
+    const { maxRadius, maxLabelWidth, maxLabelHeight } = getGraphMetrics(nodes);
+    const padding = 6;
+    const horizontalExtent = Math.max(maxRadius, maxLabelWidth / 2);
+    const availableWidth = Math.max(1, host.clientWidth - 2 * (padding + horizontalExtent));
+    const columnSpacing = Math.max(2 * maxRadius + 30, maxLabelWidth + 30);
+    const columns = Math.max(
+      1,
+      Math.min(nodes.length || 1, Math.floor(availableWidth / columnSpacing)),
+    );
     const rows = Math.max(1, Math.ceil(nodes.length / columns));
-    const spacing = 105;
+    const horizontalSpacing = Math.max(columnSpacing, availableWidth / columns);
+    const verticalSpacing = Math.max(
+      130,
+      2 * maxRadius + maxLabelHeight + 30,
+    );
     let randomState = (seed >>> 0) || 1;
     const random = () => {
       randomState = (Math.imul(1664525, randomState) + 1013904223) >>> 0;
@@ -245,10 +386,10 @@
     return nodes.map((node, index) => ({
       ...node,
       x:
-        (index % columns - (columns - 1) / 2) * spacing +
+        (index % columns - (columns - 1) / 2) * horizontalSpacing +
         (random() - 0.5) * 30,
       y:
-        (Math.floor(index / columns) - (rows - 1) / 2) * spacing +
+        (Math.floor(index / columns) - (rows - 1) / 2) * verticalSpacing +
         (random() - 0.5) * 30,
       physics: false,
     }));
@@ -277,8 +418,9 @@
     renderedGraph = graphJson;
     const config = payload.config || {};
 
+    sourceNodes = graph.nodes || [];
     const nodes = initialPositions(
-      graph.nodes || [],
+      fitNodeLabels(sourceNodes, host.clientWidth),
       config.layout?.randomSeed || 1,
     );
     const edges = graph.edges || [];
@@ -309,7 +451,19 @@
 
     network.on("selectNode", (event) => setValue(event.nodes[0] || null));
     network.on("deselectNode", () => setValue(null));
+    network.on("click", (event) => {
+      if (!event.nodes || event.nodes.length === 0) {
+        network.unselectAll();
+        setValue(null);
+      }
+    });
     network.on("zoom", clampScale);
+
+    if (selectedNode && nodes.some((node) => node.id === selectedNode)) {
+      network.selectNodes([selectedNode]);
+    } else if (selectedNode) {
+      setValue(null);
+    }
 
     for (const node of nodes) {
       velocities.set(node.id, startingVelocity(node.id));
@@ -332,6 +486,10 @@
 
   const resizeObserver = new ResizeObserver(() => {
     if (!network || !nodeData) return;
+    const updatedLabels = fitNodeLabels(sourceNodes, host.clientWidth);
+    nodeData.update(
+      updatedLabels.map((node) => ({ id: node.id, label: node.label })),
+    );
     clampScale();
     for (const node of nodeData.get()) keepInside(node.id, true);
   });

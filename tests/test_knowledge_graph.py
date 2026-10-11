@@ -201,6 +201,18 @@ def test_agraph_sends_existing_graph_data_to_bounded_component(monkeypatch):
     assert calls[0]["default"] is None
 
 
+def test_agraph_preserves_none_for_deselection(monkeypatch):
+    config = knowledge_graph.Config(height=540, width="100%")
+    config.layout["randomSeed"] = 42
+    monkeypatch.setattr(
+        knowledge_graph,
+        "_bounded_graph_component",
+        lambda **kwargs: None,
+    )
+
+    assert knowledge_graph.agraph([], [], config) is None
+
+
 def test_convert_graph_data_rejects_unknown_relationship_type():
     graph = {
         "nodes": [],
@@ -319,6 +331,24 @@ def test_render_knowledge_graph_with_isolated_topics(monkeypatch):
     serialized_config = json.loads(json.dumps(config.__dict__))
     assert serialized_config["groups"] == {}
     assert config.physics["enabled"] is True
+    assert config.physics["solver"] == "forceAtlas2Based"
+    assert config.physics["forceAtlas2Based"] == {
+        "gravitationalConstant": -50,
+        "centralGravity": 0.015,
+        "springLength": 160,
+        "springConstant": 0.08,
+        "damping": 0.4,
+        "avoidOverlap": 0.8,
+    }
+    assert config.physics["solver"] == "forceAtlas2Based"
+    assert config.physics["forceAtlas2Based"] == {
+        "gravitationalConstant": -50,
+        "centralGravity": 0.015,
+        "springLength": 160,
+        "springConstant": 0.08,
+        "damping": 0.4,
+        "avoidOverlap": 0.8,
+    }
     assert config.layout["hierarchical"]["enabled"] is False
     assert config.physics["stabilization"] == {
         "enabled": True,
