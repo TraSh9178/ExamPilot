@@ -36,21 +36,21 @@ def apply_app_styles() -> None:
         }
 
         [data-testid="stMain"] [data-testid="stMarkdownContainer"] h1 {
-            font-size: clamp(2rem, 3.2vw, 2.65rem);
+            font-size: clamp(2.5rem, 3.8vw, 3.2rem);
             font-weight: 750;
             line-height: 1.16;
             letter-spacing: -0.035em;
         }
 
         [data-testid="stMain"] [data-testid="stMarkdownContainer"] h2 {
-            font-size: 1.5rem;
+            font-size: 1.9rem;
             font-weight: 700;
             line-height: 1.3;
             letter-spacing: -0.02em;
         }
 
         [data-testid="stMain"] [data-testid="stMarkdownContainer"] h3 {
-            font-size: 1.2rem;
+            font-size: 1.6rem;
             font-weight: 680;
             line-height: 1.35;
             letter-spacing: -0.015em;
@@ -292,16 +292,23 @@ def apply_app_styles() -> None:
         }
 
         [class*="st-key-practice_overview"] [data-testid="stMarkdownContainer"] p {
-            font-size: 1.35rem;
+            font-size: 1.65rem;
             line-height: 1.35;
             overflow-wrap: anywhere;
         }
 
         [class*="st-key-practice_question_"] [data-testid="stMarkdownContainer"] h3,
         [class*="st-key-practice_review_"] [data-testid="stMarkdownContainer"] h3 {
-            font-size: 1.2rem;
+            font-size: 1.55rem;
             line-height: 1.4;
             margin-bottom: 0.35rem;
+        }
+
+        [class*="st-key-practice_question_"] [data-testid="stCaptionContainer"] p,
+        [class*="st-key-practice_review_"] [data-testid="stCaptionContainer"] p {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--exam-ink) !important;
         }
 
         [class*="st-key-practice_count_"] {
@@ -314,13 +321,20 @@ def apply_app_styles() -> None:
 
         [data-testid="stMetricLabel"] p {
             color: var(--exam-muted) !important;
-            font-size: 0.875rem;
+            font-size: 1rem;
         }
 
         [data-testid="stMetricValue"] {
             color: var(--exam-ink);
             font-weight: 750;
-            font-size: 1.8rem;
+            font-size: 2.75rem;
+        }
+
+        [data-testid="stMetricValue"] > div,
+        [data-testid="stMain"] [data-testid="stMetricValue"] [data-testid="stMarkdownContainer"] p {
+            font-size: inherit;
+            font-weight: inherit;
+            line-height: 1.2;
         }
 
         [class*="st-key-progress_topic_"] [data-testid="stMetricLabel"] p {
@@ -333,7 +347,7 @@ def apply_app_styles() -> None:
 
         [class*="st-key-progress_overview"] [data-testid="stMetricValue"],
         [class*="st-key-progress_topic_"] [data-testid="stMetricValue"] {
-            font-size: 1.8rem;
+            font-size: 2.5rem;
         }
 
         [class*="st-key-progress_topic_"] [data-testid="stCaptionContainer"],
@@ -383,6 +397,15 @@ def apply_app_styles() -> None:
         }
 
         [class*="st-key-dashboard_course_card_"] [data-testid="stMarkdownContainer"] h3 {
+            font-size: 1.9rem;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+        }
+
+        [class*="st-key-study_plan_overview"] [data-testid="stMarkdownContainer"] h3,
+        [class*="st-key-progress_course_heading"] [data-testid="stMarkdownContainer"] h3 {
+            font-size: 1.9rem;
+            line-height: 1.25;
             overflow-wrap: anywhere;
         }
 
@@ -684,8 +707,15 @@ def apply_app_styles() -> None:
                 padding: 0.9rem 0.8rem 1.8rem;
             }
 
-            [data-testid="stMain"] [data-testid="stMarkdownContainer"] h1 { font-size: 1.8rem; }
-            [data-testid="stMain"] [data-testid="stMarkdownContainer"] h2 { font-size: 1.3rem; }
+            [data-testid="stMain"] [data-testid="stMarkdownContainer"] h1 { font-size: 2.2rem; }
+            [data-testid="stMain"] [data-testid="stMarkdownContainer"] h2 { font-size: 1.7rem; }
+            [data-testid="stMain"] [data-testid="stMarkdownContainer"] h3 { font-size: 1.5rem; }
+
+            [class*="st-key-dashboard_course_card_"] [data-testid="stMarkdownContainer"] h3,
+            [class*="st-key-study_plan_overview"] [data-testid="stMarkdownContainer"] h3,
+            [class*="st-key-progress_course_heading"] [data-testid="stMarkdownContainer"] h3 {
+                font-size: 1.7rem;
+            }
 
             .exam-hero {
                 min-height: 0;
@@ -702,7 +732,7 @@ def apply_app_styles() -> None:
             }
 
             [data-testid="stTabs"] [role="tablist"] { gap: 0.6rem; }
-            [data-testid="stMetricValue"] { font-size: 1.55rem; }
+            [data-testid="stMetricValue"] { font-size: 2.35rem; }
 
             [class*="st-key-graph_controls_panel"] > [data-testid="stHorizontalBlock"] {
                 flex-direction: column;

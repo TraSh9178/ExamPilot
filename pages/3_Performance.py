@@ -19,7 +19,8 @@ if course is None:
     st.page_link("pages/0_Dashboard.py", label="Back to Dashboard")
     st.stop()
 
-st.subheader(course.course_name)
+with st.container(key="progress_course_heading"):
+    st.subheader(course.course_name)
 
 history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})
