@@ -492,3 +492,29 @@ def test_study_hub_restore_button_replaces_course_and_reports_failure(store):
     app.button(key="database_restore_course-1").click().run()
     assert [e.value for e in app.error] == ["course-1: load failed"]
     assert app.session_state["current_course"].course_name == "Saved Name"
+
+
+def test_regenerated_questions_keep_saved_history_restorable(store):
+    old = make_course("course-1", "Economics")
+    state = signed_in_state()
+    session, attempts = make_exam(old, "s1")
+    state["practice_history_course-1"] = {
+        "s1": {
+            "session": session,
+            "questions": list(old.questions),
+            "attempts": attempts,
+            "result": grade_exam(
+                session, old.questions, {a.question_id: a.selected_index for a in attempts}
+            ),
+        }
+    }
+    regenerated = old.model_copy(
+        update={"questions": [
+            q.model_copy(update={"id": f"new-{q.id}"}) for q in old.questions
+        ]}
+    )
+    assert account_sync.save_course_to_account(state, regenerated).success
+    saved_ids = {q.id for q in store.courses[TEST_USER.user_id]["course-1"].questions}
+    assert {q.id for q in old.questions} <= saved_ids
+    assert {q.id for q in regenerated.questions} <= saved_ids
+    assert len(regenerated.questions) == 2  # local bank unchanged

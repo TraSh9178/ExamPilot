@@ -162,6 +162,24 @@ def restore_after_login(session_state: MutableMapping[str, Any]) -> None:
         restore_all(session_state)
 
 
+def _with_history_questions(
+    session_state: MutableMapping[str, Any], course: StudyPackage,
+) -> StudyPackage:
+    """Keep questions that local history still references (e.g. after the
+    question bank is regenerated) so the saved history stays restorable."""
+    known = {q.id for q in course.questions}
+    missing = []
+    history = session_state.get(_history_key(course.course_id), {})
+    for record in history.values():
+        for question in record["questions"]:
+            if question.id not in known:
+                known.add(question.id)
+                missing.append(question)
+    if not missing:
+        return course
+    return course.model_copy(update={"questions": [*course.questions, *missing]})
+
+
 def save_course_to_account(
     session_state: MutableMapping[str, Any], course: StudyPackage,
 ) -> SyncOutcome | None:
@@ -169,7 +187,9 @@ def save_course_to_account(
     if user_id is None:
         return None
     state = _state(session_state, user_id)
-    result = postgres_store.save_course(user_id, course)
+    result = postgres_store.save_course(
+        user_id, _with_history_questions(session_state, course)
+    )
     if result.success:
         state["unsaved_courses"].discard(course.course_id)
     else:
