@@ -199,22 +199,44 @@ def apply_app_styles() -> None:
             opacity: 1;
         }
 
+        [class*="st-key-dashboard_courses_header"] [data-testid="stHorizontalBlock"] {
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+        }
+
+        [class*="st-key-dashboard_courses_header"] [data-testid="stColumn"] {
+            flex: 1 1 0 !important;
+            min-width: 0;
+            width: auto !important;
+        }
+
+        [class*="st-key-dashboard_courses_header"] h3 {
+            margin: 0;
+            padding: 0;
+        }
+
+        [class*="st-key-dashboard_courses_header"] [data-testid="stMarkdownContainer"] {
+            margin-bottom: 0;
+        }
+
         div[class*="st-key-create_course_button"] {
-            width: min(100%, 28rem) !important;
+            width: min(100%, 14rem) !important;
+            margin-left: auto;
         }
 
         div[class*="st-key-create_course_button"] button {
             position: relative;
             width: 100% !important;
-            max-width: 28rem !important;
-            min-height: 3.5rem !important;
-            justify-content: flex-start !important;
-            padding: 0.75rem 1.15rem !important;
+            max-width: 14rem !important;
+            min-height: 3rem !important;
+            justify-content: center !important;
+            padding: 0.65rem 1rem !important;
         }
 
         div[class*="st-key-create_course_button"] button > div,
         div[class*="st-key-create_course_button"] button > div > span {
-            justify-content: flex-start !important;
+            justify-content: center !important;
         }
 
         div[class*="st-key-create_course_button"] [data-testid="stIconMaterial"] {
@@ -639,16 +661,25 @@ def apply_app_styles() -> None:
             }
 
             div[class*="st-key-create_course_button"] button {
-                min-height: 3.5rem !important;
-                padding: 0.65rem 1rem !important;
+                min-height: 2.75rem !important;
+                padding: 0.6rem 0.5rem !important;
             }
 
             div[class*="st-key-create_course_button"] [data-testid="stIconMaterial"] {
-                font-size: 1.65rem !important;
+                font-size: 1.3rem !important;
             }
 
             div[class*="st-key-create_course_button"] button p {
-                font-size: 1.05rem;
+                font-size: 0.9rem;
+                white-space: nowrap;
+            }
+
+            [class*="st-key-dashboard_courses_header"] [data-testid="stHorizontalBlock"] {
+                gap: 0.6rem;
+            }
+
+            div[class*="st-key-create_course_button"] button > div > span {
+                gap: 0.4rem !important;
             }
 
             [class*="st-key-practice_overview"]

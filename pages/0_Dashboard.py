@@ -98,18 +98,25 @@ st.caption("Your courses and practice progress are available in this session.")
 if "show_course_setup" not in st.session_state:
     st.session_state.show_course_setup = False
 
-if st.button(
-    "Close setup" if st.session_state.show_course_setup else "Create course",
-    icon=(
-        ":material/close:"
-        if st.session_state.show_course_setup
-        else ":material/add_circle_outline:"
-    ),
-    key="create_course_button",
-    type="secondary" if st.session_state.show_course_setup else "primary",
-):
-    st.session_state.show_course_setup = not st.session_state.show_course_setup
-    st.rerun()
+with st.container(key="dashboard_courses_header"):
+    title_column, action_column = st.columns([1, 1], vertical_alignment="center")
+    with title_column:
+        st.subheader("My courses")
+    with action_column:
+        if st.button(
+            "Close setup" if st.session_state.show_course_setup else "Create course",
+            icon=(
+                ":material/close:"
+                if st.session_state.show_course_setup
+                else ":material/add_circle_outline:"
+            ),
+            key="create_course_button",
+            type="secondary" if st.session_state.show_course_setup else "primary",
+        ):
+            st.session_state.show_course_setup = not st.session_state.show_course_setup
+            st.rerun()
+
+st.caption("Start with a demo or open a course to choose what to practise.")
 
 if st.session_state.show_course_setup:
     with st.container(border=True, key="dashboard_course_setup"):
@@ -291,8 +298,6 @@ if st.session_state.show_course_setup:
                 "Extract your material to preview the text before generating topics."
             )
 
-st.subheader("My courses")
-st.caption("Start with a demo or open a course to choose what to practise.")
 courses = st.session_state.courses
 # Populate the overview after generation so it reflects a newly created course
 # immediately, while keeping it above the setup panel on screen.
