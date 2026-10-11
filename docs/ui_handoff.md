@@ -2,8 +2,8 @@
 
 ## Anki export integration
 
-- **Branch:** `feature/anki-ui-final`, based on `origin/main` `1c03bfff7849cca444b5b1a78dbe03f14eee2542` (includes PR #15 and PR #17); supersedes PR #14, whose base was stale.
-- **Scope:** `pages/5_Export_Anki.py` plus navigation and tests, reusing the existing `export_anki_tsv` and `get_weak_topic_ids` contracts. The Study Plan Anki section now points to the sidebar page instead of a disabled button. No core service, schema, or dependency change.
+- **Branch:** `feature/export-anki-ui-phase3` (PR #14), with latest `origin/main` `1c03bfff7849cca444b5b1a78dbe03f14eee2542` (includes PR #15 and PR #17) merged in.
+- **Scope:** `pages/5_Export_Anki.py` plus navigation and tests, reusing the existing `export_anki_tsv` and `get_weak_topic_ids` contracts. A card-count line and first-3 Front/Back preview are parsed from the same export content. The Study Plan Anki section now points to the sidebar page instead of a disabled button. No core service, schema, or dependency change.
 - **Export:** UTF-8 TSV, whole course or weak topics only. AnkiWeb sync is not supported; Anki Desktop import is not verified.
 - **Evidence retained:** earlier browser downloads of the Python Basics export (all questions: 9 cards; weak topics: 3 cards) are not repeated here.
 - **Database Save / Restore:** still disabled. Candidate `17aaf9f44988feee06cd3970c0463319b0530e78` has no explicit approval recorded, so it is not integrated.
