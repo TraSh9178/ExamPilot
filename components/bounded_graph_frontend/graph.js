@@ -247,19 +247,6 @@
     setValue(nodeId);
   }
 
-  function advanceAxis(position, velocity, elapsed, minimum, maximum) {
-    const span = maximum - minimum;
-    if (span <= 0) return { position: (minimum + maximum) / 2, velocity: 0 };
-
-    const period = span * 2;
-    const travel = position - minimum + velocity * elapsed;
-    const phase = ((travel % period) + period) % period;
-    if (phase <= span) {
-      return { position: minimum + phase, velocity };
-    }
-    return { position: maximum - (phase - span), velocity: -velocity };
-  }
-
   function applyGraphForces(nodes, positions, bounds, elapsed) {
     const accelerations = new Map(
       nodes.map((node) => [node.id, { x: 0, y: 0 }]),
@@ -363,19 +350,22 @@
 
     if (bounds.right >= bounds.left && bounds.bottom >= bounds.top) {
       applyGraphForces(nodes, positions, bounds, elapsed);
+      window.ExamGraphPhysics.resolveCollisions(
+        nodes, positions, velocities, draggedNode?.id, network.getScale(),
+      );
       for (const node of nodes) {
         if (draggedNode && draggedNode.id === node.id) continue;
         const point = positions.get(node.id);
         if (!point) continue;
         const velocity = velocities.get(node.id);
-        const nextX = advanceAxis(
+        const nextX = window.ExamGraphPhysics.advanceAxis(
           point.x,
           velocity.x,
           elapsed,
           bounds.left,
           bounds.right,
         );
-        const nextY = advanceAxis(
+        const nextY = window.ExamGraphPhysics.advanceAxis(
           point.y,
           velocity.y,
           elapsed,

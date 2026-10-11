@@ -2,6 +2,12 @@
 
 AI-powered exam preparation platform for any subject.
 
+For the current account UI and restored original-robot Pilot candidate, see
+[testing on another computer](docs/other_computer_testing.md). This branch is
+for UI/Auth testing; learning-record Save/Restore UI integration is pending.
+Page headings, course titles, cards and supporting text use the
+[shared typography scale](docs/ui_typography.md).
+
 ## Accounts and login
 
 The website requires an account before opening the learning pages. Users can

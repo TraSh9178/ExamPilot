@@ -6,12 +6,7 @@ from services.account_sync import (
     save_course_to_account,
 )
 from services.course_state import save_course
-from services.gemini_service import ask_tutor, generate_questions
-from services.ui_adapters import (
-    PENDING_INTEGRATION_MESSAGES,
-    tutor_question_key,
-    tutor_result_key,
-)
+from services.gemini_service import generate_questions
 from services.ui_style import apply_app_styles
 
 apply_app_styles()
@@ -26,8 +21,9 @@ if course is None:
     st.page_link("pages/0_Dashboard.py", label="Back to Dashboard")
     st.stop()
 
-st.subheader(course.course_name)
-st.caption(f"{len(course.topics)} knowledge points")
+with st.container(key="study_plan_overview"):
+    st.subheader(course.course_name)
+    st.caption(f"{len(course.topics)} knowledge points")
 
 if not course.topics:
     st.info("This course has no topics yet.")
@@ -59,7 +55,7 @@ if scope_key not in st.session_state:
         st.session_state.get(confirmed_key, [])
     )
 
-with st.container(border=True):
+with st.container(border=True, key="study_scope_panel"):
     st.subheader("Choose your exam scope")
     selected_topic_ids = st.multiselect(
         "Knowledge points",
@@ -199,45 +195,6 @@ if confirmed_topic_ids:
         st.info("No questions are available in the confirmed scope.")
 else:
     st.info("Confirm your topic selection before starting practice.")
-
-with st.expander("Gemini Tutor"):
-    st.caption(PENDING_INTEGRATION_MESSAGES["tutor"])
-    st.caption(f"Current course: {course.course_name}")
-    with st.form(key=f"tutor_form_{course.course_id}"):
-        st.text_area(
-            "Your question",
-            key=tutor_question_key(course.course_id),
-            placeholder="Ask a question about this course...",
-        )
-        tutor_submitted = st.form_submit_button(
-            "Send question",
-            key=f"tutor_send_{course.course_id}",
-            type="primary",
-        )
-
-    if tutor_submitted:
-        tutor_question = st.session_state[tutor_question_key(course.course_id)]
-        with st.spinner("Tutor is answering..."):
-            tutor_response = ask_tutor(
-                course.model_dump(),
-                tutor_question,
-            )
-        st.session_state[tutor_result_key(course.course_id)] = {
-            "question": tutor_question,
-            "response": tutor_response,
-        }
-
-    tutor_result = st.session_state.get(tutor_result_key(course.course_id))
-    if tutor_result:
-        st.caption(f"Question: {tutor_result['question']}")
-        if tutor_result["response"]["ok"]:
-            st.markdown(tutor_result["response"]["answer"])
-        else:
-            st.error(tutor_result["response"]["message"])
-
-with st.expander("Anki flashcards"):
-    st.caption(PENDING_INTEGRATION_MESSAGES["anki"])
-    st.caption("Use Export to Anki in the sidebar to download this course's cards.")
 
 with st.expander("Save / Restore"):
     render_save_restore_controls(course)

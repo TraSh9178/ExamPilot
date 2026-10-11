@@ -5,8 +5,12 @@ from services.account_sync import (
     render_sidebar_status,
     restore_after_login,
 )
-from services.auth_session import current_user, logout_session
+from services.auth_session import current_user
+
 from services.auth_ui import render_auth_page
+from services.account_ui import render_account_page, render_account_sidebar
+from services.ui_style import apply_app_styles
+from services.tutor_assistant_ui import clear_tutor_browser_state, render_tutor_assistant
 
 st.set_page_config(
     page_title="ExamPilot",
@@ -18,6 +22,7 @@ st.set_page_config(
 user = current_user(st.session_state)
 
 if user is None:
+    clear_tutor_browser_state()
     st.navigation(
         [st.Page(render_auth_page, title="Log in", icon=":material/login:", default=True)],
         position="hidden",
@@ -25,26 +30,11 @@ if user is None:
     st.stop()
 
 restore_after_login(st.session_state)
-
-with st.sidebar:
-    st.caption("Signed in as")
-    st.text(user.username)
-    discard_confirmed = True
-    if has_unresolved_conflicts(st.session_state):
-        discard_confirmed = st.checkbox(
-            "Discard conflicting local records on log out",
-            key="confirm_discard_conflicts",
-        )
-    st.button(
-        "Log out",
-        key="logout_button",
-        disabled=not discard_confirmed,
-        icon=":material/logout:",
-        on_click=logout_session,
-        args=(st.session_state,),
-        use_container_width=True,
-    )
-    render_sidebar_status()
+apply_app_styles()
+account_page = st.Page(
+    render_account_page, title="My account", icon=":material/account_circle:",
+    url_path="account", visibility="hidden",
+)
 
 pages = [
     st.Page(
@@ -80,4 +70,21 @@ pages = [
     ),
 ]
 
-st.navigation(pages).run()
+navigation = st.navigation([*pages, account_page])
+render_account_sidebar(account_page)
+with st.sidebar:
+    render_sidebar_status()
+
+# Reserve room for the floating entry at the bottom of narrow study pages.
+st.markdown(
+    """<style>
+    @media (max-width: 480px) {
+        [data-testid="stMain"] [data-testid="stMainBlockContainer"] {
+            padding-bottom: 6rem;
+        }
+    }
+    </style>""",
+    unsafe_allow_html=True,
+)
+render_tutor_assistant()
+navigation.run()
