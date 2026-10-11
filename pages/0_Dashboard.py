@@ -125,9 +125,9 @@ if st.session_state.show_course_setup:
         )
 
         st.caption(
-            "Maximum file size: 5 MiB. "
-            "Supports UTF-8 TXT, text-based PDF, text-based PPTX, and PNG/JPEG images (OCR via Tesseract + English language pack). "
-            "Image OCR currently verified on macOS only; Windows support pending. "
+            "Maximum file size: 5 MiB; extracted text limited to 50,000 characters. "
+            "Supports UTF-8 TXT, text-based PDF, text-based PPTX, and PNG/JPEG images (requires Tesseract + English language pack for OCR). "
+            "Image OCR verification: macOS pending completion, Windows pending. "
             "PPTX slide notes, scanned PDF OCR, DOCX, and other formats are not supported."
         )
 
