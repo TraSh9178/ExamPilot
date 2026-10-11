@@ -216,10 +216,11 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
                 config=config,
             )
             response_text = response.text
-    except APIError:
+    except APIError as exc:
         return {
             "ok": False,
             "error_code": "API_ERROR",
+            "status_code": exc.code,
             "message": "Gemini API 请求失败，请检查配置或稍后重试。",
         }
     except Exception:
@@ -545,10 +546,11 @@ def generate_questions(
                 config=config,
             )
             response_text = response.text
-    except APIError:
+    except APIError as exc:
         return {
             "ok": False,
             "error_code": "API_ERROR",
+            "status_code": exc.code,
             "message": "Gemini API 请求失败，请检查配置或稍后重试。",
         }
     except Exception:
