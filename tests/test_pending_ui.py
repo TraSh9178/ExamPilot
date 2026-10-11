@@ -1,7 +1,9 @@
+from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
 
 import pymupdf
+from PIL import Image
 import streamlit as st
 from streamlit.testing.v1 import AppTest
 
@@ -116,6 +118,29 @@ def test_dashboard_extracts_pdf_and_displays_actual_page_sources(monkeypatch):
     assert document["pages"][0]["page"] == 1
     assert any("course.pdf · Page 1" in item.value for item in app.caption)
     assert any("PDF pages (1)" in item.label for item in app.expander)
+
+
+def test_dashboard_image_ocr_uses_image_labels_and_updated_copy(monkeypatch):
+    upload = install_upload_mock(monkeypatch)
+    monkeypatch.setattr(
+        "services.document_service._run_ocr", lambda image: "OCR text"
+    )
+    app = AppTest.from_file(str(DASHBOARD_PATH)).run()
+    app.button(key="create_course_button").click().run()
+    stream = BytesIO()
+    Image.new("RGB", (50, 50), "white").save(stream, format="PNG")
+    upload["file"] = make_upload("scan.png", stream.getvalue())
+    app.run()
+    click_extract(app)
+
+    assert not app.exception
+    assert any("Image OCR text (1)" in item.label for item in app.expander)
+    assert not any("PDF pages" in item.label for item in app.expander)
+    assert any("scan.png · Image OCR text" in item.value for item in app.caption)
+    assert any(
+        "verified on macOS" in item.value and "Windows has not been verified" in item.value
+        for item in app.caption
+    )
 
 
 def test_dashboard_failure_message_clears_old_document_and_disables_generation(

@@ -16,6 +16,8 @@ from services.document_service import extract_document
 from services.gemini_service import generate_topics
 from services.ui_style import apply_app_styles
 
+IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg")
+
 DEMO_COURSES = (
     ("Microeconomics Demo", "sample_course.json", "econ101"),
     ("Calculus I Demo", "calculus_i_demo.json", "calculus-i-demo"),
@@ -132,8 +134,9 @@ if st.session_state.show_course_setup:
         st.caption(
             "Maximum file size: 5 MiB; extracted text limited to 50,000 characters. "
             "Supports UTF-8 TXT, text-based PDF, text-based PPTX, and PNG/JPEG images (requires Tesseract + English language pack for OCR). "
-            "Image OCR verification: macOS pending completion, Windows pending. "
-            "PPTX slide notes, scanned PDF OCR, DOCX, and other formats are not supported."
+            "Image OCR has been verified on macOS with clear English PNG/JPG/JPEG images; "
+            "Windows has not been verified. Chinese OCR is not verified (the OCR language pack defaults to English). "
+            "Not supported: scanned PDF OCR, PPTX slide notes, DOCX, and other formats."
         )
 
         file_bytes = (
@@ -189,26 +192,32 @@ if st.session_state.show_course_setup:
                     else (
                         f"Slide {page}"
                         if document_extension == ".pptx"
-                        else f"Page {page}"
+                        else (
+                            "Image OCR text"
+                            if document_extension in IMAGE_EXTENSIONS
+                            else f"Page {page}"
+                        )
                     )
                 )
                 st.caption(f"{source['filename']} · {location}")
 
             if "pages" in document:
-                page_label = (
-                    "PPTX slides"
-                    if document_extension == ".pptx"
-                    else "PDF pages"
-                )
+                if document_extension == ".pptx":
+                    page_label = "PPTX slides"
+                elif document_extension in IMAGE_EXTENSIONS:
+                    page_label = "Image OCR text"
+                else:
+                    page_label = "PDF pages"
                 with st.expander(
                     f"{page_label} ({len(document['pages'])})"
                 ):
                     for page in document["pages"]:
-                        page_unit = (
-                            "Slide"
-                            if document_extension == ".pptx"
-                            else "Page"
-                        )
+                        if document_extension == ".pptx":
+                            page_unit = "Slide"
+                        elif document_extension in IMAGE_EXTENSIONS:
+                            page_unit = "Image"
+                        else:
+                            page_unit = "Page"
                         st.markdown(
                             f"**{page_unit} {page['page']}** · "
                             f"{len(page['text']):,} characters"
