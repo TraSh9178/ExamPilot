@@ -49,3 +49,56 @@ def select_course(
             return course
 
     raise KeyError(f"Course not found: {course_id}")
+
+
+def remove_course(
+    session_state: MutableMapping[str, Any],
+    course_id: str,
+) -> StudyPackage:
+    """Remove a saved course and its course-specific session state."""
+    initialize_courses(session_state)
+
+    for index, course in enumerate(session_state["courses"]):
+        if course.course_id == course_id:
+            removed_course = session_state["courses"].pop(index)
+            current_course = session_state.get("current_course")
+            if (
+                current_course is not None
+                and current_course.course_id == course_id
+            ):
+                session_state["current_course"] = None
+
+            practice_key = f"active_practice_{course_id}"
+            history_key = f"practice_history_{course_id}"
+            practices = [
+                session_state.pop(practice_key, None),
+                *session_state.pop(history_key, {}).values(),
+            ]
+            for practice in practices:
+                if practice is None:
+                    continue
+                session = practice.get("session")
+                if session is None:
+                    continue
+                for question in practice.get("questions", []):
+                    session_state.pop(
+                        f"answer_{session.session_id}_{question.id}",
+                        None,
+                    )
+
+            for key in (
+                f"confirmed_scope_{course_id}",
+                f"scope_selection_{course_id}",
+                f"course_document_{course_id}",
+                f"course_stage_{course_id}",
+                f"practice_mode_{course_id}",
+                f"practice_topic_{course_id}",
+                f"practice_count_{course_id}",
+                f"performance_mode_{course_id}",
+                f"graph_mode_{course_id}",
+            ):
+                session_state.pop(key, None)
+
+            return removed_course
+
+    raise KeyError(f"Course not found: {course_id}")

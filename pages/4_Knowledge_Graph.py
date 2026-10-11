@@ -6,20 +6,17 @@ from components.knowledge_graph import (
 )
 from services.graph_service import build_mastery_graph
 from services.mastery_engine import calculate_topic_stats
+from services.ui_style import apply_app_styles
 
-st.set_page_config(
-    page_title="Knowledge Graph | ExamPilot",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+apply_app_styles()
 
-st.title("Knowledge Graph")
+st.title("Knowledge Map")
 
 course = st.session_state.get("current_course")
 
 if course is None:
     st.info("Load a course from the dashboard first.")
-    st.page_link("app.py", label="Back to Dashboard")
+    st.page_link("pages/0_Dashboard.py", label="Back to Dashboard")
     st.stop()
 
 st.subheader(course.course_name)

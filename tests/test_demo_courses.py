@@ -280,11 +280,6 @@ def test_homepage_loads_both_demos_reuses_ids_and_opens_each(
     app = AppTest.from_file(str(app_path)).run()
     assert not app.exception
 
-    app.button[0].click().run()
-    assert not app.exception
-    app.button[1].click().run()
-    assert not app.exception
-
     assert [
         course.course_id for course in app.session_state["courses"]
     ] == ["econ101", "calculus-i-demo"]
@@ -295,7 +290,7 @@ def test_homepage_loads_both_demos_reuses_ids_and_opens_each(
         header.value for header in app.subheader
     ]
 
-    app.button[1].click().run()
+    app.run()
     assert not app.exception
     assert [
         course.course_id for course in app.session_state["courses"]
@@ -317,9 +312,6 @@ def test_homepage_loads_both_demos_reuses_ids_and_opens_each(
     ]
 
     calculus_app = AppTest.from_file(str(app_path)).run()
-    calculus_app.button[0].click().run()
-    calculus_app.button[1].click().run()
-    calculus_app.run()
     next(
         button
         for button in calculus_app.button

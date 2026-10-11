@@ -3,21 +3,18 @@ import streamlit as st
 from models.schemas import StudyPackage
 from services.course_state import save_course
 from services.gemini_service import generate_questions
+from services.ui_style import apply_app_styles
 
-st.set_page_config(
-    page_title="Study Hub | ExamPilot",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+apply_app_styles()
 
-st.title("Study Hub")
+st.title("Study Plan")
 
 # Read the course selected on the dashboard.
 course = st.session_state.get("current_course")
 
 if course is None:
     st.info("Load a course from the dashboard to start studying.")
-    st.page_link("app.py", label="Back to Dashboard")
+    st.page_link("pages/0_Dashboard.py", label="Back to Dashboard")
     st.stop()
 
 st.subheader(course.course_name)

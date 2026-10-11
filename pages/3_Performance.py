@@ -4,21 +4,18 @@ from services.mastery_engine import (
     calculate_topic_stats,
     get_mastery_status,
 )
+from services.ui_style import apply_app_styles
 
 
-st.set_page_config(
-    page_title="Performance | ExamPilot",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+apply_app_styles()
 
-st.title("Performance")
+st.title("Progress")
 
 course = st.session_state.get("current_course")
 
 if course is None:
     st.info("Load a course from the dashboard first.")
-    st.page_link("app.py", label="Back to Dashboard")
+    st.page_link("pages/0_Dashboard.py", label="Back to Dashboard")
     st.stop()
 
 st.subheader(course.course_name)

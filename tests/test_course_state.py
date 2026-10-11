@@ -5,6 +5,7 @@ from streamlit.testing.v1 import AppTest
 from models.schemas import AttemptResult, ExamSession, StudyPackage
 from services.course_state import (
     initialize_courses,
+    remove_course,
     save_course,
     select_course,
 )
@@ -76,6 +77,46 @@ def test_save_course_replaces_existing_course_without_duplicates() -> None:
 
     assert state["courses"] == [updated]
     assert state["current_course"] == updated
+
+
+def test_remove_course_removes_card_and_clears_current_selection() -> None:
+    state = {}
+    first = make_course("course-1", "First course")
+    second = make_course("course-2", "Second course")
+    save_course(state, first)
+    save_course(state, second)
+    select_course(state, "course-1")
+
+    assert remove_course(state, "course-1") == first
+    assert state["courses"] == [second]
+    assert state["current_course"] is None
+
+
+def test_remove_course_clears_course_specific_practice_state() -> None:
+    course = make_course("course-1", "First course")
+    session = ExamSession(
+        session_id="session-1",
+        mode="mock",
+        question_ids=["course-1-question"],
+    )
+    state = {
+        "courses": [course],
+        "current_course": course,
+        "confirmed_scope_course-1": ["course-1-topic"],
+        "active_practice_course-1": {
+            "session": session,
+            "questions": course.questions,
+        },
+        "practice_history_course-1": {},
+        "answer_session-1_course-1-question": 0,
+    }
+
+    remove_course(state, "course-1")
+
+    assert "confirmed_scope_course-1" not in state
+    assert "active_practice_course-1" not in state
+    assert "practice_history_course-1" not in state
+    assert "answer_session-1_course-1-question" not in state
 
 
 def test_initialize_courses_migrates_existing_single_course() -> None:
@@ -156,13 +197,14 @@ def test_dashboard_renders_all_saved_courses_and_deduplicates_demo() -> None:
     app = AppTest.from_file(str(app_path)).run()
     assert not app.exception
 
-    app.button[0].click().run()
-    assert not app.exception
-    app.button[0].click().run()
+    assert [
+        course.course_id for course in app.session_state["courses"]
+    ] == ["econ101", "calculus-i-demo"]
+    app.run()
     assert not app.exception
     assert len(
         [button for button in app.button if button.label == "Open course"]
-    ) == 1
+    ) == 2
 
     first = make_course("course-1", "First course")
     second = make_course("course-2", "Second course")
@@ -175,7 +217,7 @@ def test_dashboard_renders_all_saved_courses_and_deduplicates_demo() -> None:
     open_buttons = [
         button for button in app.button if button.label == "Open course"
     ]
-    assert len(open_buttons) == 3
+    assert len(open_buttons) == 4
 
     next(
         button
@@ -193,7 +235,7 @@ def test_dashboard_renders_all_saved_courses_and_deduplicates_demo() -> None:
     open_buttons = [
         button for button in second_app.button if button.label == "Open course"
     ]
-    assert len(open_buttons) == 2
+    assert len(open_buttons) == 4
     next(
         button
         for button in open_buttons
@@ -202,3 +244,31 @@ def test_dashboard_renders_all_saved_courses_and_deduplicates_demo() -> None:
     assert not second_app.exception
     assert second_app.session_state["current_course"].course_id == "course-2"
     assert "Second course" in [header.value for header in second_app.subheader]
+
+
+def test_dashboard_can_remove_any_course() -> None:
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path)).run()
+    assert not app.exception
+
+    generated = make_course("generated-course", "Generated course")
+    save_course(app.session_state, generated)
+    app.session_state["course_stage_generated-course"] = "topics_only"
+    app.run()
+    assert not app.exception
+    assert any(
+        header.value == "Generated course"
+        for header in app.subheader
+    )
+
+    app.button(key="remove_course_generated-course").click().run()
+    app.run()
+    assert not app.exception
+    assert [
+        course.course_id for course in app.session_state["courses"]
+    ] == ["econ101", "calculus-i-demo"]
+    assert "course_stage_generated-course" not in app.session_state
+    assert not any(
+        button.key == "open_course_generated-course"
+        for button in app.button
+    )
