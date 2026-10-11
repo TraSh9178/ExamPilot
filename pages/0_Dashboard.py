@@ -16,6 +16,26 @@ from services.document_service import extract_document
 from services.gemini_service import generate_topics
 from services.ui_style import apply_app_styles
 
+DEMO_COURSES = (
+    ("Microeconomics Demo", "sample_course.json", "econ101"),
+    ("Calculus I Demo", "calculus_i_demo.json", "calculus-i-demo"),
+    ("Python Basics Demo", "demo_python_basics.json", "python-basics-demo"),
+)
+
+
+def load_demo_package(filename: str, expected_course_id: str) -> StudyPackage:
+    demo_path = Path(__file__).resolve().parents[1] / "data" / filename
+    course = StudyPackage.model_validate_json(
+        demo_path.read_text(encoding="utf-8")
+    )
+    if course.course_id != expected_course_id:
+        raise ValueError(
+            f"Demo course ID mismatch in {filename}: "
+            f"expected {expected_course_id}, got {course.course_id}"
+        )
+    return course
+
+
 apply_app_styles()
 
 campus_art = base64.b64encode(
@@ -38,37 +58,37 @@ st.markdown(
 
 initialize_courses(st.session_state)
 
-# Seed the built-in examples once per Streamlit session. The marker ensures
-# users can remove demos without having them reappear on the next rerun.
-if not st.session_state.get("default_demo_courses_loaded", False):
+# Seed built-in examples once. The versioned marker adds Python Basics to
+# sessions that already seeded the original two demos without restoring any
+# demos the user previously removed.
+if not st.session_state.get("default_demo_courses_v3_loaded", False):
     current_course = st.session_state["current_course"]
-    demo_courses = (
-        ("sample_course.json", "econ101"),
-        ("calculus_i_demo.json", "calculus-i-demo"),
-    )
     loaded_course_ids = {
         course.course_id for course in st.session_state["courses"]
     }
-    for filename, expected_course_id in demo_courses:
+    previous_demo_seeded = st.session_state.get(
+        "default_demo_courses_loaded",
+        False,
+    )
+    demo_courses_to_seed = (
+        DEMO_COURSES[2:] if previous_demo_seeded else DEMO_COURSES
+    )
+    seed_succeeded = True
+    for _, filename, expected_course_id in demo_courses_to_seed:
         if expected_course_id in loaded_course_ids:
             continue
-        demo_path = (
-            Path(__file__).resolve().parents[1] / "data" / filename
-        )
         try:
-            course = StudyPackage.model_validate_json(
-                demo_path.read_text(encoding="utf-8")
-            )
+            course = load_demo_package(filename, expected_course_id)
         except (OSError, ValueError) as error:
+            seed_succeeded = False
             st.error(f"Could not load the default demo course: {error}")
         else:
             save_course(st.session_state, course)
             loaded_course_ids.add(course.course_id)
     st.session_state["current_course"] = current_course
-    st.session_state["default_demo_courses_loaded"] = all(
-        course_id in loaded_course_ids
-        for _, course_id in demo_courses
-    )
+    if seed_succeeded:
+        st.session_state["default_demo_courses_loaded"] = True
+        st.session_state["default_demo_courses_v3_loaded"] = True
 
 # Keep the course setup panel open across page reruns.
 if "show_course_setup" not in st.session_state:

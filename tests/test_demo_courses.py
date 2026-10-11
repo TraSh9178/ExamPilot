@@ -52,6 +52,41 @@ def test_both_demo_packages_validate_and_have_distinct_ids(
     assert economics_question_ids.isdisjoint(calculus_question_ids)
     assert calculus.relationships == []
 
+    python_basics = load_demo("demo_python_basics.json")
+    assert python_basics.course_id == "python-basics-demo"
+    assert python_basics.course_name == "Python Basics"
+    assert [topic.id for topic in python_basics.topics] == [
+        "python-basics-topic-1",
+        "python-basics-topic-2",
+        "python-basics-topic-3",
+    ]
+    assert len(python_basics.questions) == 9
+    assert [question.id for question in python_basics.questions] == [
+        f"python-basics-q{i}" for i in range(1, 10)
+    ]
+    assert python_basics.relationships == []
+
+    topic_ids = (
+        economics_topic_ids
+        | calculus_topic_ids
+        | {topic.id for topic in python_basics.topics}
+    )
+    question_ids = (
+        economics_question_ids
+        | calculus_question_ids
+        | {question.id for question in python_basics.questions}
+    )
+    assert len(topic_ids) == (
+        len(economics_topic_ids)
+        + len(calculus_topic_ids)
+        + len(python_basics.topics)
+    )
+    assert len(question_ids) == (
+        len(economics_question_ids)
+        + len(calculus_question_ids)
+        + len(python_basics.questions)
+    )
+
 
 def test_calculus_demo_can_be_practiced_and_graded_offline() -> None:
     calculus = load_demo("calculus_i_demo.json")
@@ -282,7 +317,7 @@ def test_homepage_loads_both_demos_reuses_ids_and_opens_each(
 
     assert [
         course.course_id for course in app.session_state["courses"]
-    ] == ["econ101", "calculus-i-demo"]
+    ] == ["econ101", "calculus-i-demo", "python-basics-demo"]
     assert "Introduction to Microeconomics" in [
         header.value for header in app.subheader
     ]
@@ -294,10 +329,10 @@ def test_homepage_loads_both_demos_reuses_ids_and_opens_each(
     assert not app.exception
     assert [
         course.course_id for course in app.session_state["courses"]
-    ] == ["econ101", "calculus-i-demo"]
+    ] == ["econ101", "calculus-i-demo", "python-basics-demo"]
     assert len(
         [button for button in app.button if button.label == "Open course"]
-    ) == 2
+    ) == 3
 
     economics_button = next(
         button
@@ -324,3 +359,64 @@ def test_homepage_loads_both_demos_reuses_ids_and_opens_each(
     assert "Calculus I Demo" in [
         header.value for header in calculus_app.subheader
     ]
+
+
+def test_python_basics_demo_is_seeded_once_and_preserves_progress(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    assert not app.exception
+    assert [
+        course.course_id for course in app.session_state["courses"]
+    ] == ["econ101", "calculus-i-demo", "python-basics-demo"]
+
+    scope_key = "confirmed_scope_python-basics-demo"
+    history_key = "practice_history_python-basics-demo"
+    saved_scope = ["python-basics-topic-1"]
+    saved_history = {"existing-session": {"score": 100}}
+    app.session_state[scope_key] = saved_scope
+    app.session_state[history_key] = saved_history
+    app.run()
+    assert not app.exception
+    assert [
+        course.course_id for course in app.session_state["courses"]
+    ] == ["econ101", "calculus-i-demo", "python-basics-demo"]
+    assert app.session_state[scope_key] is saved_scope
+    assert app.session_state[history_key] is saved_history
+    assert len(
+        [button for button in app.button if button.label == "Open course"]
+    ) == 3
+
+
+def test_existing_demo_session_migrates_python_without_restoring_deleted_demos(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    assert not app.exception
+
+    app.session_state["courses"] = [
+        course
+        for course in app.session_state["courses"]
+        if course.course_id != "python-basics-demo"
+    ]
+    app.session_state["current_course"] = app.session_state["courses"][0]
+    app.session_state["default_demo_courses_loaded"] = True
+    del app.session_state["default_demo_courses_v3_loaded"]
+    app.run()
+    assert not app.exception
+    assert [
+        course.course_id for course in app.session_state["courses"]
+    ] == ["econ101", "calculus-i-demo", "python-basics-demo"]
+
+    app.session_state["courses"] = [
+        course
+        for course in app.session_state["courses"]
+        if course.course_id != "python-basics-demo"
+    ]
+    app.run()
+    assert not app.exception
+    assert [
+        course.course_id for course in app.session_state["courses"]
+    ] == ["econ101", "calculus-i-demo"]

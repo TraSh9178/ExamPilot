@@ -199,12 +199,12 @@ def test_dashboard_renders_all_saved_courses_and_deduplicates_demo() -> None:
 
     assert [
         course.course_id for course in app.session_state["courses"]
-    ] == ["econ101", "calculus-i-demo"]
+    ] == ["econ101", "calculus-i-demo", "python-basics-demo"]
     app.run()
     assert not app.exception
     assert len(
         [button for button in app.button if button.label == "Open course"]
-    ) == 2
+    ) == 3
 
     first = make_course("course-1", "First course")
     second = make_course("course-2", "Second course")
@@ -217,7 +217,7 @@ def test_dashboard_renders_all_saved_courses_and_deduplicates_demo() -> None:
     open_buttons = [
         button for button in app.button if button.label == "Open course"
     ]
-    assert len(open_buttons) == 4
+    assert len(open_buttons) == 5
 
     next(
         button
@@ -235,7 +235,7 @@ def test_dashboard_renders_all_saved_courses_and_deduplicates_demo() -> None:
     open_buttons = [
         button for button in second_app.button if button.label == "Open course"
     ]
-    assert len(open_buttons) == 4
+    assert len(open_buttons) == 5
     next(
         button
         for button in open_buttons
@@ -266,7 +266,7 @@ def test_dashboard_can_remove_any_course() -> None:
     assert not app.exception
     assert [
         course.course_id for course in app.session_state["courses"]
-    ] == ["econ101", "calculus-i-demo"]
+    ] == ["econ101", "calculus-i-demo", "python-basics-demo"]
     assert "course_stage_generated-course" not in app.session_state
     assert not any(
         button.key == "open_course_generated-course"
