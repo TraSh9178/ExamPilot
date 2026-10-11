@@ -3,7 +3,7 @@ import os
 
 from google import genai
 from google.genai.errors import APIError
-from google.genai.types import GenerateContentConfig
+from google.genai.types import GenerateContentConfig, HttpOptions
 from pydantic import TypeAdapter, ValidationError
 
 from models.schemas import Question, Relationship, StudyPackage, Topic
@@ -1087,7 +1087,10 @@ def ask_tutor(
     )
 
     try:
-        with genai.Client(api_key=api_key) as client:
+        with genai.Client(
+            api_key=api_key,
+            http_options=HttpOptions(timeout=30_000),
+        ) as client:
             response = client.models.generate_content(
                 model=model,
                 contents=contents,

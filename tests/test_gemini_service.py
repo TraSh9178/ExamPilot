@@ -193,8 +193,9 @@ def install_fake_client(monkeypatch, *, text=None, error=None):
             return SimpleNamespace(text=text)
 
     class FakeClient:
-        def __init__(self, *, api_key):
+        def __init__(self, *, api_key, http_options=None):
             self.api_key = api_key
+            self.http_options = http_options
             self.models = FakeModels()
             self.exited = False
 
@@ -205,8 +206,8 @@ def install_fake_client(monkeypatch, *, text=None, error=None):
             self.exited = True
             return False
 
-    def client_factory(*, api_key):
-        client = FakeClient(api_key=api_key)
+    def client_factory(*, api_key, http_options=None):
+        client = FakeClient(api_key=api_key, http_options=http_options)
         clients.append(client)
         return client
 
@@ -1376,6 +1377,21 @@ def test_ask_tutor_returns_plain_answer_with_default_model_and_scoped_context(
     assert clients[0].exited is True
 
 
+def test_ask_tutor_excludes_extra_raw_document_fields(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    package = make_tutor_package()
+    package["original_document"] = "PRIVATE RAW DOCUMENT MARKER"
+    package["raw_file_bytes"] = b"private-original-file-bytes"
+    clients = install_fake_client(monkeypatch, text="Answer.")
+
+    result = gemini_service.ask_tutor(package, "Explain the course topic.")
+
+    assert result == {"ok": True, "answer": "Answer."}
+    request = clients[0].models.calls[0]["contents"]
+    assert "PRIVATE RAW DOCUMENT MARKER" not in request
+    assert "private-original-file-bytes" not in request
+
+
 def test_ask_tutor_filters_topic_context_and_uses_custom_model(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
     monkeypatch.setenv("GEMINI_MODEL", "custom-tutor-model")
@@ -1599,3 +1615,33 @@ def test_ask_tutor_handles_generic_exception_without_exposing_details(monkeypatc
     assert FAKE_API_KEY not in str(result)
     assert private_message not in str(result)
     assert "Private question text." not in str(result)
+
+
+def test_ask_tutor_handles_timeout_without_exposing_details(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    private_message = f"{FAKE_API_KEY} private question and course context"
+    install_fake_client(monkeypatch, error=TimeoutError(private_message))
+
+    result = gemini_service.ask_tutor(
+        make_tutor_package(),
+        "Private question text.",
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "GENERATION_ERROR"
+    assert FAKE_API_KEY not in str(result)
+    assert private_message not in str(result)
+    assert "Private question text." not in str(result)
+
+
+def test_ask_tutor_sets_sdk_timeout_in_milliseconds(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(monkeypatch, text="Answer.")
+
+    result = gemini_service.ask_tutor(
+        make_tutor_package(),
+        "Explain the topic.",
+    )
+
+    assert result["ok"] is True
+    assert clients[0].http_options.timeout == 30_000

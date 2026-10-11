@@ -613,6 +613,62 @@ def test_extract_image_returns_engine_unavailable_without_cloud_fallback(
     assert "/private/tesseract path" not in result["message"]
 
 
+def test_extract_image_returns_engine_unavailable_when_pytesseract_import_fails(
+    monkeypatch,
+):
+    def fail_import():
+        raise ModuleNotFoundError("private pytesseract installation path")
+
+    monkeypatch.setattr(document_service, "_load_pytesseract", fail_import)
+
+    result = extract_image(make_image_bytes(), "course.png")
+
+    assert result["ok"] is False
+    assert result["error_code"] == "OCR_ENGINE_UNAVAILABLE"
+    assert "private pytesseract installation path" not in result["message"]
+
+
+@pytest.mark.parametrize("missing_component", ["pytesseract", "tesseract"])
+@pytest.mark.parametrize("filename", ["notes.txt", "course.pdf", "course.pptx"])
+def test_non_image_documents_work_without_ocr_dependencies(
+    monkeypatch,
+    missing_component,
+    filename,
+):
+    ocr_loader_calls = []
+
+    class MissingEnginePytesseract:
+        TesseractNotFoundError = FakeTesseractNotFoundError
+        TesseractError = FakeTesseractError
+
+        def get_languages(self, *, config):
+            raise FakeTesseractNotFoundError("missing Tesseract executable")
+
+        def image_to_string(self, *args, **kwargs):
+            pytest.fail("Text document extraction must not run OCR")
+
+    def fake_ocr_loader():
+        ocr_loader_calls.append(True)
+        if missing_component == "pytesseract":
+            raise ModuleNotFoundError("pytesseract is unavailable")
+        return MissingEnginePytesseract()
+
+    monkeypatch.setattr(document_service, "_load_pytesseract", fake_ocr_loader)
+
+    if filename.endswith(".txt"):
+        file_bytes = b"Text extracted without OCR."
+    elif filename.endswith(".pdf"):
+        file_bytes = make_pdf(["PDF extracted without OCR."])
+    else:
+        file_bytes = make_pptx([[('text', 'PPTX extracted without OCR.')]])
+
+    result = document_service.extract_document(file_bytes, filename)
+
+    assert result["ok"] is True
+    assert "without OCR" in result["text"]
+    assert ocr_loader_calls == []
+
+
 def test_extract_image_returns_language_unavailable(monkeypatch):
     monkeypatch.setenv("OCR_LANG", "chi_sim")
     calls = install_fake_ocr(monkeypatch, languages=("eng",))
