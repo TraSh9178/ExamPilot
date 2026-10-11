@@ -57,6 +57,37 @@ def make_pdf_document():
     }
 
 
+def make_pptx_document():
+    pages = [
+        {"page": 1, "text": "First slide material."},
+        {"page": 2, "text": ""},
+        {"page": 3, "text": "Third slide material."},
+    ]
+    return {
+        "ok": True,
+        "filename": "course.PPTX",
+        "text": "\n".join(page["text"] for page in pages),
+        "pages": pages,
+        "sources": [
+            {"filename": "course.PPTX", "page": 1},
+            {"filename": "course.PPTX", "page": 3},
+        ],
+        "raw_file_bytes": b"original-pptx-bytes-must-not-be-sent",
+    }
+
+
+def make_image_document():
+    text = "OCR extracted image text."
+    return {
+        "ok": True,
+        "filename": "course.JPEG",
+        "text": text,
+        "pages": [{"page": 1, "text": text}],
+        "sources": [{"filename": "course.JPEG", "page": 1}],
+        "raw_file_bytes": b"original-image-bytes-must-not-be-sent",
+    }
+
+
 def make_study_package():
     return StudyPackage(
         course_id="course-1",
@@ -89,6 +120,23 @@ def make_study_package():
             )
         ],
     )
+
+
+def make_tutor_package():
+    package = make_study_package().model_dump()
+    package["relationships"] = [
+        {
+            "from_topic": "topic-1",
+            "to_topic": "topic-2",
+            "type": "related",
+        },
+        {
+            "from_topic": "topic-2",
+            "to_topic": "topic-3",
+            "type": "related",
+        },
+    ]
+    return package
 
 
 def make_questions(
@@ -145,8 +193,9 @@ def install_fake_client(monkeypatch, *, text=None, error=None):
             return SimpleNamespace(text=text)
 
     class FakeClient:
-        def __init__(self, *, api_key):
+        def __init__(self, *, api_key, http_options=None):
             self.api_key = api_key
+            self.http_options = http_options
             self.models = FakeModels()
             self.exited = False
 
@@ -157,8 +206,8 @@ def install_fake_client(monkeypatch, *, text=None, error=None):
             self.exited = True
             return False
 
-    def client_factory(*, api_key):
-        client = FakeClient(api_key=api_key)
+    def client_factory(*, api_key, http_options=None):
+        client = FakeClient(api_key=api_key, http_options=http_options)
         clients.append(client)
         return client
 
@@ -317,6 +366,65 @@ def test_generate_topics_pdf_accepts_only_real_source_pages(monkeypatch):
     assert '"citable_page_numbers": [2, 4]' in request
 
 
+def test_generate_topics_pptx_uses_parsed_slides_and_real_slide_citations(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_topics(source_pages=[1, 3])),
+    )
+
+    result = gemini_service.generate_topics(
+        make_pptx_document(),
+        "course-pptx",
+        "Course PPTX",
+    )
+
+    assert result["ok"] is True
+    assert all(
+        topic["source_pages"] == [1, 3]
+        for topic in result["package"]["topics"]
+    )
+    request = clients[0].models.calls[0]["contents"]
+    assert "Document type: PPTX" in request
+    assert '"page": 1' in request
+    assert '"page": 2' in request
+    assert '"page": 3' in request
+    assert '"citable_page_numbers": [1, 3]' in request
+    assert "First slide material." in request
+    assert "Third slide material." in request
+    assert "original-pptx-bytes-must-not-be-sent" not in request
+
+
+def test_generate_topics_uses_extracted_image_text_and_page_one_citation(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_topics(source_pages=[1])),
+    )
+
+    result = gemini_service.generate_topics(
+        make_image_document(),
+        "course-image",
+        "Course Image",
+    )
+
+    assert result["ok"] is True
+    assert all(
+        topic["source_pages"] == [1]
+        for topic in result["package"]["topics"]
+    )
+    request = clients[0].models.calls[0]["contents"]
+    assert "Document type: IMAGE" in request
+    assert '"page": 1' in request
+    assert '"citable_page_numbers": [1]' in request
+    assert "OCR extracted image text." in request
+    assert "original-image-bytes-must-not-be-sent" not in request
+
+
 def test_generate_topics_uses_custom_model(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
     monkeypatch.setenv("GEMINI_MODEL", "custom-topic-model")
@@ -344,6 +452,23 @@ def test_generate_topics_rejects_pdf_citation_not_in_document_sources(monkeypatc
     assert result["ok"] is False
     assert result["error_code"] == "INVALID_CITATION"
     assert clients[0].exited is True
+
+
+def test_generate_topics_rejects_blank_pptx_slide_citation(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_topics(source_pages=[2])),
+    )
+
+    result = gemini_service.generate_topics(
+        make_pptx_document(),
+        "course-pptx",
+        "Course PPTX",
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "INVALID_CITATION"
 
 
 def test_generate_topics_rejects_coerced_pdf_page_citation(monkeypatch):
@@ -574,6 +699,63 @@ def test_generate_questions_pdf_accepts_only_real_text_page_citations(monkeypatc
     assert '"citable_page_numbers": [2, 4]' in request
 
 
+def test_generate_questions_pptx_uses_parsed_slides_and_real_slide_citations(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_questions(topic_id="topic-2", source_pages=[3])),
+    )
+
+    result = gemini_service.generate_questions(
+        make_pptx_document(),
+        make_study_package(),
+        ["topic-2"],
+    )
+
+    assert result["ok"] is True
+    assert all(
+        question["source_pages"] == [3]
+        for question in result["package"]["questions"]
+    )
+    request = clients[0].models.calls[0]["contents"]
+    assert "Document type: PPTX" in request
+    assert '"page": 1' in request
+    assert '"page": 2' in request
+    assert '"page": 3' in request
+    assert '"citable_page_numbers": [1, 3]' in request
+    assert "Third slide material." in request
+    assert "original-pptx-bytes-must-not-be-sent" not in request
+
+
+def test_generate_questions_uses_extracted_image_text_and_page_one_citation(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_questions(source_pages=[1])),
+    )
+
+    result = gemini_service.generate_questions(
+        make_image_document(),
+        make_study_package(),
+        ["topic-1"],
+    )
+
+    assert result["ok"] is True
+    assert all(
+        question["source_pages"] == [1]
+        for question in result["package"]["questions"]
+    )
+    request = clients[0].models.calls[0]["contents"]
+    assert "Document type: IMAGE" in request
+    assert '"citable_page_numbers": [1]' in request
+    assert "OCR extracted image text." in request
+    assert "original-image-bytes-must-not-be-sent" not in request
+
+
 @pytest.mark.parametrize(
     "confirmed_topic_ids",
     [None, [], ["topic-1", "topic-1"], ["unknown-topic"]],
@@ -722,6 +904,23 @@ def test_generate_questions_rejects_invalid_pdf_citation(monkeypatch):
 
     result = gemini_service.generate_questions(
         make_pdf_document(),
+        make_study_package(),
+        ["topic-1"],
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "INVALID_CITATION"
+
+
+def test_generate_questions_rejects_blank_pptx_slide_citation(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_questions(source_pages=[2])),
+    )
+
+    result = gemini_service.generate_questions(
+        make_pptx_document(),
         make_study_package(),
         ["topic-1"],
     )
@@ -911,6 +1110,54 @@ def test_generate_relationships_supplies_pdf_pages_as_material(monkeypatch):
     assert '"text": "Second extractable page."' in request
 
 
+def test_generate_relationships_supplies_parsed_pptx_slides_as_material(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_relationships()),
+    )
+
+    result = gemini_service.generate_relationships(
+        make_pptx_document(),
+        make_study_package(),
+    )
+
+    assert result["ok"] is True
+    request = clients[0].models.calls[0]["contents"]
+    assert "Document type: PPTX" in request
+    assert '"page": 1' in request
+    assert '"text": "First slide material."' in request
+    assert '"page": 2' in request
+    assert '"text": ""' in request
+    assert '"page": 3' in request
+    assert '"text": "Third slide material."' in request
+    assert "original-pptx-bytes-must-not-be-sent" not in request
+
+
+def test_generate_relationships_supplies_extracted_image_page_as_material(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_relationships()),
+    )
+
+    result = gemini_service.generate_relationships(
+        make_image_document(),
+        make_study_package(),
+    )
+
+    assert result["ok"] is True
+    request = clients[0].models.calls[0]["contents"]
+    assert "Document type: IMAGE" in request
+    assert '"page": 1' in request
+    assert '"text": "OCR extracted image text."' in request
+    assert "original-image-bytes-must-not-be-sent" not in request
+
+
 @pytest.mark.parametrize(
     "edges",
     [
@@ -1097,3 +1344,304 @@ def test_missing_key_fallback_and_sample_course_schema(monkeypatch):
 
     assert sample_package.topics
     assert sample_package.questions
+
+
+def test_ask_tutor_returns_plain_answer_with_default_model_and_scoped_context(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
+    clients = install_fake_client(monkeypatch, text="A clear tutoring answer.")
+
+    result = gemini_service.ask_tutor(
+        make_tutor_package(),
+        "Explain the main idea clearly.",
+    )
+
+    assert result == {"ok": True, "answer": "A clear tutoring answer."}
+    request = clients[0].models.calls[0]
+    config = clients[0].models.configs[0]
+    assert request["model"] == "gemini-3.8-flash"
+    assert "Explain the main idea clearly." in request["contents"]
+    assert "General Studies" in request["contents"]
+    assert "Supported summary 1." in request["contents"]
+    assert '"correct_index"' not in request["contents"]
+    assert '"options"' not in request["contents"]
+    assert "Existing question?" not in request["contents"]
+    assert "Existing explanation." not in request["contents"]
+    assert '"course_id"' not in request["contents"]
+    assert config.response_schema is None
+    assert "untrusted" in config.system_instruction.casefold()
+    assert "both the user's question and course context" in config.system_instruction
+    assert "system rules" in config.system_instruction.casefold()
+    assert clients[0].exited is True
+
+
+def test_ask_tutor_excludes_extra_raw_document_fields(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    package = make_tutor_package()
+    package["original_document"] = "PRIVATE RAW DOCUMENT MARKER"
+    package["raw_file_bytes"] = b"private-original-file-bytes"
+    clients = install_fake_client(monkeypatch, text="Answer.")
+
+    result = gemini_service.ask_tutor(package, "Explain the course topic.")
+
+    assert result == {"ok": True, "answer": "Answer."}
+    request = clients[0].models.calls[0]["contents"]
+    assert "PRIVATE RAW DOCUMENT MARKER" not in request
+    assert "private-original-file-bytes" not in request
+
+
+def test_ask_tutor_filters_topic_context_and_uses_custom_model(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    monkeypatch.setenv("GEMINI_MODEL", "custom-tutor-model")
+    clients = install_fake_client(monkeypatch, text="Topic-specific answer.")
+
+    result = gemini_service.ask_tutor(
+        make_tutor_package(),
+        "How is this topic connected?",
+        topic_id="topic-1",
+    )
+
+    assert result == {"ok": True, "answer": "Topic-specific answer."}
+    request = clients[0].models.calls[0]["contents"]
+    assert clients[0].models.calls[0]["model"] == "custom-tutor-model"
+    assert '"id": "topic-1"' in request
+    assert '"from_topic": "topic-1"' in request
+    assert '"to_topic": "topic-2"' in request
+    assert "Supported summary 2." not in request
+    assert '"id": "topic-3"' not in request
+
+
+def test_ask_tutor_rejects_missing_api_key_without_creating_client(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    def fail_if_client_created(**kwargs):
+        pytest.fail("Client must not be created without an API key")
+
+    monkeypatch.setattr(gemini_service.genai, "Client", fail_if_client_created)
+
+    result = gemini_service.ask_tutor(
+        make_tutor_package(),
+        "Explain this course concept.",
+    )
+
+    assert result == {
+        "ok": False,
+        "error_code": "MISSING_API_KEY",
+        "message": "请配置 GEMINI_API_KEY",
+    }
+
+
+@pytest.mark.parametrize(
+    ("package", "question", "topic_id", "error_code"),
+    [
+        ({"course_name": "Incomplete"}, "A question", None, "INVALID_PACKAGE"),
+        (make_tutor_package(), "  \n", None, "EMPTY_QUESTION"),
+        (make_tutor_package(), 42, None, "INVALID_QUESTION"),
+        (make_tutor_package(), "A question", "  ", "INVALID_TOPIC"),
+        (make_tutor_package(), "A question", "missing-topic", "INVALID_TOPIC"),
+    ],
+)
+def test_ask_tutor_rejects_invalid_input_before_api(
+    monkeypatch,
+    package,
+    question,
+    topic_id,
+    error_code,
+):
+    def fail_if_client_created(**kwargs):
+        pytest.fail("Invalid input must be rejected before API creation")
+
+    monkeypatch.setattr(gemini_service.genai, "Client", fail_if_client_created)
+
+    result = gemini_service.ask_tutor(package, question, topic_id)
+
+    assert result["ok"] is False
+    assert result["error_code"] == error_code
+
+
+@pytest.mark.parametrize("empty_context", ["no_topics", "no_summaries"])
+def test_ask_tutor_rejects_empty_course_context_before_api(
+    monkeypatch,
+    empty_context,
+):
+    package = make_tutor_package()
+    if empty_context == "no_topics":
+        package["topics"] = []
+        package["relationships"] = []
+        package["questions"] = []
+    else:
+        for topic in package["topics"]:
+            topic["summary"] = "  "
+
+    def fail_if_client_created(**kwargs):
+        pytest.fail("Empty context must be rejected before API creation")
+
+    monkeypatch.setattr(gemini_service.genai, "Client", fail_if_client_created)
+
+    result = gemini_service.ask_tutor(package, "Explain the course.")
+
+    assert result["ok"] is False
+    assert result["error_code"] == "EMPTY_COURSE_CONTEXT"
+
+
+def test_ask_tutor_accepts_question_at_length_limit(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(monkeypatch, text="Answer.")
+
+    result = gemini_service.ask_tutor(
+        make_tutor_package(),
+        "q" * gemini_service.MAX_TUTOR_QUESTION_CHARS,
+    )
+
+    assert result == {"ok": True, "answer": "Answer."}
+    assert len(clients[0].models.calls) == 1
+
+
+def test_ask_tutor_rejects_question_over_length_limit_before_api(monkeypatch):
+    def fail_if_client_created(**kwargs):
+        pytest.fail("Overlong question must be rejected before API creation")
+
+    monkeypatch.setattr(gemini_service.genai, "Client", fail_if_client_created)
+
+    result = gemini_service.ask_tutor(
+        make_tutor_package(),
+        "q" * (gemini_service.MAX_TUTOR_QUESTION_CHARS + 1),
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "QUESTION_TOO_LONG"
+
+
+def test_ask_tutor_accepts_context_at_limit_and_rejects_one_character_over(
+    monkeypatch,
+):
+    package = {
+        "course_id": "tutor-course",
+        "course_name": "Tutor course",
+        "topics": [{"id": "topic-1", "name": "Topic", "summary": ""}],
+        "relationships": [],
+        "questions": [],
+    }
+    context_at_limit = {
+        "course_name": package["course_name"],
+        "topics": package["topics"],
+        "relationships": [],
+    }
+    context_length = len(json.dumps(context_at_limit, ensure_ascii=False))
+    package["topics"][0]["summary"] = "x" * (
+        gemini_service.MAX_TUTOR_CONTEXT_CHARS - context_length
+    )
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(monkeypatch, text="Answer.")
+
+    at_limit_result = gemini_service.ask_tutor(package, "Explain topic.")
+
+    assert at_limit_result == {"ok": True, "answer": "Answer."}
+    assert len(clients[0].models.calls) == 1
+
+    package["topics"][0]["summary"] += "x"
+
+    def fail_if_client_created(**kwargs):
+        pytest.fail("Overlong course context must be rejected before API creation")
+
+    monkeypatch.setattr(gemini_service.genai, "Client", fail_if_client_created)
+    over_limit_result = gemini_service.ask_tutor(package, "Explain topic.")
+
+    assert over_limit_result["ok"] is False
+    assert over_limit_result["error_code"] == "COURSE_CONTEXT_TOO_LONG"
+
+
+@pytest.mark.parametrize(
+    ("status_code", "expected_message"),
+    [
+        (429, "配额或请求频率受限"),
+        (503, "服务暂时不可用"),
+    ],
+)
+def test_ask_tutor_handles_api_errors_without_exposing_details(
+    monkeypatch,
+    status_code,
+    expected_message,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    private_message = f"{FAKE_API_KEY} private course context and question"
+    install_fake_client(
+        monkeypatch,
+        error=APIError(status_code, {"message": private_message}),
+    )
+
+    result = gemini_service.ask_tutor(
+        make_tutor_package(),
+        "Private question text.",
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "API_ERROR"
+    assert result["status_code"] == status_code
+    assert expected_message in result["message"]
+    assert FAKE_API_KEY not in str(result)
+    assert private_message not in str(result)
+    assert "Private question text." not in str(result)
+
+
+@pytest.mark.parametrize("response_text", [None, "", " \n\t "])
+def test_ask_tutor_returns_empty_response_error(monkeypatch, response_text):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    install_fake_client(monkeypatch, text=response_text)
+
+    result = gemini_service.ask_tutor(
+        make_tutor_package(),
+        "Explain the topic.",
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "EMPTY_RESPONSE"
+
+
+def test_ask_tutor_handles_generic_exception_without_exposing_details(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    private_message = f"{FAKE_API_KEY} private course context and question"
+    install_fake_client(monkeypatch, error=RuntimeError(private_message))
+
+    result = gemini_service.ask_tutor(
+        make_tutor_package(),
+        "Private question text.",
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "GENERATION_ERROR"
+    assert FAKE_API_KEY not in str(result)
+    assert private_message not in str(result)
+    assert "Private question text." not in str(result)
+
+
+def test_ask_tutor_handles_timeout_without_exposing_details(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    private_message = f"{FAKE_API_KEY} private question and course context"
+    install_fake_client(monkeypatch, error=TimeoutError(private_message))
+
+    result = gemini_service.ask_tutor(
+        make_tutor_package(),
+        "Private question text.",
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "GENERATION_ERROR"
+    assert FAKE_API_KEY not in str(result)
+    assert private_message not in str(result)
+    assert "Private question text." not in str(result)
+
+
+def test_ask_tutor_sets_sdk_timeout_in_milliseconds(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(monkeypatch, text="Answer.")
+
+    result = gemini_service.ask_tutor(
+        make_tutor_package(),
+        "Explain the topic.",
+    )
+
+    assert result["ok"] is True
+    assert clients[0].http_options.timeout == 30_000

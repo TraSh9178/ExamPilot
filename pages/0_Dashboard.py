@@ -118,15 +118,18 @@ if st.session_state.show_course_setup:
 
         uploaded_file = st.file_uploader(
             "Upload course materials",
-            type=["pdf", "txt"],
+            type=["pdf", "pptx", "txt"],
             accept_multiple_files=False,
             key="setup_course_file",
+            max_upload_size=5,
         )
 
         st.caption(
             "Maximum file size: 5 MiB. "
-            "Supports UTF-8 TXT and text-based PDF. "
-            "Scanned PDFs are not supported."
+            "Supports UTF-8 TXT, text-based PDF, and text-based PPTX; "
+            "extracted text is limited to 50,000 characters. "
+            "PPTX slide notes and image OCR, DOCX, and scanned PDF OCR "
+            "are not supported."
         )
 
         file_bytes = (
@@ -167,10 +170,45 @@ if st.session_state.show_course_setup:
             st.success("Text extracted successfully.")
 
             extracted_text = document["text"]
+            document_extension = Path(document["filename"]).suffix.lower()
 
             st.caption(
-                f"Extracted text: {len(extracted_text):,} characters"
+                f"Extracted text: {len(extracted_text):,} / 50,000 characters"
             )
+
+            st.caption("Sources")
+            for source in document["sources"]:
+                page = source["page"]
+                location = (
+                    "TXT file (no page number)"
+                    if page is None
+                    else (
+                        f"Slide {page}"
+                        if document_extension == ".pptx"
+                        else f"Page {page}"
+                    )
+                )
+                st.caption(f"{source['filename']} · {location}")
+
+            if "pages" in document:
+                page_label = (
+                    "PPTX slides"
+                    if document_extension == ".pptx"
+                    else "PDF pages"
+                )
+                with st.expander(
+                    f"{page_label} ({len(document['pages'])})"
+                ):
+                    for page in document["pages"]:
+                        page_unit = (
+                            "Slide"
+                            if document_extension == ".pptx"
+                            else "Page"
+                        )
+                        st.markdown(
+                            f"**{page_unit} {page['page']}** · "
+                            f"{len(page['text']):,} characters"
+                        )
 
             with st.expander("Preview extracted text"):
                 st.text(extracted_text)

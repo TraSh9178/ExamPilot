@@ -27,8 +27,8 @@ def apply_app_styles() -> None:
         }
 
         [data-testid="stMainBlockContainer"] {
-            max-width: 1320px;
-            padding-top: 1.35rem;
+            max-width: 1380px;
+            padding-top: 1rem;
             padding-bottom: 3rem;
         }
 
@@ -37,18 +37,37 @@ def apply_app_styles() -> None:
         }
 
         h1 {
-            font-size: clamp(2rem, 3.2vw, 2.65rem);
-            line-height: 1.12;
-            letter-spacing: -0.035em;
+            font-size: clamp(2.5rem, 4vw, 3.1rem);
+            font-weight: 760;
+            line-height: 1.08;
+            letter-spacing: -0.04em;
         }
 
-        h2, h3 {
+        h2 {
+            font-size: 1.65rem;
+            font-weight: 720;
+            line-height: 1.25;
+            letter-spacing: -0.025em;
+        }
+
+        h3 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            line-height: 1.3;
             letter-spacing: -0.02em;
+        }
+
+        [data-testid="stMarkdownContainer"] p,
+        [data-testid="stMarkdownContainer"] li {
+            font-size: 1.0625rem;
+            line-height: 1.55;
         }
 
         [data-testid="stCaptionContainer"],
         [data-testid="stCaptionContainer"] p {
             color: var(--exam-muted) !important;
+            font-size: 0.92rem;
+            line-height: 1.45;
         }
 
         [data-testid="stSidebar"] {
@@ -98,18 +117,20 @@ def apply_app_styles() -> None:
         }
 
         [data-testid="stButton"] > button {
-            min-height: 2.8rem;
+            min-height: 3rem;
             border: 1px solid var(--exam-blue) !important;
             border-radius: 0.75rem !important;
             background: var(--exam-blue) !important;
             color: #FFFFFF !important;
             font-weight: 650;
+            font-size: 1rem;
             transition: background-color 120ms ease, box-shadow 120ms ease;
         }
 
         [data-testid="stButton"] > button p,
         [data-testid="stButton"] > button span {
             color: #FFFFFF !important;
+            font-size: 1rem;
         }
 
         .stApp [data-testid="stButton"] > button:not(:disabled):hover {
@@ -137,20 +158,20 @@ def apply_app_styles() -> None:
         }
 
         div[class*="st-key-create_course_button"] {
-            width: min(100%, 45rem) !important;
+            width: min(100%, 34rem) !important;
         }
 
         div[class*="st-key-create_course_button"] button {
             position: relative;
             width: 100% !important;
-            max-width: 45rem !important;
-            min-height: 6rem !important;
+            max-width: 34rem !important;
+            min-height: 5rem !important;
             justify-content: flex-start !important;
-            padding: 1rem 5rem 1rem 2rem !important;
-            border: 1px solid #DCE6F4 !important;
+            padding: 0.75rem 1.5rem !important;
+            border: 1px solid var(--exam-blue) !important;
             border-radius: 1rem !important;
-            background: rgba(255, 255, 255, 0.94) !important;
-            color: var(--exam-ink) !important;
+            background: var(--exam-blue) !important;
+            color: #FFFFFF !important;
             box-shadow: 0 3px 12px rgba(30, 76, 130, 0.06);
         }
 
@@ -160,31 +181,31 @@ def apply_app_styles() -> None:
         }
 
         div[class*="st-key-create_course_button"] [data-testid="stIconMaterial"] {
-            width: 3rem !important;
-            color: var(--exam-blue) !important;
-            font-size: 2.5rem !important;
+            width: 3.1rem !important;
+            color: #FFFFFF !important;
+            font-size: 2.8rem !important;
         }
 
         div[class*="st-key-create_course_button"] button p {
-            color: var(--exam-ink) !important;
+            color: #FFFFFF !important;
             font-size: 1.35rem;
             font-weight: 650;
         }
 
         div[class*="st-key-create_course_button"] button > div > span {
-            gap: 1.15rem !important;
+            gap: 0.85rem !important;
         }
 
         div[class*="st-key-create_course_button"] button:hover {
-            border-color: #BCD5F3 !important;
-            background: #F7FBFF !important;
-            color: var(--exam-ink) !important;
+            border-color: var(--exam-blue-dark) !important;
+            background: var(--exam-blue-dark) !important;
+            color: #FFFFFF !important;
             box-shadow: 0 5px 18px rgba(30, 76, 130, 0.1);
         }
 
         div[class*="st-key-create_course_button"] button:hover p,
         div[class*="st-key-create_course_button"] button:focus-visible p {
-            color: var(--exam-ink) !important;
+            color: #FFFFFF !important;
         }
 
         [data-testid="stVerticalBlockBorderWrapper"] {
@@ -192,6 +213,115 @@ def apply_app_styles() -> None:
             border-radius: 1rem !important;
             background: var(--exam-panel);
             box-shadow: 0 5px 18px rgba(20, 55, 105, 0.055);
+        }
+
+        [class*="st-key-knowledge_topic_heading"] {
+            padding: 0.85rem 1rem;
+            border-left: 4px solid var(--exam-blue);
+            border-radius: 0.75rem;
+            background: #EFF6FF;
+        }
+
+        [class*="st-key-study_topic_"]
+        [data-testid="stHorizontalBlock"]
+        > [data-testid="stColumn"]:first-child
+        [data-testid="stMarkdownContainer"] h3:first-of-type {
+            color: var(--exam-blue);
+        }
+
+        [class*="st-key-knowledge_graph_canvas"] {
+            overflow: hidden;
+        }
+
+        [class*="st-key-knowledge_graph_canvas"] iframe {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        div[class*="st-key-graph_zoom_out_"] button,
+        div[class*="st-key-graph_zoom_in_"] button {
+            min-width: 2.5rem;
+            padding: 0.35rem;
+            font-size: 1.25rem !important;
+        }
+
+        [class*="st-key-practice_overview"] [data-testid="stMarkdownContainer"] p {
+            font-size: 1.35rem;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        [class*="st-key-practice_question_"] [data-testid="stMarkdownContainer"] h3,
+        [class*="st-key-practice_review_"] [data-testid="stMarkdownContainer"] h3 {
+            font-size: 1.2rem;
+            line-height: 1.4;
+            margin-bottom: 0.35rem;
+        }
+
+        [class*="st-key-practice_count_"] {
+            width: min(100%, 18rem) !important;
+        }
+
+        [data-testid="stMetric"] {
+            padding: 0.25rem 0.1rem;
+        }
+
+        [data-testid="stMetricLabel"] p {
+            color: var(--exam-muted) !important;
+            font-size: 0.92rem;
+        }
+
+        [data-testid="stMetricValue"] {
+            color: var(--exam-ink);
+            font-weight: 750;
+        }
+
+        [class*="st-key-progress_topic_"] [data-testid="stMetricLabel"] p {
+            font-size: 1.1rem;
+        }
+
+        [class*="st-key-progress_overview"] [data-testid="stMetricLabel"] p {
+            font-size: 1.1rem;
+        }
+
+        [class*="st-key-progress_overview"] [data-testid="stMetricValue"],
+        [class*="st-key-progress_topic_"] [data-testid="stMetricValue"] {
+            font-size: 1.8rem;
+        }
+
+        [class*="st-key-progress_topic_"] [data-testid="stCaptionContainer"],
+        [class*="st-key-progress_topic_"] [data-testid="stCaptionContainer"] p {
+            font-size: 1.05rem;
+        }
+
+        [data-testid="stWidgetLabel"] p,
+        [data-testid="stRadio"] label p,
+        [data-testid="stCheckbox"] label p {
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        .graph-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 0.85rem;
+            padding: 0.75rem 0 0.15rem;
+            border-top: 1px solid var(--exam-border);
+            color: var(--exam-muted);
+            font-size: 0.9rem;
+        }
+
+        .graph-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .graph-legend i {
+            width: 0.62rem;
+            height: 0.62rem;
+            border-radius: 50%;
         }
 
         [data-testid="stHorizontalBlock"] {
@@ -322,11 +452,11 @@ def apply_app_styles() -> None:
             position: relative;
             overflow: hidden;
             display: flex;
-            min-height: clamp(19rem, 31vw, 27rem);
+            min-height: clamp(15rem, 22vw, 19rem);
             flex-direction: column;
             justify-content: center;
             margin: 0 0 1.2rem;
-            padding: clamp(2rem, 4.4vw, 4.6rem);
+            padding: clamp(1.8rem, 3.4vw, 3.4rem);
             border: 0;
             border-radius: 0;
             background: linear-gradient(105deg, #F9FCFF 0%, #F5FAFF 58%, #EAF5FF 100%);
@@ -355,7 +485,7 @@ def apply_app_styles() -> None:
             max-width: 680px;
             margin: 0;
             color: var(--exam-ink);
-            font-size: clamp(2.4rem, 4.3vw, 3.65rem);
+            font-size: clamp(2.7rem, 4.3vw, 3.65rem);
             line-height: 1.04;
             letter-spacing: -0.045em;
         }
@@ -445,17 +575,64 @@ def apply_app_styles() -> None:
             }
 
             div[class*="st-key-create_course_button"] button {
-                min-height: 5rem !important;
-                padding: 0.8rem 3.5rem 0.8rem 1.15rem !important;
+                min-height: 4.5rem !important;
+                padding: 0.65rem 1rem !important;
             }
 
             div[class*="st-key-create_course_button"] [data-testid="stIconMaterial"] {
-                width: 2.5rem !important;
-                font-size: 2.1rem !important;
+                width: 2.75rem !important;
+                font-size: 2.4rem !important;
             }
 
             div[class*="st-key-create_course_button"] button p {
-                font-size: 1.1rem;
+                font-size: 1.2rem;
+            }
+
+            [class*="st-key-practice_overview"]
+            > [data-testid="stHorizontalBlock"] {
+                flex-wrap: wrap;
+                gap: 0.5rem 0.8rem;
+            }
+
+            [class*="st-key-practice_overview"]
+            > [data-testid="stHorizontalBlock"]
+            > [data-testid="stColumn"]:first-child {
+                flex: 1 1 100% !important;
+                width: 100% !important;
+            }
+
+            [class*="st-key-practice_overview"]
+            > [data-testid="stHorizontalBlock"]
+            > [data-testid="stColumn"]:nth-child(2),
+            [class*="st-key-practice_overview"]
+            > [data-testid="stHorizontalBlock"]
+            > [data-testid="stColumn"]:nth-child(3) {
+                flex: 1 1 calc(50% - 0.8rem) !important;
+                width: calc(50% - 0.8rem) !important;
+            }
+
+            [class*="st-key-progress_topic_"]
+            > [data-testid="stHorizontalBlock"] {
+                flex-wrap: wrap;
+                gap: 0.5rem 0.8rem;
+            }
+
+            [class*="st-key-progress_topic_"]
+            > [data-testid="stHorizontalBlock"]
+            > [data-testid="stColumn"]:nth-child(1),
+            [class*="st-key-progress_topic_"]
+            > [data-testid="stHorizontalBlock"]
+            > [data-testid="stColumn"]:nth-child(2) {
+                flex: 1 1 calc(50% - 0.8rem) !important;
+                width: calc(50% - 0.8rem) !important;
+            }
+
+            [class*="st-key-progress_topic_"]
+            > [data-testid="stVerticalBlock"]
+            > [data-testid="stHorizontalBlock"]
+            > [data-testid="stColumn"]:nth-child(3) {
+                flex: 1 1 100% !important;
+                width: 100% !important;
             }
 
         }
