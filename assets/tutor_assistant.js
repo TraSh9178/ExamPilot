@@ -31,6 +31,7 @@ export default function(component) {
   state.clearPending = false;
 
   const bubble = root.querySelector('[data-testid="tutor-launcher"]');
+  root.querySelector('.tutor-small-pilot').src = bubble.querySelector('.tutor-pilot').src;
   const panel = root.querySelector('[data-testid="tutor-panel"]');
   const header = root.querySelector('[data-testid="tutor-drag-handle"]');
   const close = root.querySelector('[data-testid="tutor-close"]');
@@ -134,7 +135,7 @@ export default function(component) {
     item.dataset.role = safeRole;
     const label = document.createElement('span');
     label.className = 'tutor-message-label';
-    label.textContent = safeRole === 'user' ? 'You' : safeRole === 'error' ? 'Couldn’t answer' : 'AI study assistant';
+    label.textContent = safeRole === 'user' ? 'You' : safeRole === 'error' ? 'Couldn’t answer' : 'Pilot';
     const body = document.createElement('div');
     body.className = 'tutor-message-body';
     body.textContent = typeof content === 'string' ? content : '';
@@ -165,7 +166,7 @@ export default function(component) {
     state.open = true;
     panel.hidden = false;
     bubble.setAttribute('aria-expanded', 'true');
-    bubble.setAttribute('aria-label', 'Close AI study assistant');
+    bubble.setAttribute('aria-label', 'Close Pilot, your AI study assistant');
     position();
     focusFrame = requestAnimationFrame(() => {
       if (!destroyed && !question.disabled) question.focus({ preventScroll: true });
@@ -175,7 +176,7 @@ export default function(component) {
     state.open = false;
     panel.hidden = true;
     bubble.setAttribute('aria-expanded', 'false');
-    bubble.setAttribute('aria-label', 'Open AI study assistant');
+    bubble.setAttribute('aria-label', 'Open Pilot, your AI study assistant');
     position();
     bubble.focus({ preventScroll: true });
   };
@@ -211,7 +212,7 @@ export default function(component) {
   course.title = course.textContent;
   panel.hidden = !state.open;
   bubble.setAttribute('aria-expanded', String(state.open));
-  bubble.setAttribute('aria-label', `${state.open ? 'Close' : 'Open'} AI study assistant`);
+  bubble.setAttribute('aria-label', `${state.open ? 'Close' : 'Open'} Pilot, your AI study assistant`);
   renderMessages();
   updateInput();
   updateStatus();

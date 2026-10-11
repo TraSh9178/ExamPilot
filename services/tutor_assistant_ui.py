@@ -1,6 +1,7 @@
 """Global floating Tutor UI, backed by server-owned course and session state."""
 
 from functools import lru_cache
+import base64
 from pathlib import Path
 
 import streamlit as st
@@ -19,9 +20,13 @@ ASSETS = Path(__file__).resolve().parents[1] / "assets"
 
 @lru_cache(maxsize=1)
 def _component():
+    mascot = base64.b64encode((ASSETS / "pilot-mascot.png").read_bytes()).decode("ascii")
+    html = (ASSETS / "tutor_assistant.html").read_text(encoding="utf-8").replace(
+        "__PILOT_MASCOT_DATA_URI__", f"data:image/png;base64,{mascot}",
+    )
     return components.component(
         "exampilot_floating_tutor",
-        html=(ASSETS / "tutor_assistant.html").read_text(encoding="utf-8"),
+        html=html,
         css=(ASSETS / "tutor_assistant.css").read_text(encoding="utf-8"),
         js=(ASSETS / "tutor_assistant.js").read_text(encoding="utf-8"),
         isolate_styles=True,

@@ -1,29 +1,19 @@
 <div class="exam-tutor" data-testid="tutor-root">
-  <button class="tutor-bubble" type="button" data-testid="tutor-launcher" aria-label="Open AI study assistant" aria-expanded="false" aria-controls="tutor-panel" title="AI study assistant · Drag to move, or use arrow keys when focused">
-    <svg class="tutor-robot" viewBox="0 0 56 56" aria-hidden="true" focusable="false">
-      <path d="M28 8v6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-      <circle cx="28" cy="6" r="3" fill="currentColor" />
-      <rect x="10" y="15" width="36" height="29" rx="12" fill="currentColor" />
-      <rect x="15" y="21" width="26" height="16" rx="7" fill="white" />
-      <rect x="5" y="25" width="4" height="11" rx="2" fill="currentColor" />
-      <rect x="47" y="25" width="4" height="11" rx="2" fill="currentColor" />
-      <circle cx="22" cy="28" r="2.5" fill="currentColor" />
-      <circle cx="34" cy="28" r="2.5" fill="currentColor" />
-      <path d="M24 33q4 3 8 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-    </svg>
-    <span class="tutor-bubble-label" aria-hidden="true">AI</span>
+  <button class="tutor-bubble" type="button" data-testid="tutor-launcher" aria-label="Open Pilot, your AI study assistant" aria-expanded="false" aria-controls="tutor-panel" title="Pilot · Your AI study assistant · Drag to move, or use arrow keys when focused">
+    <img class="tutor-pilot" src="__PILOT_MASCOT_DATA_URI__" alt="" aria-hidden="true" draggable="false">
+    <span class="tutor-bubble-label" aria-hidden="true">Pilot</span>
   </button>
   <section class="tutor-panel" id="tutor-panel" data-testid="tutor-panel" role="dialog" aria-modal="false" aria-labelledby="tutor-title" hidden>
     <header class="tutor-header" data-testid="tutor-drag-handle">
       <div class="tutor-title-group">
-        <span class="tutor-small-robot" aria-hidden="true">✦</span>
-        <div><h2 id="tutor-title">AI study assistant</h2><p>Ask about your course</p></div>
+        <img class="tutor-small-pilot" alt="" aria-hidden="true" draggable="false">
+        <div><h2 id="tutor-title">Pilot</h2><p>Your AI study copilot</p></div>
       </div>
       <div class="tutor-header-actions">
         <button class="tutor-icon-button tutor-clear" type="button" data-testid="tutor-clear" aria-label="Clear conversation" title="Clear conversation">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v6M14 10v6" /></svg>
         </button>
-        <button class="tutor-icon-button tutor-close" type="button" data-testid="tutor-close" aria-label="Close AI study assistant" aria-keyshortcuts="Escape" title="Close">
+        <button class="tutor-icon-button tutor-close" type="button" data-testid="tutor-close" aria-label="Close Pilot" aria-keyshortcuts="Escape" title="Close Pilot">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18" /></svg>
         </button>
       </div>
