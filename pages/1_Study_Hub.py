@@ -201,18 +201,7 @@ with st.expander("Gemini Tutor"):
 
 with st.expander("Anki flashcards"):
     st.caption(PENDING_INTEGRATION_MESSAGES["anki"])
-    with st.container(border=True):
-        st.subheader("Card preview")
-        st.info("No flashcards are available to preview yet.")
-
-    st.caption(
-        "Download will be available when real cards and a valid file exist."
-    )
-    st.button(
-        "Download flashcards",
-        key=f"anki_download_{course.course_id}",
-        disabled=True,
-    )
+    st.caption("Use Export to Anki in the sidebar to download this course's cards.")
 
 with st.expander("Save / Restore"):
     st.caption(PENDING_INTEGRATION_MESSAGES["database"])

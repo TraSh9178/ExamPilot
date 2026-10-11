@@ -195,17 +195,9 @@ def test_tutor_answers_are_course_scoped_and_sent_only_on_form_submit(
             expected_question
         )
         assert not app.button(key=f"tutor_send_{course_id}").disabled
-        assert app.button(key=f"anki_download_{course_id}").disabled
         assert app.button(key=f"database_save_{course_id}").disabled
         assert app.button(key=f"database_restore_{course_id}").disabled
         assert tutor_result_key(course_id) not in app.session_state
-        assert "No flashcards are available to preview yet." in [
-            element.value for element in app.info
-        ]
-        assert any(
-            "CSV/APKG 格式待确认。" in element.value
-            for element in app.caption
-        )
         current_course = app.session_state["current_course"]
         assert any(
             f"Current course: {current_course.course_name}" == element.value
