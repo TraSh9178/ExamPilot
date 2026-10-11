@@ -153,7 +153,10 @@ st.caption(
     "in the selected mode. "
     "Below 60%: Weak · 60–79.99%: Developing · 80% or above: Mastered."
 )
-st.caption("Records are retained only in the current browser session.")
+st.caption(
+    "Results are saved to your account when you are signed in and the save "
+    "succeeds; otherwise they last only for this browser session."
+)
 
 if st.button("Start practice", type="primary"):
     st.switch_page("pages/2_Practice_Center.py")
