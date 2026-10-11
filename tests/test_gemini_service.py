@@ -491,6 +491,7 @@ def test_generate_topics_api_error_does_not_expose_secrets(monkeypatch):
 
     assert result["ok"] is False
     assert result["error_code"] == "API_ERROR"
+    assert result["status_code"] == 503
     assert FAKE_API_KEY not in str(result)
     assert private_message not in str(result)
 
@@ -762,6 +763,7 @@ def test_generate_questions_api_error_is_safe(monkeypatch):
 
     assert result["ok"] is False
     assert result["error_code"] == "API_ERROR"
+    assert result["status_code"] == 503
     assert FAKE_API_KEY not in str(result)
     assert private_message not in str(result)
 
