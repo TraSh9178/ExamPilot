@@ -44,7 +44,7 @@ with st.expander(
     "Change settings" if active_practice else "Practice settings",
     expanded=active_practice is None,
 ):
-    with st.container(border=True):
+    with st.container(border=True, key="practice_settings_panel"):
         st.caption(
             "Confirmed topics: "
             + " · ".join(topic_names[value] for value in confirmed_topic_ids)
@@ -139,6 +139,15 @@ if active_practice is not None:
 
     if not submitted:
         st.subheader("Questions")
+        answered_count = sum(
+            st.session_state.get(f"answer_{session.session_id}_{question.id}")
+            is not None
+            for question in questions
+        )
+        st.progress(
+            answered_count / len(questions),
+            text=f"{answered_count} of {len(questions)} questions answered",
+        )
 
         for question_number, question in enumerate(questions, start=1):
             with st.container(
@@ -158,7 +167,19 @@ if active_practice is not None:
                     key=f"answer_{session.session_id}_{question.id}",
                 )
 
-        if st.button("Submit answers", type="primary"):
+        with st.container(border=True, key="practice_submit_panel"):
+            remaining_count = len(questions) - answered_count
+            if remaining_count:
+                st.caption(
+                    f"{remaining_count} unanswered "
+                    f"{'question' if remaining_count == 1 else 'questions'} "
+                    "will be marked incorrect when you submit."
+                )
+            else:
+                st.caption("All questions answered. Ready to check your results.")
+            submit_answers = st.button("Submit answers", type="primary")
+
+        if submit_answers:
             selected_answers = {
                 question.id: st.session_state.get(
                     f"answer_{session.session_id}_{question.id}"
@@ -195,7 +216,8 @@ if active_practice is not None:
         result = active_practice["result"]
 
         st.subheader("Your result")
-        score_columns = st.columns(2)
+        with st.container(key="practice_result_overview"):
+            score_columns = st.columns(2)
         with score_columns[0].container(border=True):
             st.metric(
                 "Score",
@@ -203,6 +225,24 @@ if active_practice is not None:
             )
         with score_columns[1].container(border=True):
             st.metric("Accuracy", f"{result['accuracy']:.2f}%")
+
+        next_steps = st.columns(2)
+        with next_steps[0]:
+            if st.button(
+                "View progress",
+                icon=":material/monitoring:",
+                key=f"practice_view_progress_{course.course_id}",
+                use_container_width=True,
+            ):
+                st.switch_page("pages/3_Performance.py")
+        with next_steps[1]:
+            if st.button(
+                "Explore knowledge map",
+                icon=":material/hub:",
+                key=f"practice_view_graph_{course.course_id}",
+                use_container_width=True,
+            ):
+                st.switch_page("pages/4_Knowledge_Graph.py")
 
         questions_by_id = {
             question.id: question for question in questions
@@ -239,8 +279,11 @@ if active_practice is not None:
                 with st.container(border=True):
                     st.subheader("Explanation")
                     st.write(review["explanation"])
-# Show the number of graded sessions saved for this course.
+# Count sessions in memory without implying that they have synced to a database.
 history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})
 
-st.caption(f"Saved practice sessions: {len(history)}")
+st.caption(
+    f"Practice sessions in this browser: {len(history)} · "
+    "Results are kept for this browser session."
+)

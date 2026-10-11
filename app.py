@@ -41,4 +41,20 @@ pages = [
     ),
 ]
 
-st.navigation(pages).run()
+navigation = st.navigation(pages)
+
+with st.sidebar:
+    st.divider()
+    st.caption("CURRENT COURSE")
+    current_course = st.session_state.get("current_course")
+    if current_course is None:
+        st.caption("Open a course from the Dashboard to get started.")
+    else:
+        st.text(current_course.course_name)
+        st.page_link(
+            "pages/0_Dashboard.py",
+            label="Switch course",
+            icon=":material/swap_horiz:",
+        )
+
+navigation.run()

@@ -26,15 +26,15 @@ apply_app_styles()
 
 st.title("Export to Anki")
 st.caption(
-    "Review course knowledge cards here or download a UTF-8 TSV file "
-    "for Anki text import. "
-    "AnkiWeb sync is not supported; Anki Desktop import has not been verified."
+    "Preview your study cards and download a file for Anki text import."
 )
 
 course = st.session_state.get("current_course")
 
 if course is None:
     st.info("Load a course from the dashboard first.")
+    if st.button("Back to Dashboard", type="primary"):
+        st.switch_page("pages/0_Dashboard.py")
     st.stop()
 
 st.subheader(course.course_name)
@@ -43,12 +43,13 @@ if not course.questions:
     st.info("This course has no questions to export.")
     st.stop()
 
-export_scope = st.radio(
-    "Questions to export",
-    options=["All Questions", "Weak Topics"],
-    key=f"anki_export_scope_{course.course_id}",
-    horizontal=True,
-)
+with st.container(border=True, key="anki_export_settings"):
+    export_scope = st.radio(
+        "Questions to export",
+        options=["All Questions", "Weak Topics"],
+        key=f"anki_export_scope_{course.course_id}",
+        horizontal=True,
+    )
 
 topic_ids = None
 
@@ -100,7 +101,28 @@ if not content:
     st.stop()
 
 cards = list(csv.reader(StringIO(content), delimiter="\t"))
-st.caption(f"{len(cards)} study cards shown and ready to export.")
+with st.container(border=True, key="anki_export_summary"):
+    export_columns = st.columns([2, 1], vertical_alignment="center")
+    with export_columns[0]:
+        st.metric("Cards ready to export", len(cards))
+        st.caption(f"{len(cards)} study cards shown and ready to export.")
+    with export_columns[1]:
+        st.download_button(
+            "Download Anki TSV",
+            data=content.encode("utf-8"),
+            file_name=_safe_filename(course.course_name),
+            mime="text/tab-separated-values; charset=utf-8",
+            type="primary",
+            use_container_width=True,
+            key="anki_export_download",
+        )
+
+with st.expander("About this export"):
+    st.caption(
+        "UTF-8 TSV with Front, Back and Tags columns. "
+        "Download and import the file into Anki; this page does not sync AnkiWeb. "
+        "Anki Desktop import has not been verified."
+    )
 topic_names_by_tag = {
     _topic_tag(topic.id): topic.name
     for topic in course.topics
@@ -126,11 +148,3 @@ for index, (front, back, tags) in enumerate(cards, start=1):
         with st.expander("Show answer and explanation"):
             st.success(answer.removeprefix("Correct answer: "))
             st.write(explanation.removeprefix("Explanation: "))
-
-st.download_button(
-    "Download Anki TSV",
-    data=content.encode("utf-8"),
-    file_name=_safe_filename(course.course_name),
-    mime="text/tab-separated-values; charset=utf-8",
-    type="primary",
-)

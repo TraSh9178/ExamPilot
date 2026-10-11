@@ -2,10 +2,12 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pymupdf
+import pytest
 import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 from models.schemas import StudyPackage
+from services import document_service
 from services.ui_adapters import tutor_question_key, tutor_result_key
 
 
@@ -89,16 +91,47 @@ def test_dashboard_extracts_txt_and_shows_limits_preview_and_source(monkeypatch)
         {"filename": "notes.txt", "page": None}
     ]
     assert any("50,000 characters" in item.value for item in app.caption)
-    assert any(
-        "Supports UTF-8 TXT, text-based PDF, text-based PPTX" in item.value
-        and "scanned PDF OCR" in item.value
-        for item in app.caption
-    )
+    supported_materials = " ".join(item.value for item in app.caption)
+    assert "UTF-8 TXT" in supported_materials
+    assert "text-based PDF or PPTX" in supported_materials
+    assert "scanned pdf ocr" in supported_materials.lower()
     assert any(
         "notes.txt · TXT file (no page number)" in item.value
         for item in app.caption
     )
     assert "A local TXT fixture." in [item.value for item in app.text]
+
+
+@pytest.mark.parametrize("extension", ["png", "jpg", "jpeg"])
+def test_dashboard_labels_images_and_clears_results_after_removal(monkeypatch, extension):
+    upload = install_upload_mock(monkeypatch)
+    filename = f"english-notes.{extension}"
+    document = {
+        "ok": True,
+        "filename": filename,
+        "text": "Extracted English image text.",
+        "sources": [{"filename": filename, "page": 1}],
+        "pages": [{"page": 1, "text": "Extracted English image text."}],
+    }
+    monkeypatch.setattr(document_service, "extract_document", lambda *_: document)
+    app = AppTest.from_file(str(DASHBOARD_PATH)).run()
+    app.button(key="create_course_button").click().run()
+    upload["file"] = make_upload(filename, b"image fixture handled by the extraction mock")
+    app.run()
+    click_extract(app)
+
+    assert not app.exception
+    assert f"{filename} · Image 1" in [item.value for item in app.caption]
+    assert "Image (1)" in [item.label for item in app.expander]
+    assert not any("PDF pages" in item.label for item in app.expander)
+    assert document["text"] in [item.value for item in app.text]
+
+    upload["file"] = None
+    app.run()
+    assert not app.exception
+    assert "setup_document" not in app.session_state
+    assert document["text"] not in [item.value for item in app.text]
+    assert not any(button.label == "Generate topics" for button in app.button)
 
 
 def test_dashboard_extracts_pdf_and_displays_actual_page_sources(monkeypatch):
@@ -334,8 +367,7 @@ def test_dashboard_extracts_pptx_and_displays_actual_slide_sources(monkeypatch):
     )
     assert any("PPTX slides (1)" == item.label for item in app.expander)
     assert any("50,000 characters" in item.value for item in app.caption)
-    assert any(
-        "Supports UTF-8 TXT, text-based PDF, text-based PPTX" in item.value
-        and "scanned PDF OCR" in item.value
-        for item in app.caption
-    )
+    supported_materials = " ".join(item.value for item in app.caption)
+    assert "UTF-8 TXT" in supported_materials
+    assert "text-based PDF or PPTX" in supported_materials
+    assert "scanned pdf ocr" in supported_materials.lower()

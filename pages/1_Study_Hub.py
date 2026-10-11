@@ -22,29 +22,12 @@ if course is None:
     st.page_link("pages/0_Dashboard.py", label="Back to Dashboard")
     st.stop()
 
-st.subheader(course.course_name)
-st.caption(f"{len(course.topics)} knowledge points")
-
-if not course.topics:
-    st.info("This course has no topics yet.")
-else:
-    for topic_number, topic in enumerate(course.topics, start=1):
-        with st.container(border=True, key=f"study_topic_{topic.id}"):
-            topic_columns = st.columns(
-                [0.16, 4],
-                vertical_alignment="top",
-            )
-            topic_columns[0].markdown(f"### {topic_number:02d}")
-            topic_columns[1].markdown(f"### {topic.name}")
-            st.write(topic.summary)
-
-            if topic.source_pages:
-                pages = ", ".join(
-                    str(page) for page in topic.source_pages
-                )
-                st.caption(f"Source pages: {pages}")
-            else:
-                st.caption("Source pages not provided.")
+with st.container(key="study_plan_overview"):
+    st.subheader(course.course_name)
+    st.caption(
+        f"{len(course.topics)} knowledge points · "
+        f"{len(course.questions)} practice questions"
+    )
 
 # Keep scope confirmation separate for each course.
 scope_key = f"scope_selection_{course.course_id}"
@@ -55,7 +38,7 @@ if scope_key not in st.session_state:
         st.session_state.get(confirmed_key, [])
     )
 
-with st.container(border=True):
+with st.container(border=True, key="study_scope_panel"):
     st.subheader("Choose your exam scope")
     selected_topic_ids = st.multiselect(
         "Knowledge points",
@@ -163,6 +146,26 @@ if confirmed_topic_ids:
         st.info("No questions are available in the confirmed scope.")
 else:
     st.info("Confirm your topic selection before starting practice.")
+
+st.subheader("Course topics")
+if not course.topics:
+    st.info("This course has no topics yet.")
+else:
+    for topic_number, topic in enumerate(course.topics, start=1):
+        with st.container(border=True, key=f"study_topic_{topic.id}"):
+            topic_columns = st.columns(
+                [0.16, 4],
+                vertical_alignment="top",
+            )
+            topic_columns[0].markdown(f"### {topic_number:02d}")
+            topic_columns[1].markdown(f"### {topic.name}")
+            st.write(topic.summary)
+
+            if topic.source_pages:
+                pages = ", ".join(str(page) for page in topic.source_pages)
+                st.caption(f"Source pages: {pages}")
+            else:
+                st.caption("Source pages not provided.")
 
 with st.expander("Gemini Tutor"):
     st.caption(PENDING_INTEGRATION_MESSAGES["tutor"])

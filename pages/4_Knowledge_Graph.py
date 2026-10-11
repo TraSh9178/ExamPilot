@@ -50,7 +50,7 @@ if not course.topics:
     st.info("This course has no topics yet.")
     st.stop()
 
-with st.container(border=True):
+with st.container(border=True, key="graph_mode_panel"):
     st.caption("Mastery mode")
     mode_label = st.radio(
         "Mastery mode",
@@ -64,7 +64,8 @@ mode = "mock" if mode_label == "Mock Exam" else "topic"
 reset_key = f"graph_view_reset_{course.course_id}_{mode}"
 zoom_key = f"graph_zoom_{course.course_id}_{mode}"
 zoom_level = st.session_state.get(zoom_key, 0)
-graph_controls = st.columns([1.4, 3])
+with st.container(key="graph_controls_panel"):
+    graph_controls = st.columns([1.4, 3], vertical_alignment="center")
 with graph_controls[0]:
     if st.button(
         "Fit to view / Reset view",
@@ -108,7 +109,8 @@ except ValueError as error:
     st.error(f"Could not calculate mastery: {error}")
     st.stop()
 
-graph_column, details_column = st.columns([2.2, 1])
+with st.container(key="knowledge_graph_layout"):
+    graph_column, details_column = st.columns([2.2, 1])
 
 with graph_column:
     with st.container(border=True, key="knowledge_graph_canvas"):
@@ -157,7 +159,7 @@ with graph_column:
         st.info("This course has no topic relationships yet.")
 
 with details_column:
-    with st.container(border=True):
+    with st.container(border=True, key="knowledge_graph_details"):
         details = None
         topic_stats = None
         if selected_node_id is not None:
