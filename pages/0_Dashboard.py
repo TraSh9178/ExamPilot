@@ -121,11 +121,14 @@ if st.session_state.show_course_setup:
             type=["pdf", "txt"],
             accept_multiple_files=False,
             key="setup_course_file",
+            max_upload_size=5,
         )
 
         st.caption(
             "Maximum file size: 5 MiB. "
-            "Supports UTF-8 TXT and text-based PDF. "
+            "Supports UTF-8 TXT and text-based PDF; extracted text is "
+            "limited to 50,000 characters. "
+            "PPTX, DOCX, images, and OCR are not integrated yet. "
             "Scanned PDFs are not supported."
         )
 
@@ -169,8 +172,28 @@ if st.session_state.show_course_setup:
             extracted_text = document["text"]
 
             st.caption(
-                f"Extracted text: {len(extracted_text):,} characters"
+                f"Extracted text: {len(extracted_text):,} / 50,000 characters"
             )
+
+            st.caption("Sources")
+            for source in document["sources"]:
+                page = source["page"]
+                location = (
+                    "TXT file (no page number)"
+                    if page is None
+                    else f"Page {page}"
+                )
+                st.caption(f"{source['filename']} · {location}")
+
+            if "pages" in document:
+                with st.expander(
+                    f"PDF pages ({len(document['pages'])})"
+                ):
+                    for page in document["pages"]:
+                        st.markdown(
+                            f"**Page {page['page']}** · "
+                            f"{len(page['text']):,} characters"
+                        )
 
             with st.expander("Preview extracted text"):
                 st.text(extracted_text)

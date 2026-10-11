@@ -22,6 +22,24 @@ _RELATIONSHIP_STYLES = {
     },
 }
 
+_MASTERY_LABELS = {
+    "unattempted": "Unattempted",
+    "insufficient_evidence": "Insufficient evidence",
+    "weak": "Weak",
+    "developing": "Developing",
+    "mastered": "Mastered",
+}
+
+_MASTERY_BADGE_COLORS = {
+    "unattempted": "gray",
+    "insufficient_evidence": "violet",
+    "weak": "red",
+    "developing": "orange",
+    "mastered": "green",
+}
+
+MIN_NODE_SIZE = 36
+
 
 def convert_graph_data(graph: dict) -> tuple[list[Node], list[Edge]]:
     """Convert build_mastery_graph output for streamlit-agraph.
@@ -33,10 +51,13 @@ def convert_graph_data(graph: dict) -> tuple[list[Node], list[Edge]]:
             id=node["id"],
             label=node["label"],
             color=node["color"],
+            size=MIN_NODE_SIZE,
             font={
-                "color": "#F8FAFC",
-                "strokeWidth": 3,
-                "strokeColor": "#0F172A",
+                "color": "#102044",
+                "size": 16,
+                "face": "Arial",
+                "strokeWidth": 4,
+                "strokeColor": "#FFFFFF",
             },
         )
         for node in graph["nodes"]
@@ -54,7 +75,7 @@ def convert_graph_data(graph: dict) -> tuple[list[Node], list[Edge]]:
             Edge(
                 source=edge["source"],
                 target=edge["target"],
-                font={"size": 12},
+                font={"size": 14},
                 **_RELATIONSHIP_STYLES[relationship_type],
             )
         )
@@ -66,10 +87,13 @@ def render_knowledge_graph(
     package: StudyPackage,
     stats: list[TopicStats],
     mode: str,
+    view_reset: int = 0,
 ) -> str | None:
     graph = build_mastery_graph(package, stats, mode)
     nodes, edges = convert_graph_data(graph)
     config = Config(
+        height=540,
+        width=900,
         physics=True,
         hierarchical=False,
         groups={},
@@ -78,6 +102,22 @@ def render_knowledge_graph(
             "zoomView": True,
             "dragView": True,
         },
+    )
+    config.width = "100%"
+    config.layout["randomSeed"] = 42 + view_reset
+    config.physics["forceAtlas2Based"] = {
+        "gravitationalConstant": -50,
+        "centralGravity": 0.015,
+        "springLength": 160,
+        "springConstant": 0.08,
+        "damping": 0.4,
+        "avoidOverlap": 0.8,
+    }
+    config.physics["solver"] = "forceAtlas2Based"
+    config.physics["stabilization"].update(
+        enabled=True,
+        fit=True,
+        iterations=1000,
     )
 
     return agraph(nodes, edges, config)
@@ -116,18 +156,40 @@ def get_selected_topic_details(
     }
 
 
-def render_topic_details(details: dict | None) -> None:
+def render_topic_details(
+    details: dict | None,
+    topic_stats: TopicStats | None = None,
+) -> None:
     if details is None:
-        st.info("Select a topic to view its details.")
+        st.info("Click a knowledge point to see its details.")
         return
 
-    st.subheader(details["name"])
-    st.write(details["summary"])
+    with st.container(key="knowledge_topic_heading"):
+        st.subheader(details["name"])
+        status = details["status"]
+        st.badge(
+            _MASTERY_LABELS[status],
+            color=_MASTERY_BADGE_COLORS[status],
+        )
+
+    if topic_stats is not None:
+        stats_columns = st.columns(2)
+        stats_columns[0].metric("Answers", topic_stats.attempted)
+        stats_columns[1].metric(
+            "Accuracy",
+            (
+                "—"
+                if topic_stats.accuracy is None
+                else f"{topic_stats.accuracy:.2f}%"
+            ),
+        )
+
+    with st.container(border=True):
+        st.subheader("Summary")
+        st.write(details["summary"])
 
     source_pages = details["source_pages"]
     if source_pages:
         st.caption(f"Source pages: {', '.join(map(str, source_pages))}")
     else:
         st.caption("Source pages not provided")
-
-    st.metric("Mastery status", details["status"])

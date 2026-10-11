@@ -10,7 +10,8 @@ from services.ui_style import apply_app_styles
 
 apply_app_styles()
 
-st.title("Knowledge Map")
+st.title("🕸️ Knowledge Map")
+st.caption("Explore topic relationships and inspect their learning status.")
 
 course = st.session_state.get("current_course")
 
@@ -20,19 +21,40 @@ if course is None:
     st.stop()
 
 st.subheader(course.course_name)
-st.caption(f"{len(course.topics)} topics")
+st.caption(f"{len(course.topics)} knowledge points")
 
 if not course.topics:
     st.info("This course has no topics yet.")
     st.stop()
 
-mode_label = st.radio(
-    "Mastery mode",
-    options=["Mock Exam", "Topic Practice"],
-    key=f"graph_mode_{course.course_id}",
-    horizontal=True,
-)
+with st.container(border=True):
+    st.caption("Mastery mode")
+    mode_label = st.radio(
+        "Mastery mode",
+        options=["Mock Exam", "Topic Practice"],
+        key=f"graph_mode_{course.course_id}",
+        horizontal=True,
+        label_visibility="collapsed",
+    )
 mode = "mock" if mode_label == "Mock Exam" else "topic"
+
+reset_key = f"graph_view_reset_{course.course_id}_{mode}"
+zoom_key = f"graph_zoom_{course.course_id}_{mode}"
+zoom_level = st.session_state.get(zoom_key, 0)
+graph_controls = st.columns([1.4, 3])
+with graph_controls[0]:
+    if st.button(
+        "Fit to view / Reset view",
+        key=f"reset_graph_view_{course.course_id}_{mode}",
+        icon=":material/fit_screen:",
+    ):
+        st.session_state[reset_key] = (
+            st.session_state.get(reset_key, 0) + 1
+        )
+        st.session_state[zoom_key] = 0
+        st.rerun()
+with graph_controls[1]:
+    st.caption("Click a node for details · Drag to move · Scroll to zoom")
 
 history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})
@@ -63,26 +85,81 @@ except ValueError as error:
     st.error(f"Could not calculate mastery: {error}")
     st.stop()
 
-selected_node_id = render_knowledge_graph(course, stats, mode)
+graph_column, details_column = st.columns([2.2, 1])
 
-details = None
-if selected_node_id is not None:
-    graph = build_mastery_graph(course, stats, mode)
-    details = get_selected_topic_details(
-        selected_node_id, course, graph
-    )
+with graph_column:
+    with st.container(border=True, key="knowledge_graph_canvas"):
+        zoom_controls = st.columns([1, 0.08, 0.08])
+        with zoom_controls[1]:
+            if st.button(
+                "−",
+                key=f"graph_zoom_out_{course.course_id}_{mode}",
+                help="Zoom out",
+                disabled=zoom_level <= -3,
+            ):
+                st.session_state[zoom_key] = zoom_level - 1
+        with zoom_controls[2]:
+            if st.button(
+                "+",
+                key=f"graph_zoom_in_{course.course_id}_{mode}",
+                help="Zoom in",
+                disabled=zoom_level >= 3,
+            ):
+                st.session_state[zoom_key] = zoom_level + 1
 
-render_topic_details(details)
+        zoom_level = st.session_state.get(zoom_key, 0)
+        zoom_scale = 1 + zoom_level * 0.15
+        st.markdown(
+            f"""
+            <style>
+            [class*="st-key-knowledge_graph_canvas"] iframe {{
+                transform: scale({zoom_scale});
+                transform-origin: center center;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
 
-st.caption(
-    "Drag nodes to rearrange the graph. "
-    "Arrows indicate prerequisite relationships."
-)
+        selected_node_id = render_knowledge_graph(
+            course,
+            stats,
+            mode,
+            view_reset=st.session_state.get(reset_key, 0),
+        )
 
-if not course.relationships:
-    st.info("No relationships are provided for this course.")
+        st.markdown(
+            """
+            <div class="graph-legend">
+                <span><i style="background:#94A3B8"></i>Unattempted</span>
+                <span><i style="background:#A78BFA"></i>Insufficient evidence</span>
+                <span><i style="background:#EF4444"></i>Weak</span>
+                <span><i style="background:#F59E0B"></i>Developing</span>
+                <span><i style="background:#22C55E"></i>Mastered</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-st.caption(
-    "Gray: Unattempted · Purple: Insufficient evidence · "
-    "Red: Weak · Orange: Developing · Green: Mastered"
-)
+    if not course.relationships:
+        st.info("This course has no topic relationships yet.")
+
+with details_column:
+    with st.container(border=True):
+        details = None
+        topic_stats = None
+        if selected_node_id is not None:
+            graph = build_mastery_graph(course, stats, mode)
+            details = get_selected_topic_details(
+                selected_node_id, course, graph
+            )
+            topic_stats = next(
+                (
+                    item
+                    for item in stats
+                    if item.topic_id == selected_node_id
+                    and item.mode == mode
+                ),
+                None,
+            )
+        render_topic_details(details, topic_stats)

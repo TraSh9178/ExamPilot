@@ -1,12 +1,15 @@
 import json
+from contextlib import nullcontext
+from pathlib import Path
+from unittest.mock import Mock
 
 from streamlit_agraph import Edge, Node
 import pytest
-from unittest.mock import Mock
+from streamlit.testing.v1 import AppTest
 
 import components.knowledge_graph as knowledge_graph
-from components.knowledge_graph import convert_graph_data
-from models.schemas import StudyPackage
+from components.knowledge_graph import MIN_NODE_SIZE, convert_graph_data
+from models.schemas import StudyPackage, TopicStats
 
 
 def test_convert_graph_data_preserves_node_ids_labels_and_mastery_colors():
@@ -50,57 +53,72 @@ def test_convert_graph_data_preserves_node_ids_labels_and_mastery_colors():
 
     assert all(isinstance(node, Node) for node in nodes)
     assert [
-        (node.id, node.label, node.color, node.font)
+        (node.id, node.label, node.color, node.size, node.font)
         for node in nodes
     ] == [
         (
             "t1",
             "Topic 1",
             "#94A3B8",
+            MIN_NODE_SIZE,
             {
-                "color": "#F8FAFC",
-                "strokeWidth": 3,
-                "strokeColor": "#0F172A",
+                "color": "#102044",
+                "size": 16,
+                "face": "Arial",
+                "strokeWidth": 4,
+                "strokeColor": "#FFFFFF",
             },
         ),
         (
             "t2",
             "Topic 2",
             "#A78BFA",
+            MIN_NODE_SIZE,
             {
-                "color": "#F8FAFC",
-                "strokeWidth": 3,
-                "strokeColor": "#0F172A",
+                "color": "#102044",
+                "size": 16,
+                "face": "Arial",
+                "strokeWidth": 4,
+                "strokeColor": "#FFFFFF",
             },
         ),
         (
             "t3",
             "Topic 3",
             "#EF4444",
+            MIN_NODE_SIZE,
             {
-                "color": "#F8FAFC",
-                "strokeWidth": 3,
-                "strokeColor": "#0F172A",
+                "color": "#102044",
+                "size": 16,
+                "face": "Arial",
+                "strokeWidth": 4,
+                "strokeColor": "#FFFFFF",
             },
         ),
         (
             "t4",
             "Topic 4",
             "#F59E0B",
+            MIN_NODE_SIZE,
             {
-                "color": "#F8FAFC",
-                "strokeWidth": 3,
-                "strokeColor": "#0F172A",
+                "color": "#102044",
+                "size": 16,
+                "face": "Arial",
+                "strokeWidth": 4,
+                "strokeColor": "#FFFFFF",
             },
         ),
         (
             "t5",
             "Topic 5",
             "#22C55E",
+            MIN_NODE_SIZE,
             {
-                "color": "#F8FAFC",
-                "strokeWidth": 3,
-                "strokeColor": "#0F172A",
+                "color": "#102044",
+                "size": 16,
+                "face": "Arial",
+                "strokeWidth": 4,
+                "strokeColor": "#FFFFFF",
             },
         ),
     ]
@@ -134,11 +152,11 @@ def test_convert_graph_data_distinguishes_relationship_types():
     assert prerequisite.color == "#2563EB"
     assert prerequisite.dashes is True
     assert prerequisite.arrows == {"to": {"enabled": True}}
-    assert prerequisite.font == {"size": 12}
+    assert prerequisite.font == {"size": 14}
     assert (related.source, related.to) == ("a", "c")
     assert related.label == "Related"
     assert related.color == "#64748B"
-    assert related.font == {"size": 12}
+    assert related.font == {"size": 14}
     assert related.arrows == {
         "from": {"enabled": False},
         "to": {"enabled": False},
@@ -147,6 +165,8 @@ def test_convert_graph_data_distinguishes_relationship_types():
 
 def test_convert_graph_data_handles_empty_graph():
     assert convert_graph_data({"nodes": [], "edges": []}) == ([], [])
+
+    assert MIN_NODE_SIZE == 36
 
 
 def test_convert_graph_data_rejects_unknown_relationship_type():
@@ -171,7 +191,7 @@ def test_render_knowledge_graph_builds_config_and_returns_selection(monkeypatch)
     graph = {"nodes": [], "edges": []}
     nodes = [Node(id="t1", label="Topic 1", color="#94A3B8")]
     edges = [Edge(source="t1", target="t2")]
-    config = object()
+    actual_config = knowledge_graph.Config
     selected_node_id = "t1"
     build_calls = []
     conversion_calls = []
@@ -188,7 +208,7 @@ def test_render_knowledge_graph_builds_config_and_returns_selection(monkeypatch)
 
     def make_config(**kwargs):
         config_calls.append(kwargs)
-        return config
+        return actual_config(**kwargs)
 
     def render(nodes_arg, edges_arg, config_arg):
         agraph_calls.append((nodes_arg, edges_arg, config_arg))
@@ -206,6 +226,8 @@ def test_render_knowledge_graph_builds_config_and_returns_selection(monkeypatch)
     assert conversion_calls == [graph]
     assert config_calls == [
         {
+            "height": 540,
+            "width": 900,
             "physics": True,
             "hierarchical": False,
             "groups": {},
@@ -216,7 +238,11 @@ def test_render_knowledge_graph_builds_config_and_returns_selection(monkeypatch)
             },
         }
     ]
-    assert agraph_calls == [(nodes, edges, config)]
+    assert len(agraph_calls) == 1
+    assert agraph_calls[0][:2] == (nodes, edges)
+    actual_config = agraph_calls[0][2]
+    assert actual_config.width == "100%"
+    assert actual_config.layout["randomSeed"] == 42
 
 
 def test_render_knowledge_graph_with_isolated_topics(monkeypatch):
@@ -262,11 +288,82 @@ def test_render_knowledge_graph_with_isolated_topics(monkeypatch):
     assert serialized_config["groups"] == {}
     assert config.physics["enabled"] is True
     assert config.layout["hierarchical"]["enabled"] is False
+    assert config.physics["stabilization"] == {
+        "enabled": True,
+        "iterations": 1000,
+        "fit": True,
+    }
     assert config.interaction == {
         "dragNodes": True,
         "zoomView": True,
         "dragView": True,
     }
+
+
+def test_render_knowledge_graph_changes_layout_seed_for_view_reset(monkeypatch):
+    render_calls = []
+    monkeypatch.setattr(
+        knowledge_graph,
+        "agraph",
+        lambda nodes, edges, config: render_calls.append(config) or None,
+    )
+    package = StudyPackage(
+        course_id="course",
+        course_name="Course",
+        topics=[],
+        relationships=[],
+        questions=[],
+    )
+
+    knowledge_graph.render_knowledge_graph(
+        package,
+        [],
+        "mock",
+        view_reset=3,
+    )
+
+    assert render_calls[0].layout["randomSeed"] == 45
+
+
+def test_knowledge_graph_zoom_buttons_update_scale_and_are_course_scoped():
+    page_path = (
+        Path(__file__).resolve().parents[1]
+        / "pages"
+        / "4_Knowledge_Graph.py"
+    )
+    course = StudyPackage(
+        course_id="zoom-course",
+        course_name="Zoom Course",
+        topics=[
+            {"id": "topic-1", "name": "Topic", "summary": "Summary."}
+        ],
+        relationships=[],
+        questions=[],
+    )
+    app = AppTest.from_file(str(page_path))
+    app.session_state["current_course"] = course
+
+    app.run()
+
+    assert not app.exception
+    assert any(
+        "transform: scale(1.0)" in item.value
+        for item in app.markdown
+    )
+
+    app.button(key="graph_zoom_in_zoom-course_mock").click().run()
+
+    assert not app.exception
+    assert app.session_state["graph_zoom_zoom-course_mock"] == 1
+    assert any(
+        "transform: scale(1.15)" in item.value
+        for item in app.markdown
+    )
+
+    app.button(key="graph_zoom_out_zoom-course_mock").click().run()
+
+    assert not app.exception
+    assert app.session_state["graph_zoom_zoom-course_mock"] == 0
 
 
 @pytest.mark.parametrize(
@@ -362,11 +459,18 @@ def test_render_topic_details_displays_details_with_source_pages(monkeypatch):
     write = Mock()
     caption = Mock()
     metric = Mock()
+    badge = Mock()
+    monkeypatch.setattr(
+        knowledge_graph.st,
+        "container",
+        lambda **kwargs: nullcontext(),
+    )
     monkeypatch.setattr(knowledge_graph.st, "info", info)
     monkeypatch.setattr(knowledge_graph.st, "subheader", subheader)
     monkeypatch.setattr(knowledge_graph.st, "write", write)
     monkeypatch.setattr(knowledge_graph.st, "caption", caption)
     monkeypatch.setattr(knowledge_graph.st, "metric", metric)
+    monkeypatch.setattr(knowledge_graph.st, "badge", badge)
 
     knowledge_graph.render_topic_details(
         {
@@ -378,19 +482,68 @@ def test_render_topic_details_displays_details_with_source_pages(monkeypatch):
         }
     )
 
-    subheader.assert_called_once_with("Topic 1")
+    assert [
+        args.args for args in subheader.call_args_list
+    ] == [
+        ("Topic 1",),
+        ("Summary",),
+    ]
     write.assert_called_once_with("A short summary.")
     caption.assert_called_once_with("Source pages: 2, 5")
-    metric.assert_called_once_with("Mastery status", "developing")
+    badge.assert_called_once_with("Developing", color="orange")
+    metric.assert_not_called()
     info.assert_not_called()
+
+def test_render_topic_details_displays_topic_statistics(monkeypatch):
+    answers_column = Mock()
+    accuracy_column = Mock()
+    monkeypatch.setattr(
+        knowledge_graph.st,
+        "container",
+        lambda **kwargs: nullcontext(),
+    )
+    monkeypatch.setattr(
+        knowledge_graph.st,
+        "columns",
+        Mock(return_value=[answers_column, accuracy_column]),
+    )
+    monkeypatch.setattr(knowledge_graph.st, "subheader", Mock())
+    monkeypatch.setattr(knowledge_graph.st, "write", Mock())
+    monkeypatch.setattr(knowledge_graph.st, "caption", Mock())
+    monkeypatch.setattr(knowledge_graph.st, "badge", Mock())
+
+    knowledge_graph.render_topic_details(
+        {
+            "name": "Topic 1",
+            "summary": "A short summary.",
+            "source_pages": [],
+            "status": "developing",
+            "color": "#F59E0B",
+        },
+        TopicStats(
+            topic_id="t1",
+            mode="mock",
+            correct=2,
+            attempted=3,
+            accuracy=66.67,
+        ),
+    )
+
+    answers_column.metric.assert_called_once_with("Answers", 3)
+    accuracy_column.metric.assert_called_once_with("Accuracy", "66.67%")
 
 
 def test_render_topic_details_shows_missing_pages_message(monkeypatch):
     caption = Mock()
+    monkeypatch.setattr(
+        knowledge_graph.st,
+        "container",
+        lambda **kwargs: nullcontext(),
+    )
     monkeypatch.setattr(knowledge_graph.st, "caption", caption)
     monkeypatch.setattr(knowledge_graph.st, "subheader", Mock())
     monkeypatch.setattr(knowledge_graph.st, "write", Mock())
-    monkeypatch.setattr(knowledge_graph.st, "metric", Mock())
+    monkeypatch.setattr(knowledge_graph.st, "badge", Mock())
 
     knowledge_graph.render_topic_details(
         {
@@ -411,16 +564,24 @@ def test_render_topic_details_prompts_when_no_topic_is_selected(monkeypatch):
     write = Mock()
     caption = Mock()
     metric = Mock()
+    badge = Mock()
+    container = Mock()
+    monkeypatch.setattr(knowledge_graph.st, "container", container)
     monkeypatch.setattr(knowledge_graph.st, "info", info)
     monkeypatch.setattr(knowledge_graph.st, "subheader", subheader)
     monkeypatch.setattr(knowledge_graph.st, "write", write)
     monkeypatch.setattr(knowledge_graph.st, "caption", caption)
     monkeypatch.setattr(knowledge_graph.st, "metric", metric)
+    monkeypatch.setattr(knowledge_graph.st, "badge", badge)
 
     knowledge_graph.render_topic_details(None)
 
-    info.assert_called_once_with("Select a topic to view its details.")
+    info.assert_called_once_with(
+        "Click a knowledge point to see its details."
+    )
     subheader.assert_not_called()
     write.assert_not_called()
     caption.assert_not_called()
     metric.assert_not_called()
+    badge.assert_not_called()
+    container.assert_not_called()
