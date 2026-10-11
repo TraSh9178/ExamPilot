@@ -1,4 +1,6 @@
+import csv
 import re
+from io import StringIO
 
 import streamlit as st
 
@@ -91,6 +93,16 @@ content = export_anki_tsv(course, topic_ids=topic_ids)
 if not content:
     st.info("No questions match the selected export.")
     st.stop()
+
+cards = list(csv.reader(StringIO(content), delimiter="\t"))
+st.caption(f"{len(cards)} cards will be exported.")
+with st.expander("Card preview (first 3)"):
+    for front, back, _tags in cards[:3]:
+        with st.container(border=True):
+            st.markdown("**Front**")
+            st.text(front)
+            st.markdown("**Back**")
+            st.text(back)
 
 st.download_button(
     "Download Anki TSV",

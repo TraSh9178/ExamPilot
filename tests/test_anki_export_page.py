@@ -253,3 +253,14 @@ def test_weak_topic_without_course_questions_shows_no_matching_state():
         item.value for item in app.info
     ]
     assert len(app.get("download_button")) == 0
+
+
+def test_preview_uses_exported_front_back_and_card_count():
+    app = _app_with_course(_python_basics_course())
+
+    assert not app.exception
+    assert any("9 cards will be exported." == c.value for c in app.caption)
+    texts = [element.value for element in app.text]
+    assert len(texts) == 6
+    assert texts[0].startswith(_python_basics_course().questions[0].question)
+    assert texts[1].startswith("Correct answer: ")
