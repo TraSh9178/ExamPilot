@@ -130,6 +130,21 @@ class FakeConnection:
         normalized_query = " ".join(query.lower().split())
         self.execute_calls.append((query, parameters))
 
+        if normalized_query.startswith(
+            "select course_id, course_name from courses"
+        ):
+            user_id = parameters[0]
+            rows = sorted(
+                (
+                    (course_id, package_data["course_name"])
+                    for (stored_user_id, course_id), package_data
+                    in self.course_packages.items()
+                    if stored_user_id == user_id
+                ),
+                key=lambda row: row[0],
+            )
+            return FakeResult(rows=rows)
+
         if normalized_query.startswith("select package_json from courses"):
             package_data = self.course_packages.get((parameters[0], parameters[1]))
             return FakeResult(
@@ -199,6 +214,129 @@ def use_connection(
     monkeypatch: pytest.MonkeyPatch, connection: FakeConnection
 ) -> None:
     monkeypatch.setattr(postgres_store, "_connect", lambda: connection)
+
+
+def test_list_saved_courses_returns_sorted_ids_and_names(
+    monkeypatch: pytest.MonkeyPatch, package: StudyPackage
+) -> None:
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+    for course_id, course_name in [
+        ("course-z", "Z Course"),
+        ("course-a", "A Course"),
+    ]:
+        saved_package = package.model_copy(
+            update={"course_id": course_id, "course_name": course_name}
+        )
+        assert postgres_store.save_course("demo-user", saved_package).success
+
+    result = postgres_store.list_saved_courses("demo-user")
+
+    assert result.success is True
+    assert result.courses == [
+        postgres_store.SavedCourseSummary("course-a", "A Course"),
+        postgres_store.SavedCourseSummary("course-z", "Z Course"),
+    ]
+    query, parameters = connection.execute_calls[-1]
+    normalized_query = " ".join(query.lower().split())
+    assert "where demo_user_id = %s" in normalized_query
+    assert "order by course_id" in normalized_query
+    assert parameters == ("demo-user",)
+
+
+def test_list_saved_courses_empty_list_is_successful(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+
+    result = postgres_store.list_saved_courses("demo-user")
+
+    assert result.success is True
+    assert result.courses == []
+
+
+def test_list_saved_courses_are_isolated_by_user(
+    monkeypatch: pytest.MonkeyPatch, package: StudyPackage
+) -> None:
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+    shared_course = package.model_copy(
+        update={"course_id": "shared-id", "course_name": "Same Name"}
+    )
+    other_course = package.model_copy(
+        update={"course_id": "other-id", "course_name": "Other Course"}
+    )
+    assert postgres_store.save_course("user-a", shared_course).success
+    assert postgres_store.save_course("user-b", shared_course).success
+    assert postgres_store.save_course("user-b", other_course).success
+
+    user_a_courses = postgres_store.list_saved_courses("user-a")
+    user_b_courses = postgres_store.list_saved_courses("user-b")
+
+    assert user_a_courses.success is True
+    assert user_a_courses.courses == [
+        postgres_store.SavedCourseSummary("shared-id", "Same Name")
+    ]
+    assert user_b_courses.success is True
+    assert user_b_courses.courses == [
+        postgres_store.SavedCourseSummary("other-id", "Other Course"),
+        postgres_store.SavedCourseSummary("shared-id", "Same Name"),
+    ]
+
+
+def test_list_saved_courses_rejects_invalid_user_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        postgres_store,
+        "_connect",
+        lambda: pytest.fail("must not connect for an invalid user ID"),
+    )
+
+    result = postgres_store.list_saved_courses("  ")
+
+    assert result.success is False
+    assert result.courses == []
+    assert "invalid" in result.message.lower()
+
+
+def test_list_saved_courses_reports_unconfigured_database(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(postgres_store, "load_dotenv", lambda **_: None)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr(
+        postgres_store.psycopg,
+        "connect",
+        lambda *_args, **_kwargs: pytest.fail("must not connect"),
+    )
+
+    result = postgres_store.list_saved_courses("demo-user")
+
+    assert result.success is False
+    assert result.courses == []
+    assert "configuration" in result.message.lower()
+
+
+def test_list_saved_courses_hides_connection_error_details(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        postgres_store,
+        "_connect",
+        lambda: (_ for _ in ()).throw(
+            postgres_store.psycopg.Error("password=secret connection string")
+        ),
+    )
+
+    result = postgres_store.list_saved_courses("demo-user")
+
+    assert result.success is False
+    assert result.courses == []
+    assert "could not list saved courses" in result.message.lower()
+    assert "secret" not in result.message
+    assert "connection string" not in result.message
 
 
 def make_attempts(
