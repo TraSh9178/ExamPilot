@@ -2,6 +2,10 @@
 
 AI-powered exam preparation platform for any subject.
 
+For the current account UI and pixel-book Pilot candidate, see
+[testing on another computer](docs/other_computer_testing.md). This branch is
+for UI/Auth testing; learning-record Save/Restore UI integration is pending.
+
 ## Accounts and login
 
 The website requires an account before opening the learning pages. Users can
