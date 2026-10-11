@@ -10,4 +10,3 @@ selected generated output is copied into the project unchanged.
 
 This version used pixel rendering and a framed launcher. The current design
 uses smooth rendering and a transparent launcher, without a white frame.
-

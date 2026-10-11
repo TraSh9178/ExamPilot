@@ -6,6 +6,7 @@ from uuid import uuid4
 import streamlit as st
 
 from models.schemas import StudyPackage
+from services.account_sync import save_course_to_account
 from services.course_state import (
     initialize_courses,
     remove_course,
@@ -287,9 +288,23 @@ if st.session_state.show_course_setup:
                             f"course_stage_{new_course.course_id}"
                         ] = "topics_only"
                         save_course(st.session_state, new_course)
-                        # Refresh the global Tutor and sidebar to this course.
+                        sync_outcome = save_course_to_account(
+                            st.session_state, new_course
+                        )
+                        if sync_outcome is not None and not sync_outcome.success:
+                            st.warning(
+                                "Course kept in this session but not saved to "
+                                f"your account: {sync_outcome.message} "
+                                "Use Save in Study Plan to retry."
+                            )
+
+                        st.success(
+                            "Topics generated. Review them in Study Hub, "
+                            "then confirm your exam scope."
+                        )
                         st.session_state["course_generation_notice"] = True
                         st.rerun()
+
 
             if not course_name:
                 st.info("Enter a course name to enable topic generation.")

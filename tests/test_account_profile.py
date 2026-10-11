@@ -60,7 +60,7 @@ def test_avatar_accepts_actual_png_and_jpeg_and_removes_metadata(image_format):
         assert not image.getexif()
 
 
-@pytest.mark.parametrize("bad_image", [b"", b"not an image", _image("GIF"), _image("BMP")])
+@pytest.mark.parametrize("bad_image", [b"", b"not an image", _image("GIF"), _image("BMP")], ids=["empty", "invalid-text", "gif", "bmp"])
 def test_invalid_or_unsupported_images_preserve_the_previous_avatar(bad_image):
     state = _session()
     save_account_avatar(state, _image(), expected_user_id=USER_A.user_id)

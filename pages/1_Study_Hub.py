@@ -1,6 +1,10 @@
 import streamlit as st
 
 from models.schemas import StudyPackage
+from services.account_sync import (
+    render_save_restore_controls,
+    save_course_to_account,
+)
 from services.course_state import save_course
 from services.gemini_service import generate_questions
 from services.ui_style import apply_app_styles
@@ -86,6 +90,10 @@ if st.session_state.get(confirmed_key) != selected_topic_ids:
     st.session_state.pop(confirmed_key, None)
 
 confirmed_topic_ids = st.session_state.get(confirmed_key)
+practice_history = st.session_state.get(
+    f"practice_history_{course.course_id}", {}
+)
+has_practice_history = bool(practice_history)
 
 if confirmed_topic_ids:
     topic_count = len(confirmed_topic_ids)
@@ -106,7 +114,26 @@ if confirmed_topic_ids:
                 "may contain errors."
             )
 
-            if st.button("Generate questions", type="primary"):
+            if has_practice_history:
+                st.warning(
+                    "Question generation is disabled because this course "
+                    "has exam history. Regenerating questions could make "
+                    "those results impossible to restore."
+                )
+
+            if st.button(
+                "Generate questions",
+                type="primary",
+                disabled=has_practice_history,
+                key=f"generate_questions_{course.course_id}",
+            ):
+                if has_practice_history:
+                    st.error(
+                        "Questions were not generated because this course "
+                        "has exam history."
+                    )
+                    st.stop()
+
                 with st.spinner("Generating questions..."):
                     generated = generate_questions(
                         document,
@@ -127,6 +154,15 @@ if confirmed_topic_ids:
                         )
                     else:
                         save_course(st.session_state, updated_course)
+                        sync_outcome = save_course_to_account(
+                            st.session_state, updated_course
+                        )
+                        if sync_outcome is not None and not sync_outcome.success:
+                            st.warning(
+                                "Questions kept in this session but not saved "
+                                f"to your account: {sync_outcome.message} "
+                                "Use Save below to retry."
+                            )
                         st.session_state[
                             f"course_stage_{course.course_id}"
                         ] = "questions_generated"
@@ -159,3 +195,6 @@ if confirmed_topic_ids:
         st.info("No questions are available in the confirmed scope.")
 else:
     st.info("Confirm your topic selection before starting practice.")
+
+with st.expander("Save / Restore"):
+    render_save_restore_controls(course)

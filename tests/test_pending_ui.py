@@ -1,3 +1,4 @@
+from models.schemas import StudyPackage
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -188,6 +189,50 @@ def test_dashboard_file_replacement_and_removal_never_reuse_old_extraction(
     app.run()
     assert "setup_document" not in app.session_state
     assert not any(button.label == "Generate topics" for button in app.button)
+
+
+STUDY_PLAN_PATH = Path(__file__).resolve().parents[1] / "pages" / "1_Study_Hub.py"
+
+
+def make_study_course(course_id: str, course_name: str) -> StudyPackage:
+    return StudyPackage(
+        course_id=course_id,
+        course_name=course_name,
+        topics=[
+            {
+                "id": f"{course_id}-topic",
+                "name": "Course topic",
+                "summary": "A short course summary.",
+            }
+        ],
+        relationships=[],
+        questions=[],
+    )
+
+
+def test_question_generation_is_disabled_when_course_has_exam_history():
+    course = make_study_course("history-course", "History course")
+    app = AppTest.from_file(str(STUDY_PLAN_PATH))
+    app.session_state["current_course"] = course
+    app.session_state["confirmed_scope_history-course"] = [
+        "history-course-topic"
+    ]
+    app.session_state["course_document_history-course"] = {
+        "text": "Course material",
+    }
+    app.session_state["practice_history_history-course"] = {
+        "old-session": {"session": object()},
+    }
+    app.run()
+
+    assert not app.exception
+    assert app.button(key="generate_questions_history-course").disabled
+    assert any(
+        "Question generation is disabled" in item.value
+        for item in app.warning
+    )
+
+
 
 
 def test_dashboard_extracts_pptx_and_displays_actual_slide_sources(monkeypatch):

@@ -28,4 +28,3 @@ Art direction: polished charming modern 2D mascot illustration; minimal soft rou
 Composition: square canvas, one centered complete character occupying about 90% of the canvas, complete hat and book inside small margins. Genuine transparent background and clean alpha. No white square, white frame, badge, circle, sticker border/halo, speech bubble, background scenery, floor, cast shadow, surrounding objects, or text. This character itself is the floating click target, rather than a sticker placed on a white button.
 Text: none; the interface supplies the name Pilot separately.
 ```
-

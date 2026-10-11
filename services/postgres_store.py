@@ -29,6 +29,19 @@ class LoadCourseResult:
 
 
 @dataclass(frozen=True)
+class SavedCourseSummary:
+    course_id: str
+    course_name: str
+
+
+@dataclass(frozen=True)
+class SavedCoursesResult:
+    success: bool
+    courses: list[SavedCourseSummary]
+    message: str
+
+
+@dataclass(frozen=True)
 class CourseHistoryResult:
     success: bool
     package: StudyPackage | None
@@ -86,6 +99,62 @@ def _database_failure(action: str) -> PersistenceResult:
     )
 
 
+def _lock_course(
+    connection: psycopg.Connection,
+    user_id: str,
+    course_id: str,
+) -> None:
+    connection.execute(
+        """
+        SELECT pg_advisory_xact_lock(
+            hashtextextended(jsonb_build_array(%s::text, %s::text)::text, 0)
+        )
+        """,
+        (user_id, course_id),
+    )
+
+
+def _merge_course_packages(
+    existing: StudyPackage | None,
+    incoming: StudyPackage,
+) -> StudyPackage:
+    if existing is None:
+        return incoming
+
+    topics = list(existing.topics)
+    topics_by_id = {topic.id: topic for topic in topics}
+    for topic in incoming.topics:
+        existing_topic = topics_by_id.get(topic.id)
+        if existing_topic is not None:
+            if existing_topic != topic:
+                raise _PersistenceError(
+                    "A saved topic ID was reused with different content."
+                )
+            continue
+        topics.append(topic)
+        topics_by_id[topic.id] = topic
+
+    questions = list(existing.questions)
+    questions_by_id = {question.id: question for question in questions}
+    for question in incoming.questions:
+        existing_question = questions_by_id.get(question.id)
+        if existing_question is not None:
+            if existing_question != question:
+                raise _PersistenceError(
+                    "A saved question ID was reused with different content."
+                )
+            continue
+        questions.append(question)
+        questions_by_id[question.id] = question
+
+    merged_data = incoming.model_dump(mode="json")
+    merged_data["topics"] = [topic.model_dump(mode="json") for topic in topics]
+    merged_data["questions"] = [
+        question.model_dump(mode="json") for question in questions
+    ]
+    return StudyPackage.model_validate(merged_data)
+
+
 def initialize_schema() -> PersistenceResult:
     """Create the PostgreSQL tables and index from db/schema.sql."""
     schema_path = Path(__file__).resolve().parents[1] / "db" / "schema.sql"
@@ -116,6 +185,28 @@ def save_course(
         )
 
         with _connect() as connection:
+            _lock_course(
+                connection, user_id, validated_package.course_id
+            )
+            existing_row = connection.execute(
+                """
+                SELECT package_json
+                FROM courses
+                WHERE demo_user_id = %s AND course_id = %s
+                FOR UPDATE
+                """,
+                (user_id, validated_package.course_id),
+            ).fetchone()
+            existing_package = None
+            if existing_row is not None:
+                package_data = existing_row[0]
+                if isinstance(package_data, str):
+                    package_data = json.loads(package_data)
+                existing_package = StudyPackage.model_validate(package_data)
+            package_to_save = _merge_course_packages(
+                existing_package, validated_package
+            )
+
             connection.execute(
                 """
                 INSERT INTO demo_users (demo_user_id)
@@ -138,9 +229,9 @@ def save_course(
                 """,
                 (
                     user_id,
-                    validated_package.course_id,
-                    validated_package.course_name,
-                    Jsonb(validated_package.model_dump(mode="json")),
+                    package_to_save.course_id,
+                    package_to_save.course_name,
+                    Jsonb(package_to_save.model_dump(mode="json")),
                 ),
             )
     except _PersistenceError as exc:
@@ -193,6 +284,47 @@ def load_course(
             False,
             None,
             "Database could not load the course. Check configuration and connection.",
+        )
+
+
+def list_saved_courses(user_id: str) -> SavedCoursesResult:
+    """List courses for a user ID supplied by the caller's trusted auth context."""
+    try:
+        validated_user_id = _validate_demo_user_id(user_id)
+        with _connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT course_id, course_name
+                FROM courses
+                WHERE demo_user_id = %s
+                ORDER BY course_id
+                """,
+                (validated_user_id,),
+            ).fetchall()
+
+        courses = [
+            SavedCourseSummary(course_id=course_id, course_name=course_name)
+            for course_id, course_name in rows
+        ]
+        return SavedCoursesResult(True, courses, "Saved courses listed.")
+
+    except _PersistenceError:
+        return SavedCoursesResult(
+            False,
+            [],
+            "Database configuration is invalid; saved courses could not be listed.",
+        )
+    except (ValueError, TypeError):
+        return SavedCoursesResult(
+            False,
+            [],
+            "User identifier is invalid; saved courses could not be listed.",
+        )
+    except psycopg.Error:
+        return SavedCoursesResult(
+            False,
+            [],
+            "Database could not list saved courses. Check the database configuration and connection.",
         )
 
 
@@ -250,6 +382,7 @@ def save_exam_result(
                 raise ValueError("An unanswered question cannot be correct.")
 
         with _connect() as connection:
+            _lock_course(connection, user_id, course_id)
             course_row = connection.execute(
                 """
                 SELECT package_json
@@ -363,6 +496,9 @@ def load_course_history(
         user_id = _validate_demo_user_id(demo_user_id)
 
         with _connect() as connection:
+            connection.execute(
+                "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"
+            )
             course_row = connection.execute(
                 """
                 SELECT package_json
@@ -404,6 +540,15 @@ def load_course_history(
                             "question_ids": question_ids,
                         }
                     )
+                )
+
+            question_ids = {question.id for question in package.questions}
+            if any(
+                not set(session.question_ids).issubset(question_ids)
+                for session in sessions
+            ):
+                raise _PersistenceError(
+                    "Stored exam session references questions missing from the course."
                 )
 
             attempt_rows = connection.execute(

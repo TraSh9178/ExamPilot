@@ -2,6 +2,7 @@ from html import escape
 
 import streamlit as st
 
+from services.account_sync import render_last_save_status, save_exam_to_account
 from services.exam_engine import create_exam, grade_exam
 from services.ui_style import apply_app_styles
 
@@ -190,10 +191,18 @@ if active_practice is not None:
                     "result": result,
                 }
 
+                save_exam_to_account(
+                    st.session_state,
+                    course,
+                    session,
+                    result["attempts"],
+                )
+
                 st.rerun()
 
     if "result" in active_practice:
         result = active_practice["result"]
+        render_last_save_status()
 
         st.subheader("Your result")
         with st.container(key="practice_result_overview"):

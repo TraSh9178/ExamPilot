@@ -1,6 +1,12 @@
 import streamlit as st
 
+from services.account_sync import (
+    has_unresolved_conflicts,
+    render_sidebar_status,
+    restore_after_login,
+)
 from services.auth_session import current_user
+
 from services.auth_ui import render_auth_page
 from services.account_ui import render_account_page, render_account_sidebar
 from services.ui_style import apply_app_styles
@@ -23,11 +29,13 @@ if user is None:
     ).run()
     st.stop()
 
+restore_after_login(st.session_state)
 apply_app_styles()
 account_page = st.Page(
     render_account_page, title="My account", icon=":material/account_circle:",
     url_path="account", visibility="hidden",
 )
+
 pages = [
     st.Page(
         "pages/0_Dashboard.py",
@@ -64,6 +72,8 @@ pages = [
 
 navigation = st.navigation([*pages, account_page])
 render_account_sidebar(account_page)
+with st.sidebar:
+    render_sidebar_status()
 
 # Reserve room for the floating entry at the bottom of narrow study pages.
 st.markdown(

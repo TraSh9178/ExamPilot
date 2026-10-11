@@ -11,6 +11,7 @@ from services.account_profile import (
     save_account_avatar,
 )
 from services.auth_session import current_user, logout_session
+from services.account_sync import has_unresolved_conflicts
 from services.ui_style import apply_app_styles
 
 
@@ -70,9 +71,15 @@ def render_account_sidebar(account_page) -> None:
             account_page, label="My account", icon=":material/account_circle:",
             use_container_width=True,
         )
+        discard_confirmed = True
+        if has_unresolved_conflicts(st.session_state):
+            discard_confirmed = st.checkbox(
+                "Discard conflicting local records on log out",
+                key="confirm_discard_logout_button",
+            )
         st.button(
             "Log out", key="logout_button", icon=":material/logout:",
-            on_click=logout_session, args=(st.session_state,),
+            disabled=not discard_confirmed, on_click=logout_session, args=(st.session_state,),
             use_container_width=True,
         )
 
@@ -94,9 +101,15 @@ def render_account_page() -> None:
         with st.expander("Account details"):
             st.text("Account ID")
             st.text(user.user_id)
+        discard_confirmed = True
+        if has_unresolved_conflicts(st.session_state):
+            discard_confirmed = st.checkbox(
+                "Discard conflicting local records on log out",
+                key="confirm_discard_account_logout_button",
+            )
         st.button(
             "Log out", key="account_logout_button", icon=":material/logout:",
-            on_click=logout_session, args=(st.session_state,),
+            disabled=not discard_confirmed, on_click=logout_session, args=(st.session_state,),
             use_container_width=True,
         )
 
