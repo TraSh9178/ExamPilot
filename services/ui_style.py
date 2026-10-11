@@ -90,11 +90,17 @@ def apply_app_styles() -> None:
 
         [data-testid="stMain"] :is(
             [class*="st-key-progress_topic_"],
-            [class*="st-key-knowledge_topic_heading"],
-            [class*="st-key-anki_study_card_"]
+            [class*="st-key-knowledge_topic_heading"]
         ) [data-testid="stMarkdownContainer"] :is(h3, h4) {
             font-size: var(--exam-font-card);
             line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        [data-testid="stMain"] [class*="st-key-anki_study_card_"] [data-testid="stMarkdownContainer"] h4 {
+            font-size: var(--exam-font-flashcard-question);
+            font-weight: 600;
+            line-height: 1.2;
             overflow-wrap: anywhere;
         }
 
@@ -383,7 +389,8 @@ def apply_app_styles() -> None:
 
         [class*="st-key-practice_question_"] [data-testid="stMarkdownContainer"] h3,
         [class*="st-key-practice_review_"] [data-testid="stMarkdownContainer"] h3 {
-            font-size: var(--exam-font-card);
+            font-size: var(--exam-font-question);
+            font-weight: 680;
             line-height: 1.4;
             margin-bottom: 0.35rem;
         }

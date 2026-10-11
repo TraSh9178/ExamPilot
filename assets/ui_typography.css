@@ -3,6 +3,8 @@
   --exam-font-page: 3rem;
   --exam-font-heading: 2rem;
   --exam-font-card: 1.75rem;
+  --exam-font-question: 1.55rem;
+  --exam-font-flashcard-question: 1.5rem;
   --exam-font-body: 1rem;
   --exam-font-meta: 0.875rem;
   --exam-font-stat: 2.75rem;
@@ -19,6 +21,7 @@
   :root, :host {
     --exam-font-page: 2.25rem;
     --exam-font-heading: 1.75rem;
+    --exam-font-question: 1.5rem;
     --exam-font-stat: 2.5rem;
   }
 }

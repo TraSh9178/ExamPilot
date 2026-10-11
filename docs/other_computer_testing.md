@@ -5,7 +5,8 @@
 Pilot。各页面同级标题、正文和说明文字使用[统一字号](ui_typography.md)。
 原有 `fix/floating-ai-tutor-auth@09eb5d8` 和 Draft PR #24 保持不变。
 
-本分支基于已交付 Auth/Tutor 基线，未同步最终 main 或 Save/Restore PR #23。
+本分支基于已交付 Auth/Tutor 基线，已同步 `main@3850c94`，未集成 Save/Restore PR #23
+或最终主线的学习记录 UI。
 页面的课程、考试记录仍保存在 Streamlit 会话中；学习记录 Save/Restore UI 尚未集成，
 不能用此分支宣称学习记录跨设备恢复通过。头像、聊天和草稿也不跨设备同步。
 
@@ -73,8 +74,9 @@ GitHub 中的正式代码不含 `UI preview · example accounts · no database`�
 4. 打开 Microeconomics、Calculus I 和 Python Basics Demo，检查标题及首页数字。
    Study Plan 底部的重复 Tutor、Anki 说明和禁用 Save/Restore 占位区已移除；
    问答使用浮动 Pilot，Anki 使用侧栏 Export to Anki。
-5. 进入 Practice、Progress、Anki，检查同级标题、题目、正文、说明和统计数字字号
-   一致；检查手机布局、长标题换行，以及登录表单在手机上竖向排列。
+5. 进入 Practice、Progress、Anki，检查同级页面标题、正文、说明和统计数字字号
+   一致；练习题、解析标题和 Anki 题目使用放大前的原版字号，具体见统一字号表。
+   检查手机布局、长标题换行，以及登录表单在手机上竖向排列。
 6. 打开 Knowledge Map，检查拖动节点后碰墙反弹、节点碰撞和节点详情。
 7. 检查 Pilot 恢复为最初版带天线、圆眼睛和笑脸的蓝色机器人，入口和面板图标一致；
    拖拽、展开、关闭、Esc 和方向键移动均可操作。
@@ -92,7 +94,10 @@ GitHub 中的正式代码不含 `UI preview · example accounts · no database`�
 说明账号是否使用真实测试数据库、Pilot 是否调用真实 Gemini；不要把 mock 或
 浏览器会话数据当成云端恢复证据。可附截图，但不包含凭据。
 
-本轮已有证据：统一字号和布局 Chromium 检查 36/36，覆盖 1440、768、390、320px
-视口；完整 pytest 498 passed（5 个已有 SWIG 弃用警告）。Pilot 交互检查 6/6，
-账户页此前浏览器检查 9/9。上述浏览器 Auth 身份由隔离测试替换；真实 TigerData
+题目字号恢复后的专项 Chromium 检查 12/12，覆盖 1440、768、390、320px 视口、
+练习题与提交后的解析，以及 Anki 题目和答案；其他页面、课程和主题标题大小保持不变。
+此前 `bf4ec71` 的统一字号和布局检查 36/36、完整 pytest 498 passed
+（5 个已有 SWIG 弃用警告）、Pilot 交互检查 6/6；这些是此前版本的证据，
+本次 CSS 修正未重复全量 pytest。账户页此前浏览器检查 9/9。
+上述浏览器 Auth 身份由隔离测试替换；真实 TigerData
 联测需要另一台电脑按以上配置后独立报告。
