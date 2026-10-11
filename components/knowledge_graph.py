@@ -72,6 +72,7 @@ def render_knowledge_graph(
     config = Config(
         physics=True,
         hierarchical=False,
+        groups={},
         interaction={
             "dragNodes": True,
             "zoomView": True,

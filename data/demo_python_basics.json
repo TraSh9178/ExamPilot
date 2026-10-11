@@ -1,0 +1,153 @@
+{
+  "course_id": "python-basics-demo",
+  "course_name": "Python Basics",
+  "topics": [
+    {
+      "id": "python-basics-topic-1",
+      "name": "Variables and Expressions",
+      "summary": "A variable name is bound to an object. Reassignment changes that binding; it does not by itself modify or delete the previously bound object. Expressions can use values to calculate new results.",
+      "source_pages": []
+    },
+    {
+      "id": "python-basics-topic-2",
+      "name": "Conditionals",
+      "summary": "Conditionals use Boolean conditions and comparisons to select which instructions execute based on specific cases.",
+      "source_pages": []
+    },
+    {
+      "id": "python-basics-topic-3",
+      "name": "Loops",
+      "summary": "Loops repeat blocks of instructions using constructs like for and while, governed by indentation and state updates.",
+      "source_pages": []
+    }
+  ],
+  "relationships": [],
+  "questions": [
+    {
+      "id": "python-basics-q1",
+      "topic_id": "python-basics-topic-1",
+      "question": "What is the purpose of assignment in relation to a variable?",
+      "options": [
+        "It binds a value to a variable name.",
+        "It deletes the variable from memory.",
+        "It prevents the variable from ever changing.",
+        "It transforms the variable into a conditional statement."
+      ],
+      "correct_index": 0,
+      "explanation": "Assignment binds a variable name to an object. Reassignment changes which object the name is bound to; it does not mean the old object itself was modified or deleted.",
+      "source_pages": []
+    },
+    {
+      "id": "python-basics-q2",
+      "topic_id": "python-basics-topic-1",
+      "question": "What happens during reassignment to a variable?",
+      "options": [
+        "The previous value is deleted permanently without replacement.",
+        "The variable name is bound to a new object.",
+        "A new independent variable is automatically created.",
+        "The variable becomes a constant."
+      ],
+      "correct_index": 1,
+      "explanation": "Reassignment changes the object bound to the variable name. This alone does not imply that the previously bound object was modified or deleted.",
+      "source_pages": []
+    },
+    {
+      "id": "python-basics-q3",
+      "topic_id": "python-basics-topic-1",
+      "question": "What can an expression do using stored values?",
+      "options": [
+        "Calculate a new result",
+        "Terminate the execution of a program",
+        "Automatically generate a while loop",
+        "Convert text into an unchangeable constant"
+      ],
+      "correct_index": 0,
+      "explanation": "An expression can use stored values to calculate a new result.",
+      "source_pages": []
+    },
+    {
+      "id": "python-basics-q4",
+      "topic_id": "python-basics-topic-2",
+      "question": "When does an if branch run?",
+      "options": [
+        "When its condition is false",
+        "When the program terminates",
+        "When its condition is true",
+        "When a loop finishes execution"
+      ],
+      "correct_index": 2,
+      "explanation": "An if branch runs when its condition is true.",
+      "source_pages": []
+    },
+    {
+      "id": "python-basics-q5",
+      "topic_id": "python-basics-topic-2",
+      "question": "In a simple if/else statement without elif, what is the role of the else branch?",
+      "options": [
+        "It executes before the if branch is evaluated.",
+        "It handles the other case when the if condition is not met.",
+        "It restarts the current loop from the beginning.",
+        "It evaluates whether a variable should be reassigned."
+      ],
+      "correct_index": 1,
+      "explanation": "In a simple if/else statement without elif, the else branch handles the other case when the if condition is false.",
+      "source_pages": []
+    },
+    {
+      "id": "python-basics-q6",
+      "topic_id": "python-basics-topic-2",
+      "question": "What do comparisons such as equality and greater-than produce?",
+      "options": [
+        "Numeric values",
+        "Boolean values",
+        "Text strings",
+        "Variable names"
+      ],
+      "correct_index": 1,
+      "explanation": "Comparisons such as equality and greater-than produce Boolean values.",
+      "source_pages": []
+    },
+    {
+      "id": "python-basics-q7",
+      "topic_id": "python-basics-topic-3",
+      "question": "What does a for loop process?",
+      "options": [
+        "Elements in an iterable",
+        "Only boolean conditions",
+        "Single isolated variable assignments",
+        "Indentation levels exclusively"
+      ],
+      "correct_index": 0,
+      "explanation": "A for loop iterates over the elements provided by an iterable object.",
+      "source_pages": []
+    },
+    {
+      "id": "python-basics-q8",
+      "topic_id": "python-basics-topic-3",
+      "question": "Unless exited early, under what condition does a while loop continue?",
+      "options": [
+        "Until the program crashes",
+        "While its condition remains true",
+        "Exactly one time per sequence item",
+        "Until an else branch triggers"
+      ],
+      "correct_index": 1,
+      "explanation": "A while loop repeats while its condition remains true. A break statement can exit the loop early.",
+      "source_pages": []
+    },
+    {
+      "id": "python-basics-q9",
+      "topic_id": "python-basics-topic-3",
+      "question": "What determines which instructions belong to the loop body?",
+      "options": [
+        "Assignment operators",
+        "Boolean comparisons",
+        "Indentation",
+        "Variable names"
+      ],
+      "correct_index": 2,
+      "explanation": "Indentation determines which instructions belong to the loop body.",
+      "source_pages": []
+    }
+  ]
+}
