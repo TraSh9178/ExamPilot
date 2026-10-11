@@ -6,7 +6,7 @@ import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 from models.schemas import StudyPackage
-from services.ui_adapters import tutor_question_key
+from services.ui_adapters import tutor_question_key, tutor_result_key
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,7 +63,11 @@ def test_dashboard_extracts_txt_and_shows_limits_preview_and_source(monkeypatch)
         {"filename": "notes.txt", "page": None}
     ]
     assert any("50,000 characters" in item.value for item in app.caption)
-    assert any("PPTX, DOCX, images, and OCR" in item.value for item in app.caption)
+    assert any(
+        "text-based PPTX" in item.value
+        and "PPTX slide notes and image OCR" in item.value
+        for item in app.caption
+    )
     assert any(
         "notes.txt · TXT file (no page number)" in item.value
         for item in app.caption
@@ -155,7 +159,19 @@ def make_study_course(course_id: str, course_name: str) -> StudyPackage:
     )
 
 
-def test_pending_feature_controls_are_disabled_and_tutor_input_is_course_scoped():
+def test_tutor_answers_are_course_scoped_and_sent_only_on_form_submit(
+    monkeypatch,
+):
+    from services import gemini_service
+
+    calls = []
+
+    def fake_ask_tutor(package, question, topic_id=None):
+        calls.append((package, question, topic_id))
+        return {"ok": True, "answer": f"Answer for {package['course_name']}"}
+
+    monkeypatch.setattr(gemini_service, "ask_tutor", fake_ask_tutor)
+
     first_course = make_study_course("course-a", "Course A")
     first_app = AppTest.from_file(str(STUDY_PLAN_PATH))
     first_app.session_state["current_course"] = first_course
@@ -178,10 +194,11 @@ def test_pending_feature_controls_are_disabled_and_tutor_input_is_course_scoped(
         assert app.text_area(key=tutor_question_key(course_id)).value == (
             expected_question
         )
-        assert app.button(key=f"tutor_send_{course_id}").disabled
+        assert not app.button(key=f"tutor_send_{course_id}").disabled
         assert app.button(key=f"anki_download_{course_id}").disabled
         assert app.button(key=f"database_save_{course_id}").disabled
         assert app.button(key=f"database_restore_{course_id}").disabled
+        assert tutor_result_key(course_id) not in app.session_state
         assert "No flashcards are available to preview yet." in [
             element.value for element in app.info
         ]
@@ -195,7 +212,7 @@ def test_pending_feature_controls_are_disabled_and_tutor_input_is_course_scoped(
             for element in app.caption
         )
         assert any(
-            "接口待接入" in element.value
+            "Answers use this course" in element.value
             for element in app.caption
         )
         assert any(
@@ -203,6 +220,7 @@ def test_pending_feature_controls_are_disabled_and_tutor_input_is_course_scoped(
             for element in app.caption
         )
 
+    assert calls == []
     first_app.text_area(key=tutor_question_key("course-a")).set_value(
         "Updated question A"
     ).run()
@@ -211,4 +229,94 @@ def test_pending_feature_controls_are_disabled_and_tutor_input_is_course_scoped(
     )
     assert second_app.session_state[tutor_question_key("course-b")] == (
         "Question B"
+    )
+
+    first_app.button(key="tutor_send_course-a").click().run()
+
+    assert not first_app.exception
+    assert len(calls) == 1
+    assert type(calls[0][0]) is dict
+    assert calls[0][0]["course_id"] == "course-a"
+    assert calls[0][1] == "Updated question A"
+    assert calls[0][2] is None
+    assert any(
+        element.value == "Answer for Course A"
+        for element in first_app.markdown
+    )
+    assert tutor_result_key("course-a") in first_app.session_state
+    assert tutor_result_key("course-b") not in second_app.session_state
+
+    first_app.run()
+    assert len(calls) == 1
+
+
+def test_tutor_displays_service_failure_without_retrying(monkeypatch):
+    from services import gemini_service
+
+    calls = []
+
+    def fake_ask_tutor(package, question, topic_id=None):
+        calls.append((package, question))
+        return {
+            "ok": False,
+            "error_code": "MISSING_API_KEY",
+            "message": "Please configure GEMINI_API_KEY.",
+        }
+
+    monkeypatch.setattr(gemini_service, "ask_tutor", fake_ask_tutor)
+    course = make_study_course("course-failure", "Failure course")
+    app = AppTest.from_file(str(STUDY_PLAN_PATH))
+    app.session_state["current_course"] = course
+    app.session_state[tutor_question_key(course.course_id)] = "Explain this."
+    app.run()
+
+    app.button(key=f"tutor_send_{course.course_id}").click().run()
+
+    assert not app.exception
+    assert len(calls) == 1
+    assert type(calls[0][0]) is dict
+    assert calls[0][0]["course_id"] == course.course_id
+    assert calls[0][1] == "Explain this."
+    assert any(
+        error.value == "Please configure GEMINI_API_KEY."
+        for error in app.error
+    )
+
+    app.run()
+    assert len(calls) == 1
+
+
+def test_dashboard_extracts_pptx_and_displays_actual_slide_sources(monkeypatch):
+    from io import BytesIO
+
+    from pptx import Presentation
+
+    upload = install_upload_mock(monkeypatch)
+    app = AppTest.from_file(str(DASHBOARD_PATH)).run()
+    app.button(key="create_course_button").click().run()
+    presentation = Presentation()
+    slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+    shape = slide.shapes.add_textbox(0, 0, 2_000_000, 500_000)
+    shape.text_frame.text = "PPTX extraction fixture."
+    output = BytesIO()
+    presentation.save(output)
+    upload["file"] = make_upload("slides.pptx", output.getvalue())
+    app.run()
+
+    click_extract(app)
+
+    assert not app.exception
+    document = app.session_state["setup_document"]
+    assert document["sources"] == [{"filename": "slides.pptx", "page": 1}]
+    assert document["pages"] == [
+        {"page": 1, "text": "PPTX extraction fixture."}
+    ]
+    assert any(
+        "slides.pptx · Slide 1" == item.value for item in app.caption
+    )
+    assert any("PPTX slides (1)" == item.label for item in app.expander)
+    assert any(
+        "Supports UTF-8 TXT, text-based PDF, and text-based PPTX"
+        in item.value
+        for item in app.caption
     )
