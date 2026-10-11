@@ -194,6 +194,75 @@ def apply_app_styles() -> None:
             box-shadow: 0 5px 18px rgba(20, 55, 105, 0.055);
         }
 
+        [data-testid="stMetric"] {
+            padding: 0.25rem 0.1rem;
+        }
+
+        [data-testid="stMetricLabel"] p {
+            color: var(--exam-muted) !important;
+            font-size: 0.85rem;
+        }
+
+        [data-testid="stMetricValue"] {
+            color: var(--exam-ink);
+            font-weight: 750;
+        }
+
+        .mastery-badge {
+            display: inline-block;
+            padding: 0.3rem 0.65rem;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 650;
+        }
+
+        .mastery-unattempted {
+            background: #F1F5F9;
+            color: #475569;
+        }
+
+        .mastery-insufficient_evidence {
+            background: #F0EAFE;
+            color: #6941C6;
+        }
+
+        .mastery-weak {
+            background: #FEECEC;
+            color: #B42318;
+        }
+
+        .mastery-developing {
+            background: #FFF4D6;
+            color: #8A5A00;
+        }
+
+        .mastery-mastered {
+            background: #E8F7EF;
+            color: #157347;
+        }
+
+        .graph-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 0.85rem;
+            padding: 0.75rem 0 0.15rem;
+            border-top: 1px solid var(--exam-border);
+            color: var(--exam-muted);
+            font-size: 0.78rem;
+        }
+
+        .graph-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .graph-legend i {
+            width: 0.62rem;
+            height: 0.62rem;
+            border-radius: 50%;
+        }
+
         [data-testid="stHorizontalBlock"] {
             align-items: stretch;
             gap: 1.1rem;

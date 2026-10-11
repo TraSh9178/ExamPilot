@@ -20,18 +20,21 @@ if course is None:
     st.stop()
 
 st.subheader(course.course_name)
-st.caption(f"{len(course.topics)} topics")
+st.caption(f"{len(course.topics)} knowledge points")
 
 if not course.topics:
     st.info("This course has no topics yet.")
     st.stop()
 
-mode_label = st.radio(
-    "Mastery mode",
-    options=["Mock Exam", "Topic Practice"],
-    key=f"graph_mode_{course.course_id}",
-    horizontal=True,
-)
+with st.container(border=True):
+    st.caption("Mastery mode")
+    mode_label = st.radio(
+        "Mastery mode",
+        options=["Mock Exam", "Topic Practice"],
+        key=f"graph_mode_{course.course_id}",
+        horizontal=True,
+        label_visibility="collapsed",
+    )
 mode = "mock" if mode_label == "Mock Exam" else "topic"
 
 history_key = f"practice_history_{course.course_id}"
@@ -63,26 +66,35 @@ except ValueError as error:
     st.error(f"Could not calculate mastery: {error}")
     st.stop()
 
-selected_node_id = render_knowledge_graph(course, stats, mode)
+graph_column, details_column = st.columns([2.2, 1])
 
-details = None
-if selected_node_id is not None:
-    graph = build_mastery_graph(course, stats, mode)
-    details = get_selected_topic_details(
-        selected_node_id, course, graph
-    )
+with graph_column:
+    with st.container(border=True):
+        selected_node_id = render_knowledge_graph(course, stats, mode)
 
-render_topic_details(details)
+        st.markdown(
+            """
+            <div class="graph-legend">
+                <span><i style="background:#94A3B8"></i>Unattempted</span>
+                <span><i style="background:#A78BFA"></i>Insufficient evidence</span>
+                <span><i style="background:#EF4444"></i>Weak</span>
+                <span><i style="background:#F59E0B"></i>Developing</span>
+                <span><i style="background:#22C55E"></i>Mastered</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.caption("Click to view details · Drag to move · Scroll to zoom")
 
-st.caption(
-    "Drag nodes to rearrange the graph. "
-    "Arrows indicate prerequisite relationships."
-)
+    if not course.relationships:
+        st.info("No topic relationships are available for this course.")
 
-if not course.relationships:
-    st.info("No relationships are provided for this course.")
-
-st.caption(
-    "Gray: Unattempted · Purple: Insufficient evidence · "
-    "Red: Weak · Orange: Developing · Green: Mastered"
-)
+with details_column:
+    with st.container(border=True):
+        details = None
+        if selected_node_id is not None:
+            graph = build_mastery_graph(course, stats, mode)
+            details = get_selected_topic_details(
+                selected_node_id, course, graph
+            )
+        render_topic_details(details)

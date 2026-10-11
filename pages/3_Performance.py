@@ -23,12 +23,6 @@ st.subheader(course.course_name)
 history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})
 
-if not history:
-    st.info("Submit a practice session to see your performance.")
-    if st.button("Go to Practice Center", type="primary"):
-        st.switch_page("pages/2_Practice_Center.py")
-    st.stop()
-
 sessions = [
     record["session"] for record in history.values()
 ]
@@ -63,11 +57,41 @@ mode_label = st.radio(
     horizontal=True,
 )
 mode = "mock" if mode_label == "Mock Exam" else "topic"
+mode_name = mode_label
 
 mode_sessions = [
     session for session in sessions if session.mode == mode
 ]
-st.caption(f"Graded sessions: {len(mode_sessions)}")
+mode_session_ids = {session.session_id for session in mode_sessions}
+mode_attempts = [
+    attempt for attempt in attempts
+    if attempt.session_id in mode_session_ids
+]
+correct_count = sum(attempt.is_correct for attempt in mode_attempts)
+overall_accuracy = (
+    correct_count / len(mode_attempts) * 100 if mode_attempts else None
+)
+
+st.caption(f"Statistics for {mode_name}")
+
+overview = st.columns(3)
+for column, label, value in (
+    (overview[0], "Graded practice sessions", len(mode_sessions)),
+    (overview[1], "Answers", len(mode_attempts)),
+    (
+        overview[2],
+        "Accuracy",
+        "—" if overall_accuracy is None else f"{overall_accuracy:.2f}%",
+    ),
+):
+    with column.container(border=True):
+        st.metric(label, value)
+
+if not history:
+    st.info(
+        "No graded practice sessions yet. Your topic list will update "
+        "after you complete a practice session."
+    )
 
 status_labels = {
     "unattempted": "Unattempted",
@@ -83,7 +107,6 @@ stats_by_topic = {
     if item.mode == mode
 }
 
-rows = []
 for topic in course.topics:
     topic_stats = stats_by_topic.get(topic.id)
 
@@ -98,29 +121,35 @@ for topic in course.topics:
         accuracy = topic_stats.accuracy
         status = get_mastery_status(topic_stats)
 
-    rows.append(
-        {
-            "Topic": topic.name,
-            "Attempted": attempted,
-            "Correct": correct,
-            "Accuracy": (
-                "—" if accuracy is None else f"{accuracy:.2f}%"
+    with st.container(border=True):
+        topic_columns = st.columns([2.5, 1, 1, 1.3])
+        topic_columns[0].markdown(f"**{topic.name}**")
+        topic_columns[1].metric("Answers", attempted)
+        topic_columns[2].metric(
+            "Accuracy",
+            "—" if accuracy is None else f"{accuracy:.2f}%",
+        )
+        topic_columns[3].markdown(
+            (
+                f'<span class="mastery-badge mastery-{status}">'
+                f"{status_labels[status]}</span>"
             ),
-            "Status": status_labels[status],
-        }
-    )
-
-st.dataframe(
-    rows,
-    hide_index=True,
-    use_container_width=True,
-)
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            (
+                f"{correct} correct out of {attempted} answers."
+                if attempted
+                else "No answers recorded in this mode."
+            )
+        )
 
 st.caption(
-    "Mastery requires at least 3 attempts per topic in the selected mode. "
+    "Insufficient evidence means fewer than 3 answers for that topic "
+    "in the selected mode. "
     "Below 60%: Weak · 60–79.99%: Developing · 80% or above: Mastered."
 )
 st.caption("Records are retained only in the current browser session.")
 
-if st.button("Go to Practice Center", type="primary"):
+if st.button("Start practice", type="primary"):
     st.switch_page("pages/2_Practice_Center.py")

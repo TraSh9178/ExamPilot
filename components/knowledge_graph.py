@@ -70,6 +70,8 @@ def render_knowledge_graph(
     graph = build_mastery_graph(package, stats, mode)
     nodes, edges = convert_graph_data(graph)
     config = Config(
+        height=560,
+        width=900,
         physics=True,
         hierarchical=False,
         groups={},
@@ -118,7 +120,7 @@ def get_selected_topic_details(
 
 def render_topic_details(details: dict | None) -> None:
     if details is None:
-        st.info("Select a topic to view its details.")
+        st.info("Click a knowledge point to see its details.")
         return
 
     st.subheader(details["name"])

@@ -9,7 +9,6 @@ apply_app_styles()
 
 st.title("Study Plan")
 
-# Read the course selected on the dashboard.
 course = st.session_state.get("current_course")
 
 if course is None:
@@ -18,14 +17,19 @@ if course is None:
     st.stop()
 
 st.subheader(course.course_name)
-st.caption(f"{len(course.topics)} topics")
+st.caption(f"{len(course.topics)} knowledge points")
 
 if not course.topics:
     st.info("This course has no topics yet.")
 else:
-    for topic in course.topics:
+    for topic_number, topic in enumerate(course.topics, start=1):
         with st.container(border=True):
-            st.subheader(topic.name)
+            topic_columns = st.columns([0.55, 4])
+            topic_columns[0].markdown(
+                f"### {topic_number:02d}",
+                help=f"Knowledge point {topic_number}",
+            )
+            topic_columns[1].markdown(f"**{topic.name}**")
             st.write(topic.summary)
 
             if topic.source_pages:
@@ -36,9 +40,6 @@ else:
             else:
                 st.caption("Source pages not provided.")
 
-st.divider()
-st.subheader("Confirm exam scope")
-
 # Keep scope confirmation separate for each course.
 scope_key = f"scope_selection_{course.course_id}"
 confirmed_key = f"confirmed_scope_{course.course_id}"
@@ -48,33 +49,39 @@ if scope_key not in st.session_state:
         st.session_state.get(confirmed_key, [])
     )
 
+with st.container(border=True):
+    st.subheader("Choose your exam scope")
+    selected_topic_ids = st.multiselect(
+        "Knowledge points",
+        options=[topic.id for topic in course.topics],
+        format_func=lambda topic_id: next(
+            topic.name
+            for topic in course.topics
+            if topic.id == topic_id
+        ),
+        key=scope_key,
+    )
+    st.caption(
+        f"Selected {len(selected_topic_ids)} / {len(course.topics)} "
+        "knowledge points"
+    )
 
-selected_topic_ids = st.multiselect(
-    "Choose topics for your exam",
-    options=[topic.id for topic in course.topics],
-    format_func=lambda topic_id: next(
-        topic.name
-        for topic in course.topics
-        if topic.id == topic_id
-    ),
-    key=scope_key,
-)
+    if st.button("Confirm exam scope", type="primary"):
+        valid_topic_ids = {topic.id for topic in course.topics}
+
+        if not selected_topic_ids:
+            st.error("Select at least one topic.")
+        elif len(selected_topic_ids) != len(set(selected_topic_ids)):
+            st.error("Duplicate topic IDs are not allowed.")
+        elif not set(selected_topic_ids).issubset(valid_topic_ids):
+            st.error("The selection contains an invalid topic.")
+        else:
+            st.session_state[confirmed_key] = selected_topic_ids.copy()
+            st.rerun()
 
 # A changed selection requires confirmation again.
 if st.session_state.get(confirmed_key) != selected_topic_ids:
     st.session_state.pop(confirmed_key, None)
-
-if st.button("Confirm exam scope", type="primary"):
-    valid_topic_ids = {topic.id for topic in course.topics}
-
-    if not selected_topic_ids:
-        st.error("Select at least one topic.")
-    elif len(selected_topic_ids) != len(set(selected_topic_ids)):
-        st.error("Duplicate topic IDs are not allowed.")
-    elif not set(selected_topic_ids).issubset(valid_topic_ids):
-        st.error("The selection contains an invalid topic.")
-    else:
-        st.session_state[confirmed_key] = selected_topic_ids.copy()
 
 confirmed_topic_ids = st.session_state.get(confirmed_key)
 
@@ -82,52 +89,52 @@ if confirmed_topic_ids:
     topic_count = len(confirmed_topic_ids)
     topic_label = "topic" if topic_count == 1 else "topics"
 
-    st.success(
-        f"Exam scope confirmed: {topic_count} {topic_label}."
-    )
+    st.success(f"Exam scope confirmed: {topic_count} {topic_label}.")
 
     document = st.session_state.get(
         f"course_document_{course.course_id}"
     )
 
     if document is not None:
-        st.caption(
-            "Generate candidate questions from your material "
-            "using only the confirmed topics. "
-            "AI-generated questions may contain errors."
-        )
+        with st.container(border=True):
+            st.subheader("Questions from your material")
+            st.caption(
+                "Generate candidate questions from this course material "
+                "using only the confirmed topics. AI-generated questions "
+                "may contain errors."
+            )
 
-        if st.button("Generate questions", type="primary"):
-            with st.spinner("Generating questions..."):
-                generated = generate_questions(
-                    document,
-                    course,
-                    list(confirmed_topic_ids),
-                )
+            if st.button("Generate questions", type="primary"):
+                with st.spinner("Generating questions..."):
+                    generated = generate_questions(
+                        document,
+                        course,
+                        list(confirmed_topic_ids),
+                    )
 
-            if not generated["ok"]:
-                st.error(generated["message"])
-            else:
-                try:
-                    updated_course = StudyPackage.model_validate(
-                        generated["package"]
-                    )
-                except ValueError as error:
-                    st.error(
-                        f"Could not load generated questions: {error}"
-                    )
+                if not generated["ok"]:
+                    st.error(generated["message"])
                 else:
-                    save_course(st.session_state, updated_course)
-                    st.session_state[
-                        f"course_stage_{course.course_id}"
-                    ] = "questions_generated"
+                    try:
+                        updated_course = StudyPackage.model_validate(
+                            generated["package"]
+                        )
+                    except ValueError as error:
+                        st.error(
+                            f"Could not load generated questions: {error}"
+                        )
+                    else:
+                        save_course(st.session_state, updated_course)
+                        st.session_state[
+                            f"course_stage_{course.course_id}"
+                        ] = "questions_generated"
 
-                    # Previous practice used the old question set.
-                    st.session_state.pop(
-                        f"active_practice_{course.course_id}",
-                        None,
-                    )
-                    st.rerun()
+                        # Previous practice used the old question set.
+                        st.session_state.pop(
+                            f"active_practice_{course.course_id}",
+                            None,
+                        )
+                        st.rerun()
 
     available_count = sum(
         question.topic_id in confirmed_topic_ids
@@ -139,7 +146,7 @@ if confirmed_topic_ids:
     )
 
     if available_count:
-        if st.button("Go to Practice Center", type="primary"):
+        if st.button("Start practice", type="primary"):
             st.switch_page("pages/2_Practice_Center.py")
     elif document is not None:
         st.info(
@@ -149,4 +156,4 @@ if confirmed_topic_ids:
     else:
         st.info("No questions are available in the confirmed scope.")
 else:
-    st.info("Confirm your topic selection before starting an exam.")
+    st.info("Confirm your topic selection before starting practice.")

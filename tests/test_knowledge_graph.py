@@ -206,6 +206,8 @@ def test_render_knowledge_graph_builds_config_and_returns_selection(monkeypatch)
     assert conversion_calls == [graph]
     assert config_calls == [
         {
+            "height": 560,
+            "width": 900,
             "physics": True,
             "hierarchical": False,
             "groups": {},
@@ -419,7 +421,9 @@ def test_render_topic_details_prompts_when_no_topic_is_selected(monkeypatch):
 
     knowledge_graph.render_topic_details(None)
 
-    info.assert_called_once_with("Select a topic to view its details.")
+    info.assert_called_once_with(
+        "Click a knowledge point to see its details."
+    )
     subheader.assert_not_called()
     write.assert_not_called()
     caption.assert_not_called()
