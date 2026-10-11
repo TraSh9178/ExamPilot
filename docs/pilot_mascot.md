@@ -1,7 +1,7 @@
 # Pilot mascot: original captain concept
 
-This document records the first portrait. The current aircraft outline is
-documented in `pilot_aircraft_icon.md` and uses `assets/pilot-aircraft.svg`.
+This document records the first portrait. The restored original robot is
+documented in `pilot_robot_icon.md` and uses `assets/pilot-robot.svg`.
 
 Pilot is ExamPilot's cartoon airline captain and AI study assistant. The same
 portrait appears on the draggable launcher and in the chat header. Labels and

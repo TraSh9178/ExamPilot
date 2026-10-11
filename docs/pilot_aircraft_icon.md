@@ -1,6 +1,9 @@
-# Pilot: robotic aircraft head
+# Pilot: previous robotic aircraft head
 
-The current assistant icon is an aircraft head with a robot-inspired design:
+The current original robot icon is documented in `pilot_robot_icon.md` and uses
+`assets/pilot-robot.svg`.
+
+This version was an aircraft head with a robot-inspired design:
 metallic blue shell, cyan cockpit eyes, mechanical wings, engine rings and a
 small status light. The front-view nose and wings retain the aircraft silhouette.
 It has a transparent background without an image border or button frame.

@@ -20,7 +20,7 @@ ASSETS = Path(__file__).resolve().parents[1] / "assets"
 
 @lru_cache(maxsize=1)
 def _component():
-    icon = base64.b64encode((ASSETS / "pilot-aircraft.svg").read_bytes()).decode("ascii")
+    icon = base64.b64encode((ASSETS / "pilot-robot.svg").read_bytes()).decode("ascii")
     html = (ASSETS / "tutor_assistant.html").read_text(encoding="utf-8").replace(
         "__PILOT_MASCOT_DATA_URI__", f"data:image/svg+xml;base64,{icon}",
     )

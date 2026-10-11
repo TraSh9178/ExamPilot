@@ -1,8 +1,8 @@
 # Pilot: previous fresh book captain
 
 This document records the previous rounded pastel-blue book captain. The current
-aircraft outline is documented in `pilot_aircraft_icon.md` and uses
-`assets/pilot-aircraft.svg`.
+original robot is documented in `pilot_robot_icon.md` and uses
+`assets/pilot-robot.svg`.
 
 This version was a rounded pastel-blue book captain with black eyes, a small
 white beard, and a simple captain cap. It appears directly as the draggable

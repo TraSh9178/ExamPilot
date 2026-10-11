@@ -1,7 +1,7 @@
 # 另一台电脑联测：UI、账户页和 Pilot
 
 统一测试分支：`feature/pilot-mascot`。它包含字体与统计数字放大、知识图谱
-节点碰撞/边界反弹、左侧栏账户入口、当前账号展示、会话头像，以及机械飞机机头
+节点碰撞/边界反弹、左侧栏账户入口、当前账号展示、会话头像，以及最初版蓝色机器人
 Pilot。原有 `fix/floating-ai-tutor-auth@09eb5d8` 和 Draft PR #24 保持不变。
 
 本分支基于已交付 Auth/Tutor 基线，未同步最终 main 或 Save/Restore PR #23。
@@ -74,7 +74,7 @@ GitHub 中的正式代码不含 `UI preview · example accounts · no database`�
    问答使用浮动 Pilot，Anki 使用侧栏 Export to Anki。
 5. 进入 Practice、Progress、Anki，检查题目字号、统计数字与手机布局。
 6. 打开 Knowledge Map，检查拖动节点后碰墙反弹、节点碰撞和节点详情。
-7. 检查 Pilot 的金属蓝机头、青色驾驶舱窗和机械机翼，确认没有像素效果或白色按钮框；
+7. 检查 Pilot 恢复为最初版带天线、圆眼睛和笑脸的蓝色机器人，入口和面板图标一致；
    拖拽、展开、关闭、Esc 和方向键移动均可操作。
 
 仅查看 Demo、布局和图标不需要调用 Gemini。要验证 Pilot 的真实回答，请通过
