@@ -600,3 +600,53 @@ def test_has_unresolved_conflicts_tracks_quarantined_records():
     assert account_sync.has_unresolved_conflicts(session_state)
     session_state["account_sync"]["restore_conflicts"] = {}
     assert not account_sync.has_unresolved_conflicts(session_state)
+
+
+def test_logout_requires_explicit_confirmation_for_restore_conflicts():
+    app = signed_in_app(APP_PATH)
+    app.session_state[account_sync.STATE_KEY] = {
+        "user_id": TEST_USER.user_id,
+        "restore_attempted": True,
+        "restore_errors": [],
+        "restore_message": "",
+        "unsaved_courses": set(),
+        "unsaved_exams": set(),
+        "course_messages": {},
+        "last_save": None,
+        "restore_conflicts": {"course-1": {"history": {"local": {}}}},
+    }
+
+    app.run()
+
+    assert not app.exception
+    assert not app.checkbox(key="confirm_discard_conflicts").value
+    assert app.button(key="logout_button").disabled
+
+    app.checkbox(key="confirm_discard_conflicts").set_value(True).run()
+
+    assert not app.exception
+    assert not app.button(key="logout_button").disabled
+
+
+def test_progress_explains_account_saved_history_and_local_only_work():
+    course = make_course()
+    session, attempts = make_exam(course, "session-1")
+    app = signed_in_app(ROOT / "pages" / "3_Performance.py")
+    app.session_state["current_course"] = course
+    app.session_state["practice_history_course-1"] = {
+        "session-1": {
+            "session": session,
+            "questions": course.questions,
+            "attempts": attempts,
+            "result": {},
+        }
+    }
+
+    app.run()
+
+    assert not app.exception
+    assert any(
+        "Results saved to your account can be restored after login." in item.value
+        and "Unsaved local results remain only in this browser session." in item.value
+        for item in app.caption
+    )
