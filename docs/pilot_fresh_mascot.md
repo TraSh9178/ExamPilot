@@ -1,6 +1,10 @@
-# Pilot: fresh book captain
+# Pilot: previous fresh book captain
 
-The current Pilot is a rounded pastel-blue book captain with black eyes, a small
+This document records the previous rounded pastel-blue book captain. The current
+aircraft outline is documented in `pilot_aircraft_icon.md` and uses
+`assets/pilot-aircraft.svg`.
+
+This version was a rounded pastel-blue book captain with black eyes, a small
 white beard, and a simple captain cap. It appears directly as the draggable
 launcher, with a plain Pilot label and no white button frame or colored badge.
 The same image appears in the chat header without a background tile.

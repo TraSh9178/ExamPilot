@@ -1,8 +1,8 @@
 # Pilot: previous pixel book concept
 
 This document records the previous pixel-art book: black eyes, a white beard and
-moustache, and an airline captain's hat. The current rounded book captain is
-documented in `pilot_fresh_mascot.md` and uses `assets/pilot-book-fresh.png`.
+moustache, and an airline captain's hat. The current aircraft outline is
+documented in `pilot_aircraft_icon.md` and uses `assets/pilot-aircraft.svg`.
 
 Previous asset: `assets/pilot-book-mascot.png` (transparent PNG). Created with the
 built-in `image_gen` tool using the original captain as an edit target. The

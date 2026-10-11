@@ -10,7 +10,7 @@
 .tutor-bubble:hover { background: transparent; box-shadow: none; }
 .tutor-bubble.is-dragging { cursor: grabbing; background: transparent; box-shadow: none; }
 .tutor-bubble.is-panel-overlap { visibility: hidden; pointer-events: none; }
-.tutor-pilot { width: 52px; height: 52px; flex-shrink: 0; display: block; object-fit: contain; filter: drop-shadow(0 2px 2px #244f7a18); transition: transform 150ms ease; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.tutor-pilot { width: 52px; height: 52px; flex-shrink: 0; display: block; object-fit: contain; transition: transform 150ms ease; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .tutor-bubble:hover .tutor-pilot { transform: translateY(-1px); }
 .tutor-bubble-label { display: block; width: 64px; height: 12px; border: 0; padding: 0; background: transparent; color: #385779; text-align: center; font-size: 11px; font-weight: 650; line-height: 12px; pointer-events: none; }
 .tutor-panel { position: fixed; z-index: 1000000; width: min(388px, calc(100vw - 24px)); height: min(560px, calc(100dvh - 24px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #cfdef3; border-radius: 18px; background: #fff; box-shadow: 0 12px 50px #10204426, 0 2px 6px #10204412; animation: tutor-appear 140ms ease-out; }
