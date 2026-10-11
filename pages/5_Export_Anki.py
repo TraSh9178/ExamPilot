@@ -24,7 +24,7 @@ def _topic_tag(topic_id: str) -> str:
 
 apply_app_styles()
 
-st.title("Export to Anki")
+st.title("🗂️ Export to Anki")
 st.caption(
     "Review course knowledge cards here or download a UTF-8 TSV file "
     "for Anki text import. "
