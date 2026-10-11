@@ -1,11 +1,35 @@
 import streamlit as st
 
+from services.auth_session import current_user, logout_session
+from services.auth_ui import render_auth_page
+
 st.set_page_config(
     page_title="ExamPilot",
     page_icon="📚",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+user = current_user(st.session_state)
+
+if user is None:
+    st.navigation(
+        [st.Page(render_auth_page, title="Log in", icon=":material/login:", default=True)],
+        position="hidden",
+    ).run()
+    st.stop()
+
+with st.sidebar:
+    st.caption("Signed in as")
+    st.text(user.username)
+    st.button(
+        "Log out",
+        key="logout_button",
+        icon=":material/logout:",
+        on_click=logout_session,
+        args=(st.session_state,),
+        use_container_width=True,
+    )
 
 pages = [
     st.Page(
