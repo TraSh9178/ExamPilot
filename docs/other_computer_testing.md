@@ -5,7 +5,7 @@
 Pilot。原有 `fix/floating-ai-tutor-auth@09eb5d8` 和 Draft PR #24 保持不变。
 
 本分支基于已交付 Auth/Tutor 基线，未同步最终 main 或 Save/Restore PR #23。
-页面的课程、考试记录仍保存在 Streamlit 会话中；Save/Restore 按钮尚未接线，
+页面的课程、考试记录仍保存在 Streamlit 会话中；学习记录 Save/Restore UI 尚未集成，
 不能用此分支宣称学习记录跨设备恢复通过。头像、聊天和草稿也不跨设备同步。
 
 ## 获取代码
@@ -70,6 +70,8 @@ GitHub 中的正式代码不含 `UI preview · example accounts · no database`�
 2. 上传 PNG/JPG 头像，检查账户页与侧栏同时更新；更换、删除和无效图片提示。
 3. 退出再登录另一账号，确认头像、Pilot 对话和草稿没有残留。
 4. 打开 Microeconomics、Calculus I 和 Python Basics Demo，检查标题及首页数字。
+   Study Plan 底部的重复 Tutor、Anki 说明和禁用 Save/Restore 占位区已移除；
+   问答使用浮动 Pilot，Anki 使用侧栏 Export to Anki。
 5. 进入 Practice、Progress、Anki，检查题目字号、统计数字与手机布局。
 6. 打开 Knowledge Map，检查拖动节点后碰墙反弹、节点碰撞和节点详情。
 7. 检查 Pilot 的金属蓝机头、青色驾驶舱窗和机械机翼，确认没有像素效果或白色按钮框；
