@@ -1,4 +1,4 @@
-streamlit==1.55.0
+﻿streamlit==1.55.0
 pydantic==2.12.5
 google-genai==1.66.0
 Pillow==12.3.0
