@@ -26,6 +26,8 @@ export GEMINI_MODEL="gemini-3.8-flash"
 
 PDF 页码从 1 开始；PPTX 的 `pages`/`sources` 页码表示从 1 开始的幻灯片号。PDF 和 PPTX 的 `pages` 都保留空白页，`sources` 只包含有文字的页/幻灯片。TXT 没有真实页码，不返回 `pages` 字段，`sources` 中 `page` 为 `None`。图片 OCR、幻灯片备注和旧版 `.ppt` 均不支持；扫描 PDF 或只有图片的 PPTX 不支持 OCR。
 
+`generate_topics`、`generate_questions` 和 `generate_relationships` 均可使用已提取的 PPTX 文字。Gemini 请求只包含解析后的幻灯片文本与页码，不发送原始 PPTX 字节。topics/questions 的 `source_pages` 对应从 1 开始且包含文字的幻灯片号；空白幻灯片不能作为来源。
+
 ```python
 from services.document_service import extract_document
 

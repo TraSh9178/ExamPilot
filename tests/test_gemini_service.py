@@ -57,6 +57,25 @@ def make_pdf_document():
     }
 
 
+def make_pptx_document():
+    pages = [
+        {"page": 1, "text": "First slide material."},
+        {"page": 2, "text": ""},
+        {"page": 3, "text": "Third slide material."},
+    ]
+    return {
+        "ok": True,
+        "filename": "course.PPTX",
+        "text": "\n".join(page["text"] for page in pages),
+        "pages": pages,
+        "sources": [
+            {"filename": "course.PPTX", "page": 1},
+            {"filename": "course.PPTX", "page": 3},
+        ],
+        "raw_file_bytes": b"original-pptx-bytes-must-not-be-sent",
+    }
+
+
 def make_study_package():
     return StudyPackage(
         course_id="course-1",
@@ -317,6 +336,37 @@ def test_generate_topics_pdf_accepts_only_real_source_pages(monkeypatch):
     assert '"citable_page_numbers": [2, 4]' in request
 
 
+def test_generate_topics_pptx_uses_parsed_slides_and_real_slide_citations(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_topics(source_pages=[1, 3])),
+    )
+
+    result = gemini_service.generate_topics(
+        make_pptx_document(),
+        "course-pptx",
+        "Course PPTX",
+    )
+
+    assert result["ok"] is True
+    assert all(
+        topic["source_pages"] == [1, 3]
+        for topic in result["package"]["topics"]
+    )
+    request = clients[0].models.calls[0]["contents"]
+    assert "Document type: PPTX" in request
+    assert '"page": 1' in request
+    assert '"page": 2' in request
+    assert '"page": 3' in request
+    assert '"citable_page_numbers": [1, 3]' in request
+    assert "First slide material." in request
+    assert "Third slide material." in request
+    assert "original-pptx-bytes-must-not-be-sent" not in request
+
+
 def test_generate_topics_uses_custom_model(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
     monkeypatch.setenv("GEMINI_MODEL", "custom-topic-model")
@@ -344,6 +394,23 @@ def test_generate_topics_rejects_pdf_citation_not_in_document_sources(monkeypatc
     assert result["ok"] is False
     assert result["error_code"] == "INVALID_CITATION"
     assert clients[0].exited is True
+
+
+def test_generate_topics_rejects_blank_pptx_slide_citation(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_topics(source_pages=[2])),
+    )
+
+    result = gemini_service.generate_topics(
+        make_pptx_document(),
+        "course-pptx",
+        "Course PPTX",
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "INVALID_CITATION"
 
 
 def test_generate_topics_rejects_coerced_pdf_page_citation(monkeypatch):
@@ -574,6 +641,36 @@ def test_generate_questions_pdf_accepts_only_real_text_page_citations(monkeypatc
     assert '"citable_page_numbers": [2, 4]' in request
 
 
+def test_generate_questions_pptx_uses_parsed_slides_and_real_slide_citations(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_questions(topic_id="topic-2", source_pages=[3])),
+    )
+
+    result = gemini_service.generate_questions(
+        make_pptx_document(),
+        make_study_package(),
+        ["topic-2"],
+    )
+
+    assert result["ok"] is True
+    assert all(
+        question["source_pages"] == [3]
+        for question in result["package"]["questions"]
+    )
+    request = clients[0].models.calls[0]["contents"]
+    assert "Document type: PPTX" in request
+    assert '"page": 1' in request
+    assert '"page": 2' in request
+    assert '"page": 3' in request
+    assert '"citable_page_numbers": [1, 3]' in request
+    assert "Third slide material." in request
+    assert "original-pptx-bytes-must-not-be-sent" not in request
+
+
 @pytest.mark.parametrize(
     "confirmed_topic_ids",
     [None, [], ["topic-1", "topic-1"], ["unknown-topic"]],
@@ -722,6 +819,23 @@ def test_generate_questions_rejects_invalid_pdf_citation(monkeypatch):
 
     result = gemini_service.generate_questions(
         make_pdf_document(),
+        make_study_package(),
+        ["topic-1"],
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "INVALID_CITATION"
+
+
+def test_generate_questions_rejects_blank_pptx_slide_citation(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_questions(source_pages=[2])),
+    )
+
+    result = gemini_service.generate_questions(
+        make_pptx_document(),
         make_study_package(),
         ["topic-1"],
     )
@@ -909,6 +1023,32 @@ def test_generate_relationships_supplies_pdf_pages_as_material(monkeypatch):
     assert '"text": ""' in request
     assert '"page": 4' in request
     assert '"text": "Second extractable page."' in request
+
+
+def test_generate_relationships_supplies_parsed_pptx_slides_as_material(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_relationships()),
+    )
+
+    result = gemini_service.generate_relationships(
+        make_pptx_document(),
+        make_study_package(),
+    )
+
+    assert result["ok"] is True
+    request = clients[0].models.calls[0]["contents"]
+    assert "Document type: PPTX" in request
+    assert '"page": 1' in request
+    assert '"text": "First slide material."' in request
+    assert '"page": 2' in request
+    assert '"text": ""' in request
+    assert '"page": 3' in request
+    assert '"text": "Third slide material."' in request
+    assert "original-pptx-bytes-must-not-be-sent" not in request
 
 
 @pytest.mark.parametrize(
