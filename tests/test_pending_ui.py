@@ -62,10 +62,9 @@ def test_dashboard_extracts_txt_and_shows_limits_preview_and_source(monkeypatch)
     assert app.session_state["setup_document"]["sources"] == [
         {"filename": "notes.txt", "page": None}
     ]
-    assert any("50,000 characters" in item.value for item in app.caption)
     assert any(
-        "text-based PPTX" in item.value
-        and "PPTX slide notes and image OCR" in item.value
+        "Supports UTF-8 TXT, text-based PDF, text-based PPTX" in item.value
+        and "scanned PDF OCR" in item.value
         for item in app.caption
     )
     assert any(
@@ -316,7 +315,7 @@ def test_dashboard_extracts_pptx_and_displays_actual_slide_sources(monkeypatch):
     )
     assert any("PPTX slides (1)" == item.label for item in app.expander)
     assert any(
-        "Supports UTF-8 TXT, text-based PDF, and text-based PPTX"
-        in item.value
+        "Supports UTF-8 TXT, text-based PDF, text-based PPTX" in item.value
+        and "scanned PDF OCR" in item.value
         for item in app.caption
     )
