@@ -22,7 +22,9 @@ export GEMINI_MODEL="gemini-3.8-flash"
 
 ## 提取资料
 
-`extract_document(file_bytes, filename)` 接受扩展名不区分大小写的 `.txt` 和文字型 `.pdf` 文件。TXT 按 UTF-8（兼容 BOM）读取；PDF 逐页提取文本。文件大小上限为 5 MiB，提取文本上限为 50,000 个字符，超过上限会返回失败而不会截断。PDF 页码从 1 开始；TXT 没有真实页码，来源页码为 `None`。扫描件或空白 PDF 不支持 OCR。
+`extract_document(file_bytes, filename)` 接受扩展名不区分大小写的 `.txt`、文字型 `.pdf` 和 `.pptx` 文件。TXT 按 UTF-8（兼容 BOM）读取；PDF 使用 PyMuPDF 逐页提取；PPTX 使用 `python-pptx` 提取文本框、表格和分组中的文字。文件大小上限为 5 MiB，提取文本上限为 50,000 个字符，超过上限会返回失败而不会截断。
+
+PDF 页码从 1 开始；PPTX 的 `pages`/`sources` 页码表示从 1 开始的幻灯片号。PDF 和 PPTX 的 `pages` 都保留空白页，`sources` 只包含有文字的页/幻灯片。TXT 没有真实页码，不返回 `pages` 字段，`sources` 中 `page` 为 `None`。图片 OCR、幻灯片备注和旧版 `.ppt` 均不支持；扫描 PDF 或只有图片的 PPTX 不支持 OCR。
 
 ```python
 from services.document_service import extract_document
