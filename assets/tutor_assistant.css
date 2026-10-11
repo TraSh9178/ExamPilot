@@ -17,6 +17,7 @@
 .tutor-header.is-dragging { cursor: grabbing; }
 .tutor-title-group { display: flex; align-items: center; gap: 9px; min-width: 0; pointer-events: none; }
 .tutor-small-pilot { display: block; flex: 0 0 auto; width: 38px; height: 38px; object-fit: contain; border-radius: 11px; background: #e7f0ff; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.tutor-pilot, .tutor-small-pilot { image-rendering: pixelated; }
 .tutor-title-group h2 { margin: 0; color: var(--tutor-ink); font-size: 16px; font-weight: 700; line-height: 1.3; letter-spacing: -.2px; }
 .tutor-title-group p { margin: 2px 0 0; color: var(--tutor-muted); font-size: 12px; line-height: 1.4; }
 .tutor-header-actions { display: flex; gap: 2px; }
