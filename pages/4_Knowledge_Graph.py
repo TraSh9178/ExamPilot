@@ -43,8 +43,9 @@ if course.course_id == "calculus-i-demo" and not course.relationships:
         )
         save_course(st.session_state, course)
 
-st.subheader(course.course_name)
-st.caption(f"{len(course.topics)} knowledge points")
+with st.container(key="graph_course_heading"):
+    st.subheader(course.course_name)
+    st.caption(f"{len(course.topics)} knowledge points")
 
 if not course.topics:
     st.info("This course has no topics yet.")

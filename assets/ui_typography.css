@@ -1,0 +1,24 @@
+/* Shared text scale for the app and isolated Pilot component. */
+:root, :host {
+  --exam-font-page: 3rem;
+  --exam-font-heading: 2rem;
+  --exam-font-card: 1.75rem;
+  --exam-font-body: 1rem;
+  --exam-font-meta: 0.875rem;
+  --exam-font-stat: 2.75rem;
+  --exam-font-compact-heading: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  :root, :host {
+    --exam-font-card: 1.625rem;
+  }
+}
+
+@media (max-width: 480px) {
+  :root, :host {
+    --exam-font-page: 2.25rem;
+    --exam-font-heading: 1.75rem;
+    --exam-font-stat: 2.5rem;
+  }
+}

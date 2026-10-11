@@ -124,7 +124,8 @@ if active_practice is not None:
         overview = st.columns([3, 1.25, 0.7])
         with overview[0]:
             st.caption("Course")
-            st.markdown(f"**{escape(course.course_name)}**")
+            with st.container(key="practice_course_heading"):
+                st.markdown(f"**{escape(course.course_name)}**")
         with overview[1]:
             st.caption("Mode")
             st.markdown(f"**{mode_name}**")
@@ -195,14 +196,15 @@ if active_practice is not None:
         result = active_practice["result"]
 
         st.subheader("Your result")
-        score_columns = st.columns(2)
-        with score_columns[0].container(border=True):
-            st.metric(
-                "Score",
-                f"{result['correct_count']} / {result['total_count']}",
-            )
-        with score_columns[1].container(border=True):
-            st.metric("Accuracy", f"{result['accuracy']:.2f}%")
+        with st.container(key="practice_result_overview"):
+            score_columns = st.columns(2)
+            with score_columns[0].container(border=True):
+                st.metric(
+                    "Score",
+                    f"{result['correct_count']} / {result['total_count']}",
+                )
+            with score_columns[1].container(border=True):
+                st.metric("Accuracy", f"{result['accuracy']:.2f}%")
 
         questions_by_id = {
             question.id: question for question in questions

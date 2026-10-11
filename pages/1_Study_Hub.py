@@ -51,7 +51,7 @@ if scope_key not in st.session_state:
         st.session_state.get(confirmed_key, [])
     )
 
-with st.container(border=True):
+with st.container(border=True, key="study_scope_panel"):
     st.subheader("Choose your exam scope")
     selected_topic_ids = st.multiselect(
         "Knowledge points",

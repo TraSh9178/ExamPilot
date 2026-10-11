@@ -1,11 +1,15 @@
+from pathlib import Path
+
 import streamlit as st
 
 
 def apply_app_styles() -> None:
     """Apply shared presentation styles without changing page behavior."""
+    typography = (
+        Path(__file__).resolve().parents[1] / "assets" / "ui_typography.css"
+    ).read_text(encoding="utf-8")
     st.markdown(
-        """
-        <style>
+        "<style>\n" + typography + """
         :root {
             color-scheme: light;
             --exam-blue: #2166DB;
@@ -25,6 +29,12 @@ def apply_app_styles() -> None:
             background: rgba(248, 250, 254, 0.95);
         }
 
+        /* Do not reserve navigation space around the standalone login form. */
+        [data-testid="stApp"]:has(.st-key-auth_forms) [data-testid="stSidebar"],
+        [data-testid="stApp"]:has(.st-key-auth_forms) [data-testid="stExpandSidebarButton"] {
+            display: none;
+        }
+
         [data-testid="stMainBlockContainer"] {
             max-width: 1320px;
             padding-top: 1.4rem;
@@ -36,36 +46,62 @@ def apply_app_styles() -> None:
         }
 
         [data-testid="stMain"] [data-testid="stMarkdownContainer"] h1 {
-            font-size: clamp(2.5rem, 3.8vw, 3.2rem);
+            font-size: var(--exam-font-page);
             font-weight: 750;
             line-height: 1.16;
             letter-spacing: -0.035em;
         }
 
         [data-testid="stMain"] [data-testid="stMarkdownContainer"] h2 {
-            font-size: 1.9rem;
+            font-size: var(--exam-font-heading);
             font-weight: 700;
             line-height: 1.3;
             letter-spacing: -0.02em;
         }
 
         [data-testid="stMain"] [data-testid="stMarkdownContainer"] h3 {
-            font-size: 1.6rem;
-            font-weight: 680;
+            font-size: var(--exam-font-heading);
+            font-weight: 700;
             line-height: 1.35;
             letter-spacing: -0.015em;
         }
 
         [data-testid="stMarkdownContainer"] p,
         [data-testid="stMarkdownContainer"] li {
-            font-size: 1rem;
+            font-size: var(--exam-font-body);
             line-height: 1.6;
+        }
+
+        [data-testid="stText"],
+        [data-testid="stTextInput"] input,
+        [data-testid="stNumberInput"] input,
+        [data-testid="stTextArea"] textarea,
+        [data-testid="stSelectbox"] [data-baseweb="select"],
+        [data-testid="stMultiSelect"] [data-baseweb="select"],
+        [data-testid="stTabs"] [role="tab"] p,
+        [data-testid="stFileUploaderDropzoneInstructions"] span {
+            font-size: var(--exam-font-body);
+        }
+
+        [data-testid="stMain"] [data-testid="stMarkdownContainer"] h4 {
+            font-size: var(--exam-font-compact-heading);
+            line-height: 1.35;
+        }
+
+        [data-testid="stMain"] :is(
+            [class*="st-key-progress_topic_"],
+            [class*="st-key-knowledge_topic_heading"],
+            [class*="st-key-anki_study_card_"]
+        ) [data-testid="stMarkdownContainer"] :is(h3, h4) {
+            font-size: var(--exam-font-card);
+            line-height: 1.35;
+            overflow-wrap: anywhere;
         }
 
         [data-testid="stCaptionContainer"],
         [data-testid="stCaptionContainer"] p {
             color: var(--exam-muted) !important;
-            font-size: 0.875rem;
+            font-size: var(--exam-font-meta);
             line-height: 1.5;
         }
 
@@ -101,7 +137,7 @@ def apply_app_styles() -> None:
             margin: 0.15rem 0.55rem;
             border-radius: 0.65rem;
             color: #304461;
-            font-size: 1rem;
+            font-size: var(--exam-font-body);
             font-weight: 550;
         }
 
@@ -159,7 +195,7 @@ def apply_app_styles() -> None:
             [data-testid="stBaseButton-secondaryFormSubmit"]
         ) :is(p, span) {
             color: inherit !important;
-            font-size: 0.95rem;
+            font-size: var(--exam-font-body);
         }
 
         button:is(
@@ -217,11 +253,11 @@ def apply_app_styles() -> None:
             padding: 0 0 0 0.75rem;
             border-left: 4px solid var(--exam-blue);
             color: var(--exam-ink);
-            font-size: 2.125rem;
+            font-size: var(--exam-font-heading);
             font-weight: 800;
             line-height: 1.2;
             letter-spacing: -0.035em;
-            white-space: nowrap;
+            overflow-wrap: normal;
         }
 
         [class*="st-key-dashboard_courses_header"] [data-testid="stMarkdownContainer"] {
@@ -252,7 +288,7 @@ def apply_app_styles() -> None:
         }
 
         div[class*="st-key-create_course_button"] button p {
-            font-size: 1.05rem;
+            font-size: var(--exam-font-body);
             font-weight: 650;
         }
 
@@ -294,7 +330,7 @@ def apply_app_styles() -> None:
         }
 
         [class*="st-key-knowledge_topic_stats"] [data-testid="stMetricValue"] {
-            font-size: 2.2rem;
+            font-size: var(--exam-font-stat);
         }
 
         [class*="st-key-study_topic_"]
@@ -306,7 +342,7 @@ def apply_app_styles() -> None:
 
         [data-testid="stMain"] [class*="st-key-study_topic_"]
         [data-testid="stHorizontalBlock"] [data-testid="stMarkdownContainer"] h3 {
-            font-size: 1.8rem;
+            font-size: var(--exam-font-card);
             line-height: 1.3;
             overflow-wrap: anywhere;
         }
@@ -341,21 +377,20 @@ def apply_app_styles() -> None:
         }
 
         [class*="st-key-practice_overview"] [data-testid="stMarkdownContainer"] p {
-            font-size: 1.65rem;
             line-height: 1.35;
             overflow-wrap: anywhere;
         }
 
         [class*="st-key-practice_question_"] [data-testid="stMarkdownContainer"] h3,
         [class*="st-key-practice_review_"] [data-testid="stMarkdownContainer"] h3 {
-            font-size: 1.55rem;
+            font-size: var(--exam-font-card);
             line-height: 1.4;
             margin-bottom: 0.35rem;
         }
 
         [class*="st-key-practice_question_"] [data-testid="stCaptionContainer"] p,
         [class*="st-key-practice_review_"] [data-testid="stCaptionContainer"] p {
-            font-size: 1.05rem;
+            font-size: var(--exam-font-meta);
             font-weight: 700;
             color: var(--exam-ink) !important;
         }
@@ -370,13 +405,13 @@ def apply_app_styles() -> None:
 
         [data-testid="stMetricLabel"] p {
             color: var(--exam-muted) !important;
-            font-size: 1rem;
+            font-size: var(--exam-font-body);
         }
 
         [data-testid="stMetricValue"] {
             color: var(--exam-ink);
             font-weight: 750;
-            font-size: 2.75rem;
+            font-size: var(--exam-font-stat);
         }
 
         [data-testid="stMetricValue"] > div,
@@ -387,27 +422,27 @@ def apply_app_styles() -> None:
         }
 
         [class*="st-key-progress_topic_"] [data-testid="stMetricLabel"] p {
-            font-size: 0.95rem;
+            font-size: var(--exam-font-body);
         }
 
         [class*="st-key-progress_overview"] [data-testid="stMetricLabel"] p {
-            font-size: 0.95rem;
+            font-size: var(--exam-font-body);
         }
 
         [class*="st-key-progress_overview"] [data-testid="stMetricValue"],
         [class*="st-key-progress_topic_"] [data-testid="stMetricValue"] {
-            font-size: 2.5rem;
+            font-size: var(--exam-font-stat);
         }
 
         [class*="st-key-progress_topic_"] [data-testid="stCaptionContainer"],
         [class*="st-key-progress_topic_"] [data-testid="stCaptionContainer"] p {
-            font-size: 0.9rem;
+            font-size: var(--exam-font-meta);
         }
 
         [data-testid="stWidgetLabel"] p,
         [data-testid="stRadio"] label p,
         [data-testid="stCheckbox"] label p {
-            font-size: 0.95rem;
+            font-size: var(--exam-font-body);
             line-height: 1.45;
         }
 
@@ -418,7 +453,7 @@ def apply_app_styles() -> None:
             padding: 0.75rem 0 0.15rem;
             border-top: 1px solid var(--exam-border);
             color: var(--exam-muted);
-            font-size: 0.9rem;
+            font-size: var(--exam-font-meta);
         }
 
         .graph-legend span {
@@ -446,14 +481,17 @@ def apply_app_styles() -> None:
         }
 
         [class*="st-key-dashboard_course_card_"] [data-testid="stMarkdownContainer"] h3 {
-            font-size: 1.9rem;
+            font-size: var(--exam-font-heading);
             line-height: 1.25;
             overflow-wrap: anywhere;
         }
 
         [class*="st-key-study_plan_overview"] [data-testid="stMarkdownContainer"] h3,
-        [class*="st-key-progress_course_heading"] [data-testid="stMarkdownContainer"] h3 {
-            font-size: 1.9rem;
+        [class*="st-key-progress_course_heading"] [data-testid="stMarkdownContainer"] h3,
+        [class*="st-key-graph_course_heading"] [data-testid="stMarkdownContainer"] h3,
+        [class*="st-key-anki_course_heading"] [data-testid="stMarkdownContainer"] h3,
+        [class*="st-key-practice_course_heading"] [data-testid="stMarkdownContainer"] p {
+            font-size: var(--exam-font-heading);
             line-height: 1.25;
             overflow-wrap: anywhere;
         }
@@ -587,7 +625,7 @@ def apply_app_styles() -> None:
             max-width: 38rem;
             margin: 0;
             color: var(--exam-ink);
-            font-size: clamp(2.1rem, 3.4vw, 3rem);
+            font-size: var(--exam-font-page);
             line-height: 1.12;
             letter-spacing: -0.04em;
         }
@@ -602,12 +640,12 @@ def apply_app_styles() -> None:
             max-width: 35rem;
             margin: 0.75rem 0 0;
             color: var(--exam-muted);
-            font-size: 1rem;
+            font-size: var(--exam-font-body);
         }
 
-        .exam-eyebrow {
+        .exam-hero .exam-eyebrow {
             color: var(--exam-blue);
-            font-size: 0.8rem;
+            font-size: var(--exam-font-meta);
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -616,6 +654,16 @@ def apply_app_styles() -> None:
         @media (max-width: 768px) {
             [data-testid="stMainBlockContainer"] {
                 padding: 1rem 1.1rem 2rem;
+            }
+
+            [data-testid="stHorizontalBlock"]:has([class*="st-key-auth_forms"]) {
+                flex-direction: column;
+            }
+
+            [data-testid="stHorizontalBlock"]:has([class*="st-key-auth_forms"])
+            > [data-testid="stColumn"] {
+                flex: 1 1 100% !important;
+                width: 100% !important;
             }
 
             [data-testid="stHorizontalBlock"]:has(
@@ -673,11 +721,6 @@ def apply_app_styles() -> None:
                 width: auto !important;
             }
 
-            [data-testid="stMain"] [class*="st-key-study_topic_"]
-            [data-testid="stHorizontalBlock"] [data-testid="stMarkdownContainer"] h3 {
-                font-size: 1.65rem;
-            }
-
             .exam-hero {
                 min-height: 11rem;
                 padding: 1.6rem;
@@ -702,7 +745,7 @@ def apply_app_styles() -> None:
             }
 
             div[class*="st-key-create_course_button"] button p {
-                font-size: 0.9rem;
+                font-size: var(--exam-font-body);
                 white-space: nowrap;
             }
 
@@ -715,13 +758,18 @@ def apply_app_styles() -> None:
             }
 
             [class*="st-key-practice_overview"]
-            > [data-testid="stHorizontalBlock"] {
+            > [data-testid="stHorizontalBlock"],
+            [class*="st-key-practice_overview"]
+            > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] {
                 flex-wrap: wrap;
                 gap: 0.5rem 0.8rem;
             }
 
-            [class*="st-key-practice_overview"]
+            [data-testid="stVerticalBlock"][class*="st-key-practice_overview"]
             > [data-testid="stHorizontalBlock"]
+            > [data-testid="stColumn"]:first-child,
+            [data-testid="stVerticalBlock"][class*="st-key-practice_overview"]
+            > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"]
             > [data-testid="stColumn"]:first-child {
                 flex: 1 1 100% !important;
                 width: 100% !important;
@@ -732,7 +780,10 @@ def apply_app_styles() -> None:
             > [data-testid="stColumn"]:nth-child(2),
             [class*="st-key-practice_overview"]
             > [data-testid="stHorizontalBlock"]
-            > [data-testid="stColumn"]:nth-child(3) {
+            > [data-testid="stColumn"]:nth-child(3),
+            [class*="st-key-practice_overview"]
+            > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"]
+            > [data-testid="stColumn"]:is(:nth-child(2), :nth-child(3)) {
                 flex: 1 1 calc(50% - 0.8rem) !important;
                 width: calc(50% - 0.8rem) !important;
             }
@@ -770,20 +821,9 @@ def apply_app_styles() -> None:
                 padding: 0.9rem 0.8rem 1.8rem;
             }
 
-            [data-testid="stMain"] [data-testid="stMarkdownContainer"] h1 { font-size: 2.2rem; }
-            [data-testid="stMain"] [data-testid="stMarkdownContainer"] h2 { font-size: 1.7rem; }
-            [data-testid="stMain"] [data-testid="stMarkdownContainer"] h3 { font-size: 1.5rem; }
-
             [data-testid="stMain"] [class*="st-key-dashboard_courses_header"]
             [data-testid="stMarkdownContainer"] h3 {
                 padding-left: 0.5rem;
-                font-size: clamp(1.55rem, 6.7vw, 1.75rem);
-            }
-
-            [class*="st-key-dashboard_course_card_"] [data-testid="stMarkdownContainer"] h3,
-            [class*="st-key-study_plan_overview"] [data-testid="stMarkdownContainer"] h3,
-            [class*="st-key-progress_course_heading"] [data-testid="stMarkdownContainer"] h3 {
-                font-size: 1.7rem;
             }
 
             .exam-hero {
@@ -791,7 +831,6 @@ def apply_app_styles() -> None:
                 padding: 1.3rem 1.1rem;
             }
 
-            [data-testid="stMain"] .exam-hero h1 { font-size: 2rem; }
             .exam-hero::after { width: 100%; opacity: 0.16; }
 
             [data-testid="stFileUploaderDropzone"] {
@@ -801,7 +840,22 @@ def apply_app_styles() -> None:
             }
 
             [data-testid="stTabs"] [role="tablist"] { gap: 0.6rem; }
-            [data-testid="stMetricValue"] { font-size: 2.35rem; }
+
+            /* Keep complete percentages readable at the shared metric size. */
+            [data-testid="stVerticalBlock"]:is(
+                [class*="st-key-practice_result_overview"],
+                [class*="st-key-progress_topic_"],
+                [class*="st-key-progress_overview"]
+            ) > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"]
+            > [data-testid="stColumn"],
+            [data-testid="stVerticalBlock"]:is(
+                [class*="st-key-practice_result_overview"],
+                [class*="st-key-progress_topic_"],
+                [class*="st-key-progress_overview"]
+            ) > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+                flex: 1 1 10rem !important;
+                width: auto !important;
+            }
 
             [class*="st-key-graph_controls_panel"] > [data-testid="stHorizontalBlock"] {
                 flex-direction: column;
@@ -886,13 +940,13 @@ def apply_app_styles() -> None:
         }
 
         .account-sidebar-label {
-            font-size: 0.7rem;
+            font-size: var(--exam-font-meta);
             letter-spacing: 0.075em;
             color: var(--exam-muted);
         }
 
         .account-sidebar-copy strong {
-            font-size: 1.05rem;
+            font-size: var(--exam-font-body);
             line-height: 1.4;
             overflow-wrap: anywhere;
         }

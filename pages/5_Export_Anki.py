@@ -37,7 +37,8 @@ if course is None:
     st.info("Load a course from the dashboard first.")
     st.stop()
 
-st.subheader(course.course_name)
+with st.container(key="anki_course_heading"):
+    st.subheader(course.course_name)
 
 if not course.questions:
     st.info("This course has no questions to export.")

@@ -27,7 +27,9 @@ def _component():
     return components.component(
         "exampilot_floating_tutor",
         html=html,
-        css=(ASSETS / "tutor_assistant.css").read_text(encoding="utf-8"),
+        css=(ASSETS / "ui_typography.css").read_text(encoding="utf-8")
+        + "\n"
+        + (ASSETS / "tutor_assistant.css").read_text(encoding="utf-8"),
         js=(ASSETS / "tutor_assistant.js").read_text(encoding="utf-8"),
         isolate_styles=True,
     )
