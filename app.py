@@ -1,5 +1,7 @@
 import streamlit as st
 
+from services.tutor_assistant_ui import render_tutor_assistant
+
 st.set_page_config(
     page_title="ExamPilot",
     page_icon="📚",
@@ -57,4 +59,5 @@ with st.sidebar:
             icon=":material/swap_horiz:",
         )
 
+render_tutor_assistant()
 navigation.run()

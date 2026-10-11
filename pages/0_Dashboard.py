@@ -235,6 +235,12 @@ if st.session_state.show_course_setup:
                 "setup_course_name", ""
             ).strip()
 
+            if st.session_state.pop("course_generation_notice", False):
+                st.success(
+                    "Topics generated. Review them in Study Hub, "
+                    "then confirm your exam scope."
+                )
+
             st.caption(
                 "Generating topics sends this material to Gemini. "
                 "You can review the topics before choosing your exam scope."
@@ -274,11 +280,9 @@ if st.session_state.show_course_setup:
                             f"course_stage_{new_course.course_id}"
                         ] = "topics_only"
                         save_course(st.session_state, new_course)
-
-                        st.success(
-                            "Topics generated. Review them in Study Hub, "
-                            "then confirm your exam scope."
-                        )
+                        # Refresh the global Tutor and sidebar to this course.
+                        st.session_state["course_generation_notice"] = True
+                        st.rerun()
 
             if not course_name:
                 st.info("Enter a course name to enable topic generation.")
