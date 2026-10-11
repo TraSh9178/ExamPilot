@@ -1,5 +1,6 @@
 import streamlit as st
 
+from services.account_sync import render_sidebar_status, restore_after_login
 from services.auth_session import current_user, logout_session
 from services.auth_ui import render_auth_page
 
@@ -19,6 +20,8 @@ if user is None:
     ).run()
     st.stop()
 
+restore_after_login(st.session_state)
+
 with st.sidebar:
     st.caption("Signed in as")
     st.text(user.username)
@@ -30,6 +33,7 @@ with st.sidebar:
         args=(st.session_state,),
         use_container_width=True,
     )
+    render_sidebar_status()
 
 pages = [
     st.Page(
