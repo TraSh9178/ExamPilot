@@ -91,9 +91,9 @@ def initialize_schema() -> PersistenceResult:
     schema_path = Path(__file__).resolve().parents[1] / "db" / "schema.sql"
 
     try:
-        schema_text = schema_path.read_text(encoding="utf-8")
+        schema_bytes = schema_path.read_bytes()
         with _connect() as connection:
-            for statement in schema_text.split(";"):
+            for statement in schema_bytes.split(b";"):
                 if statement.strip():
                     connection.execute(statement)
     except _PersistenceError as exc:

@@ -582,3 +582,39 @@ def test_course_history_rejects_invalid_restored_models(
     assert result.success is False
     assert result.sessions == []
     assert result.attempts == []
+def test_initialize_schema_skips_empty_sql_fragments(
+    monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+    class RecordingConnection:
+        def __init__(self) -> None:
+            self.execute_calls: list[bytes] = []
+
+        def __enter__(self) -> RecordingConnection:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+        def execute(self, query: bytes) -> None:
+            self.execute_calls.append(query)
+
+    connection = RecordingConnection()
+    schema_bytes = b";  \n; CREATE TABLE test_schema (id INTEGER); ;"
+
+    monkeypatch.setattr(
+        postgres_store.Path,
+        "read_bytes",
+        lambda _path: schema_bytes,
+    )
+    monkeypatch.setattr(
+        postgres_store,
+        "_connect",
+        lambda: connection,
+    )
+
+    result = postgres_store.initialize_schema()
+
+    assert result.success is True
+    assert connection.execute_calls == [
+        b" CREATE TABLE test_schema (id INTEGER)"
+    ]
