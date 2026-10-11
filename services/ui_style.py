@@ -744,6 +744,116 @@ def apply_app_styles() -> None:
             }
         }
 
+        [data-testid="stSidebarContent"] {
+            display: flex;
+            flex-direction: column;
+            min-height: 100dvh;
+        }
+
+        [data-testid="stSidebarUserContent"] {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 1.25rem;
+        }
+
+        [data-testid="stSidebarUserContent"] > div {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {
+            flex: 1;
+        }
+
+        [data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-account_sidebar) {
+            order: 999;
+            margin-top: auto;
+        }
+
+        .st-key-account_sidebar {
+            padding-top: 1rem;
+            border-top: 1px solid var(--exam-border);
+        }
+
+        .account-sidebar-identity {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.35rem 0.1rem 0.65rem;
+        }
+
+        .account-avatar {
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #D9E7FB;
+        }
+
+        .account-avatar-initial {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #E1ECFF;
+            color: #184FAE;
+            font-size: 1.35rem;
+            font-weight: 750;
+        }
+
+        .account-avatar-large {
+            width: 96px;
+            height: 96px;
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .account-sidebar-copy {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .account-sidebar-label {
+            font-size: 0.7rem;
+            letter-spacing: 0.075em;
+            color: var(--exam-muted);
+        }
+
+        .account-sidebar-copy strong {
+            font-size: 1.05rem;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+        }
+
+        .st-key-account_sidebar [data-testid="stPageLink"] {
+            border-radius: 0.65rem;
+            background: #E8F0FE;
+        }
+
+        .st-key-account_sidebar button,
+        .st-key-account_sidebar [data-testid="stPageLink"] a {
+            min-height: 44px;
+        }
+
+        .st-key-account_identity,
+        .st-key-account_avatar_controls {
+            padding: 1.2rem;
+        }
+
+        @media (max-width: 640px) {
+            [data-testid="stHorizontalBlock"]:has(.st-key-account_identity) {
+                flex-direction: column;
+            }
+
+            [data-testid="stHorizontalBlock"]:has(.st-key-account_identity) > [data-testid="stColumn"] {
+                width: 100% !important;
+                flex: 1 1 100% !important;
+            }
+        }
+
         @media (prefers-reduced-motion: reduce) {
             button[data-testid^="stBaseButton-"] { transition: none; }
         }

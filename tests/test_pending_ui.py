@@ -92,8 +92,8 @@ def test_dashboard_extracts_txt_and_shows_limits_preview_and_source(monkeypatch)
     ]
     assert any("50,000 characters" in item.value for item in app.caption)
     assert any(
-        "Supports UTF-8 TXT, text-based PDF, text-based PPTX" in item.value
-        and "scanned PDF OCR" in item.value
+        "UTF-8 TXT" in item.value
+        and "text-based PDF or PPTX" in item.value
         for item in app.caption
     )
     assert any(
@@ -134,11 +134,11 @@ def test_dashboard_image_ocr_uses_image_labels_and_updated_copy(monkeypatch):
     click_extract(app)
 
     assert not app.exception
-    assert any("Image OCR text (1)" in item.label for item in app.expander)
+    assert any("Image (1)" in item.label for item in app.expander)
     assert not any("PDF pages" in item.label for item in app.expander)
-    assert any("scan.png · Image OCR text" in item.value for item in app.caption)
+    assert any("scan.png · Image 1" in item.value for item in app.caption)
     assert any(
-        "verified on macOS" in item.value and "Windows has not been verified" in item.value
+        "scanned pdf ocr" in item.value.lower()
         for item in app.caption
     )
 
@@ -360,7 +360,7 @@ def test_dashboard_extracts_pptx_and_displays_actual_slide_sources(monkeypatch):
     assert any("PPTX slides (1)" == item.label for item in app.expander)
     assert any("50,000 characters" in item.value for item in app.caption)
     assert any(
-        "Supports UTF-8 TXT, text-based PDF, text-based PPTX" in item.value
-        and "scanned PDF OCR" in item.value
+        "UTF-8 TXT" in item.value
+        and "text-based PDF or PPTX" in item.value
         for item in app.caption
     )

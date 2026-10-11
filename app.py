@@ -1,7 +1,9 @@
 import streamlit as st
 
-from services.auth_session import current_user, logout_session
+from services.auth_session import current_user
 from services.auth_ui import render_auth_page
+from services.account_ui import render_account_page, render_account_sidebar
+from services.ui_style import apply_app_styles
 from services.tutor_assistant_ui import clear_tutor_browser_state, render_tutor_assistant
 
 st.set_page_config(
@@ -21,18 +23,11 @@ if user is None:
     ).run()
     st.stop()
 
-with st.sidebar:
-    st.caption("Signed in as")
-    st.text(user.username)
-    st.button(
-        "Log out",
-        key="logout_button",
-        icon=":material/logout:",
-        on_click=logout_session,
-        args=(st.session_state,),
-        use_container_width=True,
-    )
-
+apply_app_styles()
+account_page = st.Page(
+    render_account_page, title="My account", icon=":material/account_circle:",
+    url_path="account", visibility="hidden",
+)
 pages = [
     st.Page(
         "pages/0_Dashboard.py",
@@ -67,7 +62,8 @@ pages = [
     ),
 ]
 
-navigation = st.navigation(pages)
+navigation = st.navigation([*pages, account_page])
+render_account_sidebar(account_page)
 
 # Reserve room for the floating entry at the bottom of narrow study pages.
 st.markdown(

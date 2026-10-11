@@ -261,6 +261,17 @@ def test_dashboard_can_remove_any_course() -> None:
     )
 
     app.button(key="remove_course_generated-course").click().run()
+    assert any(
+        course.course_id == "generated-course"
+        for course in app.session_state["courses"]
+    )
+    app.button(key="cancel_remove_course_generated-course").click().run()
+    assert any(
+        course.course_id == "generated-course"
+        for course in app.session_state["courses"]
+    )
+    app.button(key="remove_course_generated-course").click().run()
+    app.button(key="confirm_remove_course_generated-course").click().run()
     app.run()
     assert not app.exception
     assert [
