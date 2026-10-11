@@ -39,5 +39,7 @@ pages = [
 ]
 
 page = st.navigation(pages)
-render_ai_assistant()
-page.run()
+try:
+    page.run()
+finally:
+    render_ai_assistant()

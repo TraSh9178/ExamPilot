@@ -52,7 +52,7 @@ def test_ask_only_on_submit_with_course_dict_and_shows_answer(monkeypatch):
     app = _app(course)
     assert calls == []
 
-    app.text_area(key="assistant_question_a").set_value("Why?")
+    app.text_area[0].set_value("Why?")
     app.run()
     assert calls == []
 
@@ -77,7 +77,7 @@ def test_failure_is_local_and_results_are_course_scoped(monkeypatch):
         lambda *a, **k: {"ok": False, "message": "请配置 GEMINI_API_KEY"},
     )
     app = _app(_course("a"))
-    app.text_area(key="assistant_question_a").set_value("Q")
+    app.text_area[0].set_value("Q")
     app.run()
     app.button[0].click()
     app.run()
@@ -88,4 +88,4 @@ def test_failure_is_local_and_results_are_course_scoped(monkeypatch):
     app.session_state["current_course"] = _course("b")
     app.run()
     assert not app.error
-    assert app.text_area(key="assistant_question_b").value == ""
+    assert app.text_area[0].value == ""

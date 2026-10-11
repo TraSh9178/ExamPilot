@@ -5,10 +5,6 @@ from services.gemini_service import ask_tutor
 ASSISTANT_CONTAINER_KEY = "ai_assistant_fab"
 
 
-def assistant_question_key(course_id: str) -> str:
-    return f"assistant_question_{course_id}"
-
-
 def assistant_result_key(course_id: str) -> str:
     return f"assistant_result_{course_id}"
 
@@ -45,17 +41,13 @@ def render_ai_assistant() -> None:
 
             st.caption(f"Course: {course.course_name}")
             with st.form(key=f"assistant_form_{course.course_id}"):
-                st.text_area(
+                question = st.text_area(
                     "Ask a question",
-                    key=assistant_question_key(course.course_id),
                     placeholder="Ask about this course...",
                 )
                 submitted = st.form_submit_button("Ask")
 
             if submitted:
-                question = st.session_state[
-                    assistant_question_key(course.course_id)
-                ]
                 with st.spinner("Answering..."):
                     response = ask_tutor(course.model_dump(), question)
                 st.session_state[assistant_result_key(course.course_id)] = {
