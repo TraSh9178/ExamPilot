@@ -1,11 +1,13 @@
-# Pilot: front-view aircraft outline
+# Pilot: robotic aircraft head
 
-The current assistant icon is a simple blue outline of an aircraft viewed from
-the front: rounded nose, cockpit windows, two wings and engines. It has no
-mascot face, beard, captain hat, pixel rendering, image border or button frame.
+The current assistant icon is an aircraft head with a robot-inspired design:
+metallic blue shell, cyan cockpit eyes, mechanical wings, engine rings and a
+small status light. The front-view nose and wings retain the aircraft silhouette.
+It has a transparent background without an image border or button frame.
 
 Asset: `assets/pilot-aircraft.svg`. It is a hand-authored vector with a transparent
-background, no external resources or scripts, and remains crisp at small sizes.
+background, internal gradients, no external resources or scripts, and remains
+crisp at small sizes. The lighting is static, without blinking or animation.
 The component embeds it once as an `image/svg+xml` data URI and shares it between
 the 52 px launcher image and the 38 px chat header image.
 
