@@ -76,6 +76,18 @@ def make_pptx_document():
     }
 
 
+def make_image_document():
+    text = "OCR extracted image text."
+    return {
+        "ok": True,
+        "filename": "course.JPEG",
+        "text": text,
+        "pages": [{"page": 1, "text": text}],
+        "sources": [{"filename": "course.JPEG", "page": 1}],
+        "raw_file_bytes": b"original-image-bytes-must-not-be-sent",
+    }
+
+
 def make_study_package():
     return StudyPackage(
         course_id="course-1",
@@ -365,6 +377,34 @@ def test_generate_topics_pptx_uses_parsed_slides_and_real_slide_citations(
     assert "First slide material." in request
     assert "Third slide material." in request
     assert "original-pptx-bytes-must-not-be-sent" not in request
+
+
+def test_generate_topics_uses_extracted_image_text_and_page_one_citation(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_topics(source_pages=[1])),
+    )
+
+    result = gemini_service.generate_topics(
+        make_image_document(),
+        "course-image",
+        "Course Image",
+    )
+
+    assert result["ok"] is True
+    assert all(
+        topic["source_pages"] == [1]
+        for topic in result["package"]["topics"]
+    )
+    request = clients[0].models.calls[0]["contents"]
+    assert "Document type: IMAGE" in request
+    assert '"page": 1' in request
+    assert '"citable_page_numbers": [1]' in request
+    assert "OCR extracted image text." in request
+    assert "original-image-bytes-must-not-be-sent" not in request
 
 
 def test_generate_topics_uses_custom_model(monkeypatch):
@@ -669,6 +709,33 @@ def test_generate_questions_pptx_uses_parsed_slides_and_real_slide_citations(
     assert '"citable_page_numbers": [1, 3]' in request
     assert "Third slide material." in request
     assert "original-pptx-bytes-must-not-be-sent" not in request
+
+
+def test_generate_questions_uses_extracted_image_text_and_page_one_citation(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_questions(source_pages=[1])),
+    )
+
+    result = gemini_service.generate_questions(
+        make_image_document(),
+        make_study_package(),
+        ["topic-1"],
+    )
+
+    assert result["ok"] is True
+    assert all(
+        question["source_pages"] == [1]
+        for question in result["package"]["questions"]
+    )
+    request = clients[0].models.calls[0]["contents"]
+    assert "Document type: IMAGE" in request
+    assert '"citable_page_numbers": [1]' in request
+    assert "OCR extracted image text." in request
+    assert "original-image-bytes-must-not-be-sent" not in request
 
 
 @pytest.mark.parametrize(
@@ -1049,6 +1116,28 @@ def test_generate_relationships_supplies_parsed_pptx_slides_as_material(
     assert '"page": 3' in request
     assert '"text": "Third slide material."' in request
     assert "original-pptx-bytes-must-not-be-sent" not in request
+
+
+def test_generate_relationships_supplies_extracted_image_page_as_material(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(
+        monkeypatch,
+        text=json.dumps(make_relationships()),
+    )
+
+    result = gemini_service.generate_relationships(
+        make_image_document(),
+        make_study_package(),
+    )
+
+    assert result["ok"] is True
+    request = clients[0].models.calls[0]["contents"]
+    assert "Document type: IMAGE" in request
+    assert '"page": 1' in request
+    assert '"text": "OCR extracted image text."' in request
+    assert "original-image-bytes-must-not-be-sent" not in request
 
 
 @pytest.mark.parametrize(

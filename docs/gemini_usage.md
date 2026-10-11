@@ -22,11 +22,13 @@ export GEMINI_MODEL="gemini-3.8-flash"
 
 ## 提取资料
 
-`extract_document(file_bytes, filename)` 接受扩展名不区分大小写的 `.txt`、文字型 `.pdf` 和 `.pptx` 文件。TXT 按 UTF-8（兼容 BOM）读取；PDF 使用 PyMuPDF 逐页提取；PPTX 使用 `python-pptx` 提取文本框、表格和分组中的文字。文件大小上限为 5 MiB，提取文本上限为 50,000 个字符，超过上限会返回失败而不会截断。
+`extract_document(file_bytes, filename)` 接受扩展名不区分大小写的 `.txt`、文字型 `.pdf`、`.pptx`、`.png`、`.jpg` 和 `.jpeg` 文件。TXT 按 UTF-8（兼容 BOM）读取；PDF 使用 PyMuPDF 逐页提取；PPTX 使用 `python-pptx` 提取文本框、表格和分组中的文字。PNG/JPEG 使用 Pillow 解码并由 pytesseract 调用本地 Tesseract OCR。所有文件大小上限为 5 MiB，文本上限为 50,000 个字符；图片另有 20,000,000 像素上限。超限会返回失败，不会截断。
 
-PDF 页码从 1 开始；PPTX 的 `pages`/`sources` 页码表示从 1 开始的幻灯片号。PDF 和 PPTX 的 `pages` 都保留空白页，`sources` 只包含有文字的页/幻灯片。TXT 没有真实页码，不返回 `pages` 字段，`sources` 中 `page` 为 `None`。图片 OCR、幻灯片备注和旧版 `.ppt` 均不支持；扫描 PDF 或只有图片的 PPTX 不支持 OCR。
+图片只接受实际 PNG/JPEG 内容，OCR 超时为 15 秒。图片作为虚拟页 1 返回；`pages` 中保留该页文本，`sources` 的 `page` 为 `1`。PDF 页码从 1 开始；PPTX 的 `pages`/`sources` 页码表示从 1 开始的幻灯片号。PDF 和 PPTX 的 `pages` 保留空白页，`sources` 只包含有文字的页/幻灯片。TXT 没有真实页码，不返回 `pages` 字段，`sources` 中 `page` 为 `None`。幻灯片备注、旧版 `.ppt`、扫描 PDF OCR 和 PPTX 图片 OCR 均不支持。
 
-`generate_topics`、`generate_questions` 和 `generate_relationships` 均可使用已提取的 PPTX 文字。Gemini 请求只包含解析后的幻灯片文本与页码，不发送原始 PPTX 字节。topics/questions 的 `source_pages` 对应从 1 开始且包含文字的幻灯片号；空白幻灯片不能作为来源。
+Pillow 和 pytesseract 是 Python 依赖；它们不会安装 Tesseract OCR 引擎或语言数据。运行主机还必须单独安装 `tesseract` 可执行文件，并安装 `OCR_LANG` 指定的全部语言包。`OCR_LANG` 默认是 `eng`，可通过进程环境变量设为例如 `chi_sim+eng`。可用 `tesseract --version` 检查引擎，使用 `tesseract --list-langs` 检查语言包。缺引擎、缺语言包、超时、图片损坏、执行失败或没有文字时，提取服务返回固定错误码和提示；不会把图片发送给 Gemini。
+
+`generate_topics`、`generate_questions` 和 `generate_relationships` 可使用已提取的 PDF、PPTX 或 PNG/JPEG 文字及页数据。Gemini 请求只包含解析后的文本与页码，不发送原始 PDF、PPTX 或图片字节。topics/questions 的 `source_pages` 只能引用 `sources` 中有文字的页或幻灯片；图片来源页为 `1`。
 
 ```python
 from services.document_service import extract_document

@@ -2,17 +2,70 @@ from io import BytesIO
 
 import pytest
 import pymupdf
+from PIL import Image
 from pptx import Presentation
 from pptx.oxml.xmlchemy import OxmlElement
 
-from services import document_service
+from services import document_service, gemini_service
 from services.document_service import (
     MAX_FILE_BYTES,
     MAX_TEXT_CHARS,
+    extract_image,
     extract_pdf,
     extract_pptx,
     extract_txt,
 )
+
+
+class FakeTesseractNotFoundError(OSError):
+    pass
+
+
+class FakeTesseractError(RuntimeError):
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
+
+def make_image_bytes(image_format="PNG"):
+    stream = BytesIO()
+    Image.new("RGB", (2, 2), color="white").save(stream, format=image_format)
+    return stream.getvalue()
+
+
+def install_fake_ocr(
+    monkeypatch,
+    *,
+    text="Recognized image text",
+    languages=("eng",),
+    languages_error=None,
+    ocr_error=None,
+):
+    calls = []
+
+    class FakePytesseract:
+        TesseractError = FakeTesseractError
+        TesseractNotFoundError = FakeTesseractNotFoundError
+
+        def get_languages(self, *, config):
+            if languages_error is not None:
+                raise languages_error
+            return list(languages)
+
+        def image_to_string(self, image, *, lang, timeout):
+            calls.append((image, lang, timeout))
+            if ocr_error is not None:
+                raise ocr_error
+            return text
+
+    fake_pytesseract = FakePytesseract()
+    monkeypatch.setattr(
+        document_service,
+        "_load_pytesseract",
+        lambda: fake_pytesseract,
+        raising=False,
+    )
+    return calls
 
 
 def make_pdf(page_texts, *, user_password=None):
@@ -390,6 +443,219 @@ def test_extract_pptx_text_length_limit(monkeypatch):
 
 
 @pytest.mark.parametrize(
+    ("image_format", "filename"),
+    [("PNG", "course.png"), ("JPEG", "course.JPG"), ("JPEG", "course.jpeg")],
+)
+def test_extract_image_returns_virtual_page_one_and_uses_local_ocr(
+    monkeypatch,
+    image_format,
+    filename,
+):
+    monkeypatch.delenv("OCR_LANG", raising=False)
+    calls = install_fake_ocr(monkeypatch)
+
+    result = extract_image(make_image_bytes(image_format), filename)
+
+    assert result == {
+        "ok": True,
+        "filename": filename,
+        "text": "Recognized image text",
+        "pages": [{"page": 1, "text": "Recognized image text"}],
+        "sources": [{"filename": filename, "page": 1}],
+    }
+    assert len(calls) == 1
+    assert calls[0][0].mode == "RGB"
+    assert calls[0][1:] == ("eng", 15)
+
+
+def test_extract_image_uses_configured_language_pack(monkeypatch):
+    monkeypatch.setenv("OCR_LANG", "chi_sim+eng")
+    calls = install_fake_ocr(
+        monkeypatch,
+        languages=("chi_sim", "eng"),
+    )
+
+    result = extract_image(make_image_bytes(), "course.png")
+
+    assert result["ok"] is True
+    assert calls[0][1:] == ("chi_sim+eng", 15)
+
+
+@pytest.mark.parametrize("filename", ["COURSE.PNG", "COURSE.JPG", "COURSE.JPEG"])
+def test_extract_document_dispatches_images_case_insensitively(
+    monkeypatch,
+    filename,
+):
+    file_bytes = b"image bytes"
+    result = {"ok": True, "selected": "image"}
+    calls = []
+
+    def fake_image(received_bytes, received_filename):
+        calls.append((received_bytes, received_filename))
+        return result
+
+    monkeypatch.setattr(document_service, "extract_image", fake_image)
+
+    extracted = document_service.extract_document(file_bytes, filename)
+
+    assert extracted is result
+    assert calls == [(file_bytes, filename)]
+
+
+@pytest.mark.parametrize(
+    ("file_bytes", "filename"),
+    [
+        (b"not an image", "corrupt.png"),
+        (make_image_bytes("GIF"), "renamed.png"),
+        (make_image_bytes("PNG"), "renamed.jpg"),
+    ],
+)
+def test_extract_image_rejects_corrupt_or_mismatched_image_content(
+    file_bytes,
+    filename,
+):
+    result = extract_image(file_bytes, filename)
+
+    assert result["ok"] is False
+    assert result["error_code"] == "INVALID_IMAGE"
+    assert "not an image" not in result["message"]
+
+
+def test_extract_image_rejects_empty_and_unsupported_inputs():
+    empty_result = extract_image(b"", "empty.png")
+    unsupported_result = extract_image(b"data", "photo.webp")
+
+    assert empty_result["error_code"] == "EMPTY_DOCUMENT"
+    assert unsupported_result["error_code"] == "UNSUPPORTED_FILE_TYPE"
+
+
+def test_extract_image_checks_pixel_limit_before_full_decode(monkeypatch):
+    class HeaderOnlyImage:
+        format = "PNG"
+        size = (5000, 4001)
+
+        def __init__(self):
+            self.loaded = False
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            return False
+
+        def load(self):
+            self.loaded = True
+
+        def convert(self, mode):
+            pytest.fail("Pixel limit must be checked before conversion")
+
+    image = HeaderOnlyImage()
+    monkeypatch.setattr(document_service.Image, "open", lambda stream: image)
+    monkeypatch.setattr(
+        document_service,
+        "_load_pytesseract",
+        lambda: pytest.fail("OCR must not run for oversized images"),
+        raising=False,
+    )
+
+    result = extract_image(b"header bytes", "oversized.png")
+
+    assert result["ok"] is False
+    assert result["error_code"] == "IMAGE_TOO_LARGE"
+    assert image.loaded is False
+
+
+def test_extract_image_enforces_file_size_limit(monkeypatch):
+    file_bytes = make_image_bytes()
+    monkeypatch.setattr(document_service, "MAX_FILE_BYTES", len(file_bytes))
+    install_fake_ocr(monkeypatch)
+
+    at_limit_result = extract_image(file_bytes, "at-limit.png")
+    over_limit_result = extract_image(file_bytes + b"x", "over-limit.png")
+
+    assert at_limit_result["ok"] is True
+    assert over_limit_result["ok"] is False
+    assert over_limit_result["error_code"] == "FILE_TOO_LARGE"
+
+
+def test_extract_image_enforces_text_length_limit(monkeypatch):
+    monkeypatch.setattr(document_service, "MAX_TEXT_CHARS", 4)
+    install_fake_ocr(monkeypatch, text="1234")
+    at_limit_result = extract_image(make_image_bytes(), "at-limit.png")
+    install_fake_ocr(monkeypatch, text="12345")
+
+    over_limit_result = extract_image(make_image_bytes(), "over-limit.png")
+
+    assert at_limit_result["ok"] is True
+    assert over_limit_result["ok"] is False
+    assert over_limit_result["error_code"] == "TEXT_TOO_LONG"
+
+
+def test_extract_image_returns_engine_unavailable_without_cloud_fallback(
+    monkeypatch,
+):
+    def fail_if_gemini_called(**kwargs):
+        pytest.fail("Local OCR failure must not call Gemini")
+
+    monkeypatch.setattr(gemini_service.genai, "Client", fail_if_gemini_called)
+    install_fake_ocr(
+        monkeypatch,
+        languages_error=FakeTesseractNotFoundError("/private/tesseract path"),
+    )
+
+    result = document_service.extract_document(
+        make_image_bytes(),
+        "course.png",
+    )
+
+    assert result["ok"] is False
+    assert result["error_code"] == "OCR_ENGINE_UNAVAILABLE"
+    assert "/private/tesseract path" not in result["message"]
+
+
+def test_extract_image_returns_language_unavailable(monkeypatch):
+    monkeypatch.setenv("OCR_LANG", "chi_sim")
+    calls = install_fake_ocr(monkeypatch, languages=("eng",))
+
+    result = extract_image(make_image_bytes(), "course.png")
+
+    assert result["ok"] is False
+    assert result["error_code"] == "OCR_LANGUAGE_UNAVAILABLE"
+    assert calls == []
+
+
+@pytest.mark.parametrize(
+    ("ocr_error", "expected_error"),
+    [
+        (RuntimeError("Tesseract process timeout"), "OCR_TIMEOUT"),
+        (FakeTesseractError("private OCR path and data"), "OCR_FAILED"),
+    ],
+)
+def test_extract_image_returns_safe_timeout_and_execution_errors(
+    monkeypatch,
+    ocr_error,
+    expected_error,
+):
+    install_fake_ocr(monkeypatch, ocr_error=ocr_error)
+
+    result = extract_image(make_image_bytes(), "course.png")
+
+    assert result["ok"] is False
+    assert result["error_code"] == expected_error
+    assert "private OCR path" not in result["message"]
+    assert "private OCR path and data" not in result["message"]
+
+
+def test_extract_image_rejects_empty_ocr_result(monkeypatch):
+    install_fake_ocr(monkeypatch, text=" \n\t ")
+
+    result = extract_image(make_image_bytes(), "blank.png")
+
+    assert result["ok"] is False
+    assert result["error_code"] == "NO_EXTRACTABLE_TEXT"
+
+
+@pytest.mark.parametrize(
     ("filename", "selected_extractor"),
     [
         ("notes.txt", "txt"),
@@ -440,5 +706,5 @@ def test_extract_document_rejects_unsupported_type_without_calling_extractors(
     assert result == {
         "ok": False,
         "error_code": "UNSUPPORTED_FILE_TYPE",
-        "message": "仅支持 TXT、文字型 PDF 或文字型 PPTX。",
+        "message": "仅支持 TXT、文字型 PDF、文字型 PPTX 或 PNG/JPEG 图片。",
     }
