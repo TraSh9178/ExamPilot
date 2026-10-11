@@ -1,7 +1,7 @@
 # Pilot mascot: original captain concept
 
-This document records the first portrait. The current pixel book mascot is
-documented in `pilot_book_mascot.md` and uses `assets/pilot-book-mascot.png`.
+This document records the first portrait. The current fresh book mascot is
+documented in `pilot_fresh_mascot.md` and uses `assets/pilot-book-fresh.png`.
 
 Pilot is ExamPilot's cartoon airline captain and AI study assistant. The same
 portrait appears on the draggable launcher and in the chat header. Labels and

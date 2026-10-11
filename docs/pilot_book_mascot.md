@@ -1,20 +1,13 @@
-# Pilot pixel book mascot
+# Pilot: previous pixel book concept
 
-Pilot is ExamPilot's friendly pixel-art book: black eyes, a white beard and
-moustache, and an airline captain's hat. The launcher, chat header, and assistant
-name all use Pilot.
+This document records the previous pixel-art book: black eyes, a white beard and
+moustache, and an airline captain's hat. The current rounded book captain is
+documented in `pilot_fresh_mascot.md` and uses `assets/pilot-book-fresh.png`.
 
-Current asset: `assets/pilot-book-mascot.png` (transparent PNG). Created with the
+Previous asset: `assets/pilot-book-mascot.png` (transparent PNG). Created with the
 built-in `image_gen` tool using the original captain as an edit target. The
 selected generated output is copied into the project unchanged.
 
-The component embeds one copy of the image and shares it between the launcher
-and chat header. Both use `image-rendering: pixelated`; launcher size, dragging,
-authentication, and chat behavior retain their existing implementation.
-
-## Final generation prompt
-
-```text
-undefined
-```
+This version used pixel rendering and a framed launcher. The current design
+uses smooth rendering and a transparent launcher, without a white frame.
 

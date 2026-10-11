@@ -20,7 +20,7 @@ ASSETS = Path(__file__).resolve().parents[1] / "assets"
 
 @lru_cache(maxsize=1)
 def _component():
-    mascot = base64.b64encode((ASSETS / "pilot-book-mascot.png").read_bytes()).decode("ascii")
+    mascot = base64.b64encode((ASSETS / "pilot-book-fresh.png").read_bytes()).decode("ascii")
     html = (ASSETS / "tutor_assistant.html").read_text(encoding="utf-8").replace(
         "__PILOT_MASCOT_DATA_URI__", f"data:image/png;base64,{mascot}",
     )

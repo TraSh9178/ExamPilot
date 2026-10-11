@@ -6,18 +6,19 @@
 .exam-tutor button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .exam-tutor button:focus-visible, .exam-tutor textarea:focus-visible, .tutor-messages:focus-visible { outline: 3px solid #83b4ff; outline-offset: 3px; }
 .exam-tutor button:disabled { cursor: default; opacity: .48; }
-.tutor-bubble { position: fixed; z-index: 1000001; width: 64px; height: 64px; display: grid; place-items: center; border: 1px solid #c9dbf8; border-radius: 22px; padding: 5px; background: #fff; color: var(--tutor-blue); box-shadow: 0 5px 20px #14366c29, 0 1px 3px #14366c1a; touch-action: none; user-select: none; transition: box-shadow 150ms ease, background-color 150ms ease; }
-.tutor-bubble:hover { background: #f3f7ff; box-shadow: 0 7px 24px #14366c38; }
-.tutor-bubble.is-dragging { cursor: grabbing; box-shadow: 0 9px 28px #14366c45; }
+.tutor-bubble { position: fixed; z-index: 1000001; width: 64px; height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 0; border-radius: 16px; padding: 0; background: transparent; color: var(--tutor-blue); box-shadow: none; touch-action: none; user-select: none; }
+.tutor-bubble:hover { background: transparent; box-shadow: none; }
+.tutor-bubble.is-dragging { cursor: grabbing; background: transparent; box-shadow: none; }
 .tutor-bubble.is-panel-overlap { visibility: hidden; pointer-events: none; }
-.tutor-pilot { width: 56px; height: 56px; display: block; object-fit: contain; pointer-events: none; user-select: none; -webkit-user-drag: none; }
-.tutor-bubble-label { position: absolute; right: -5px; bottom: -3px; display: grid; place-items: center; min-width: 35px; height: 20px; padding: 0 5px; border-radius: 8px; border: 2px solid white; background: var(--tutor-blue); color: white; font-size: 10px; font-weight: 750; line-height: 1; pointer-events: none; }
+.tutor-pilot { width: 52px; height: 52px; flex-shrink: 0; display: block; object-fit: contain; filter: drop-shadow(0 2px 2px #244f7a18); transition: transform 150ms ease; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.tutor-bubble:hover .tutor-pilot { transform: translateY(-1px); }
+.tutor-bubble-label { display: block; width: 64px; height: 12px; border: 0; padding: 0; background: transparent; color: #385779; text-align: center; font-size: 11px; font-weight: 650; line-height: 12px; pointer-events: none; }
 .tutor-panel { position: fixed; z-index: 1000000; width: min(388px, calc(100vw - 24px)); height: min(560px, calc(100dvh - 24px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #cfdef3; border-radius: 18px; background: #fff; box-shadow: 0 12px 50px #10204426, 0 2px 6px #10204412; animation: tutor-appear 140ms ease-out; }
 .tutor-header { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 8px; min-height: 75px; padding: 12px 12px 12px 17px; background: linear-gradient(115deg, #edf4ff, #f8faff); border-bottom: 1px solid var(--tutor-border); cursor: grab; touch-action: none; user-select: none; }
 .tutor-header.is-dragging { cursor: grabbing; }
 .tutor-title-group { display: flex; align-items: center; gap: 9px; min-width: 0; pointer-events: none; }
-.tutor-small-pilot { display: block; flex: 0 0 auto; width: 38px; height: 38px; object-fit: contain; border-radius: 11px; background: #e7f0ff; pointer-events: none; user-select: none; -webkit-user-drag: none; }
-.tutor-pilot, .tutor-small-pilot { image-rendering: pixelated; }
+.tutor-small-pilot { display: block; flex: 0 0 auto; width: 38px; height: 38px; object-fit: contain; background: transparent; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.tutor-pilot, .tutor-small-pilot { image-rendering: auto; }
 .tutor-title-group h2 { margin: 0; color: var(--tutor-ink); font-size: 16px; font-weight: 700; line-height: 1.3; letter-spacing: -.2px; }
 .tutor-title-group p { margin: 2px 0 0; color: var(--tutor-muted); font-size: 12px; line-height: 1.4; }
 .tutor-header-actions { display: flex; gap: 2px; }
@@ -70,4 +71,4 @@
 @keyframes tutor-appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes tutor-spin { to { transform: rotate(360deg); } }
 @media (max-width: 480px) { .tutor-panel { border-radius: 15px; } .tutor-header { padding-left: 13px; } .tutor-messages { padding: 13px; } .tutor-form { padding: 10px 12px 8px; } .tutor-input-help { max-width: 172px; } }
-@media (prefers-reduced-motion: reduce) { .tutor-panel, .tutor-status.is-pending::before { animation: none; } .tutor-bubble { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .tutor-panel, .tutor-status.is-pending::before { animation: none; } .tutor-pilot { transition: none; } }
