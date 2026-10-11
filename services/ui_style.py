@@ -304,6 +304,25 @@ def apply_app_styles() -> None:
             color: var(--exam-blue);
         }
 
+        [data-testid="stMain"] [class*="st-key-study_topic_"]
+        [data-testid="stHorizontalBlock"] [data-testid="stMarkdownContainer"] h3 {
+            font-size: 1.8rem;
+            line-height: 1.3;
+            overflow-wrap: anywhere;
+        }
+
+        [class*="st-key-study_topic_"] [data-testid="stHorizontalBlock"]
+        > [data-testid="stColumn"]:first-child {
+            flex: 0 0 2.25rem !important;
+            width: 2.25rem !important;
+        }
+
+        [class*="st-key-study_topic_"] [data-testid="stHorizontalBlock"]
+        > [data-testid="stColumn"]:last-child {
+            flex: 1 1 0 !important;
+            width: auto !important;
+        }
+
         [class*="st-key-knowledge_graph_canvas"] {
             overflow: hidden;
         }
@@ -652,6 +671,11 @@ def apply_app_styles() -> None:
             [class*="st-key-study_topic_"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child {
                 flex: 1 1 0 !important;
                 width: auto !important;
+            }
+
+            [data-testid="stMain"] [class*="st-key-study_topic_"]
+            [data-testid="stHorizontalBlock"] [data-testid="stMarkdownContainer"] h3 {
+                font-size: 1.65rem;
             }
 
             .exam-hero {
