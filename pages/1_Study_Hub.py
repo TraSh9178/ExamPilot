@@ -17,8 +17,9 @@ if course is None:
     st.page_link("pages/0_Dashboard.py", label="Back to Dashboard")
     st.stop()
 
-st.subheader(course.course_name)
-st.caption(f"{len(course.topics)} knowledge points")
+with st.container(key="study_plan_overview"):
+    st.subheader(course.course_name)
+    st.caption(f"{len(course.topics)} knowledge points")
 
 if not course.topics:
     st.info("This course has no topics yet.")
