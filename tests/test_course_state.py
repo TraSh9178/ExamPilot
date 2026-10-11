@@ -1,7 +1,5 @@
 from pathlib import Path
 
-from streamlit.testing.v1 import AppTest
-
 from models.schemas import AttemptResult, ExamSession, StudyPackage
 from services.course_state import (
     initialize_courses,
@@ -10,6 +8,7 @@ from services.course_state import (
     select_course,
 )
 from services.mastery_engine import calculate_topic_stats
+from tests.auth_helpers import signed_in_app
 
 
 def make_course(course_id: str, name: str) -> StudyPackage:
@@ -194,7 +193,7 @@ def test_scope_practice_history_and_mastery_are_course_specific() -> None:
 
 def test_dashboard_renders_all_saved_courses_and_deduplicates_demo() -> None:
     app_path = Path(__file__).resolve().parents[1] / "app.py"
-    app = AppTest.from_file(str(app_path)).run()
+    app = signed_in_app(app_path).run()
     assert not app.exception
 
     assert [
@@ -228,7 +227,7 @@ def test_dashboard_renders_all_saved_courses_and_deduplicates_demo() -> None:
     assert app.session_state["current_course"].course_id == "course-1"
     assert "First course" in [header.value for header in app.subheader]
 
-    second_app = AppTest.from_file(str(app_path)).run()
+    second_app = signed_in_app(app_path).run()
     save_course(second_app.session_state, first)
     save_course(second_app.session_state, second)
     second_app.run()
@@ -248,7 +247,7 @@ def test_dashboard_renders_all_saved_courses_and_deduplicates_demo() -> None:
 
 def test_dashboard_can_remove_any_course() -> None:
     app_path = Path(__file__).resolve().parents[1] / "app.py"
-    app = AppTest.from_file(str(app_path)).run()
+    app = signed_in_app(app_path).run()
     assert not app.exception
 
     generated = make_course("generated-course", "Generated course")
@@ -262,6 +261,17 @@ def test_dashboard_can_remove_any_course() -> None:
     )
 
     app.button(key="remove_course_generated-course").click().run()
+    assert any(
+        course.course_id == "generated-course"
+        for course in app.session_state["courses"]
+    )
+    app.button(key="cancel_remove_course_generated-course").click().run()
+    assert any(
+        course.course_id == "generated-course"
+        for course in app.session_state["courses"]
+    )
+    app.button(key="remove_course_generated-course").click().run()
+    app.button(key="confirm_remove_course_generated-course").click().run()
     app.run()
     assert not app.exception
     assert [

@@ -24,7 +24,7 @@ def _topic_tag(topic_id: str) -> str:
 
 apply_app_styles()
 
-st.title("Export to Anki")
+st.title("🗂️ Export to Anki")
 st.caption(
     "Review course knowledge cards here or download a UTF-8 TSV file "
     "for Anki text import. "
@@ -37,7 +37,8 @@ if course is None:
     st.info("Load a course from the dashboard first.")
     st.stop()
 
-st.subheader(course.course_name)
+with st.container(key="anki_course_heading"):
+    st.subheader(course.course_name)
 
 if not course.questions:
     st.info("This course has no questions to export.")

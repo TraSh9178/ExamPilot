@@ -1,12 +1,11 @@
 from pathlib import Path
 
 import pytest
-from streamlit.testing.v1 import AppTest
-
 from models.schemas import AttemptResult, StudyPackage
 from services.course_state import save_course, select_course
 from services.exam_engine import create_exam, grade_exam
 from services.mastery_engine import calculate_topic_stats, get_mastery_status
+from tests.auth_helpers import signed_in_app
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -322,7 +321,7 @@ def test_homepage_loads_both_demos_reuses_ids_and_opens_each(
 ) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     app_path = ROOT / "app.py"
-    app = AppTest.from_file(str(app_path)).run()
+    app = signed_in_app(app_path).run()
     assert not app.exception
 
     assert [
@@ -356,7 +355,7 @@ def test_homepage_loads_both_demos_reuses_ids_and_opens_each(
         header.value for header in app.subheader
     ]
 
-    calculus_app = AppTest.from_file(str(app_path)).run()
+    calculus_app = signed_in_app(app_path).run()
     next(
         button
         for button in calculus_app.button
@@ -375,7 +374,7 @@ def test_python_basics_demo_is_seeded_once_and_preserves_progress(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    app = signed_in_app(ROOT / "app.py").run()
     assert not app.exception
     assert [
         course.course_id for course in app.session_state["courses"]
@@ -403,7 +402,7 @@ def test_existing_demo_session_migrates_python_without_restoring_deleted_demos(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    app = signed_in_app(ROOT / "app.py").run()
     assert not app.exception
 
     app.session_state["courses"] = [

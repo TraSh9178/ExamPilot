@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="pilot-shell" x1="23" y1="16" x2="42" y2="53" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#edf5ff"/>
+      <stop offset=".35" stop-color="#b4d0f0"/>
+      <stop offset=".7" stop-color="#6494d1"/>
+      <stop offset="1" stop-color="#2c5c98"/>
+    </linearGradient>
+    <linearGradient id="pilot-wing" x1="32" y1="27" x2="32" y2="44" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a5c9ed"/>
+      <stop offset=".48" stop-color="#4e83be"/>
+      <stop offset=".52" stop-color="#9ec5ee"/>
+      <stop offset="1" stop-color="#305b8e"/>
+    </linearGradient>
+    <linearGradient id="pilot-visor" x1="32" y1="27" x2="32" y2="35" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b6fbff"/>
+      <stop offset=".5" stop-color="#57e0ef"/>
+      <stop offset="1" stop-color="#28a9d1"/>
+    </linearGradient>
+  </defs>
+  <g stroke="#285788" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m28.5 17 1.2-10h4.6l1.2 10" fill="url(#pilot-wing)"/>
+    <path d="M19 27 5 33.5v7l14.8-2.8M45 27l14 6.5v7l-14.8-2.8" fill="url(#pilot-wing)"/>
+    <circle cx="12" cy="41.5" r="4" fill="#153456"/>
+    <circle cx="52" cy="41.5" r="4" fill="#153456"/>
+    <path d="M32 16c9 0 14 7.6 14 17.4C46 44 39 53 32 53s-14-9-14-19.6C18 23.6 23 16 32 16Z" fill="url(#pilot-shell)"/>
+    <path d="M23.5 25.5h17a2 2 0 0 1 2 2v6.6c0 .8-.5 1.4-1.2 1.6L32 38.5l-9.3-2.8c-.7-.2-1.2-.8-1.2-1.6v-6.6a2 2 0 0 1 2-2Z" fill="#102b49" stroke="#426f9f" stroke-width="1.5"/>
+    <path d="M25 41.5 28 45M39 41.5 36 45" stroke="#345f94" stroke-width="1.6"/>
+  </g>
+  <g fill="none" stroke="#5ce8ef" stroke-width="1.4">
+    <circle cx="12" cy="41.5" r="2.2"/>
+    <circle cx="52" cy="41.5" r="2.2"/>
+  </g>
+  <g fill="url(#pilot-visor)">
+    <path d="M24 28h6.5v7L24 33Z"/>
+    <path d="M33.5 28H40v5l-6.5 2Z"/>
+  </g>
+  <g fill="none" stroke-linecap="round">
+    <path d="M25.5 21.5c4-2 9-2 13 0" stroke="#f3f9ff" stroke-width="1.5" opacity=".8"/>
+    <path d="M25 29h4.5M34.5 29H39" stroke="#d2fdff" stroke-width="1.3"/>
+    <path d="M29.5 44h5" stroke="#55dbe9" stroke-width="4" opacity=".18"/>
+    <path d="M29.5 44h5" stroke="#86f3f5" stroke-width="1.8"/>
+  </g>
+</svg>

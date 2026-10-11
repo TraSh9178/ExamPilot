@@ -16,8 +16,6 @@ from services.document_service import extract_document
 from services.gemini_service import generate_topics
 from services.ui_style import apply_app_styles
 
-IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg")
-
 DEMO_COURSES = (
     ("Microeconomics Demo", "sample_course.json", "econ101"),
     ("Calculus I Demo", "calculus_i_demo.json", "calculus-i-demo"),
@@ -50,9 +48,10 @@ campus_art = base64.b64encode(
 
 st.markdown(
     f"""
-    <section class="exam-hero" style="--campus-art: url('data:image/svg+xml;base64,{campus_art}')">
-        <h1>Your next study session<br><span>starts here.</span></h1>
-        <p>Turn course materials into focused exam practice.</p>
+    <section class="exam-hero exam-hero-compact" style="--campus-art: url('data:image/svg+xml;base64,{campus_art}')">
+        <p class="exam-eyebrow">YOUR STUDY SPACE</p>
+        <h1>Make your next<br><span>study session count.</span></h1>
+        <p>Pick up a course, practise a topic, or bring your own materials.</p>
     </section>
     """,
     unsafe_allow_html=True,
@@ -92,37 +91,44 @@ if not st.session_state.get("default_demo_courses_v3_loaded", False):
         st.session_state["default_demo_courses_loaded"] = True
         st.session_state["default_demo_courses_v3_loaded"] = True
 
+overview = st.container(key="dashboard_overview")
+st.caption("Your courses and practice progress are available in this session.")
+
 # Keep the course setup panel open across page reruns.
 if "show_course_setup" not in st.session_state:
     st.session_state.show_course_setup = False
 
-if st.button(
-    "Close setup" if st.session_state.show_course_setup else "Create course",
-    icon=(
-        ":material/close:"
-        if st.session_state.show_course_setup
-        else ":material/add_circle_outline:"
-    ),
-    key="create_course_button",
-    type="secondary",
-):
-    st.session_state.show_course_setup = not st.session_state.show_course_setup
-    st.rerun()
-
-if st.session_state.show_course_setup:
-    with st.container(border=True):
-        st.subheader("Create a course")
-
-        if st.button("Close setup"):
-            st.session_state.show_course_setup = False
+with st.container(key="dashboard_courses_header"):
+    title_column, action_column = st.columns([1, 1], vertical_alignment="center")
+    with title_column:
+        st.subheader("My courses")
+    with action_column:
+        if st.button(
+            "Close setup" if st.session_state.show_course_setup else "Create course",
+            icon=(
+                ":material/close:"
+                if st.session_state.show_course_setup
+                else ":material/add_circle_outline:"
+            ),
+            key="create_course_button",
+            type="secondary" if st.session_state.show_course_setup else "primary",
+        ):
+            st.session_state.show_course_setup = not st.session_state.show_course_setup
             st.rerun()
 
+st.caption("Start with a demo or open a course to choose what to practise.")
+
+if st.session_state.show_course_setup:
+    with st.container(border=True, key="dashboard_course_setup"):
+        st.subheader("Create a course")
+        st.caption("1 · Name your course")
         st.text_input(
             "Course name",
             placeholder="e.g. Introduction to Biology",
             key="setup_course_name",
         )
 
+        st.caption("2 · Upload materials and extract text")
         uploaded_file = st.file_uploader(
             "Upload course materials",
             type=["pdf", "pptx", "txt", "png", "jpg", "jpeg"],
@@ -132,12 +138,15 @@ if st.session_state.show_course_setup:
         )
 
         st.caption(
-            "Maximum file size: 5 MiB; extracted text limited to 50,000 characters. "
-            "Supports UTF-8 TXT, text-based PDF, text-based PPTX, and PNG/JPEG images (requires Tesseract + English language pack for OCR). "
-            "Image OCR has been verified on macOS with clear English PNG/JPG/JPEG images; "
-            "Windows has not been verified. Chinese OCR is not verified (the OCR language pack defaults to English). "
-            "Not supported: scanned PDF OCR, PPTX slide notes, DOCX, and other formats."
+            "PDF, PPTX, TXT, PNG or JPG/JPEG · up to 5 MiB per file · "
+            "up to 50,000 characters of extracted text."
         )
+        with st.expander("Supported materials"):
+            st.caption(
+                "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text. "
+                "Image text extraction requires Tesseract with English language support. "
+                "Scanned PDF OCR, PPTX slide notes and DOCX are not supported."
+            )
 
         file_bytes = (
             uploaded_file.getvalue()
@@ -158,6 +167,7 @@ if st.session_state.show_course_setup:
         if st.button(
             "Extract text",
             disabled=uploaded_file is None,
+            type="primary",
         ):
             with st.spinner("Extracting text..."):
                 document = extract_document(
@@ -173,11 +183,15 @@ if st.session_state.show_course_setup:
 
         document = st.session_state.get("setup_document")
 
+        st.caption("3 · Review the text and generate topics")
         if document is not None:
             st.success("Text extracted successfully.")
 
             extracted_text = document["text"]
             document_extension = Path(document["filename"]).suffix.lower()
+            is_image_document = document_extension in {
+                ".png", ".jpg", ".jpeg"
+            }
 
             st.caption(
                 f"Extracted text: {len(extracted_text):,} / 50,000 characters"
@@ -193,8 +207,8 @@ if st.session_state.show_course_setup:
                         f"Slide {page}"
                         if document_extension == ".pptx"
                         else (
-                            "Image OCR text"
-                            if document_extension in IMAGE_EXTENSIONS
+                            f"Image {page}"
+                            if is_image_document
                             else f"Page {page}"
                         )
                     )
@@ -202,22 +216,20 @@ if st.session_state.show_course_setup:
                 st.caption(f"{source['filename']} · {location}")
 
             if "pages" in document:
-                if document_extension == ".pptx":
-                    page_label = "PPTX slides"
-                elif document_extension in IMAGE_EXTENSIONS:
-                    page_label = "Image OCR text"
-                else:
-                    page_label = "PDF pages"
+                page_label = (
+                    "PPTX slides"
+                    if document_extension == ".pptx"
+                    else ("Image" if is_image_document else "PDF pages")
+                )
                 with st.expander(
                     f"{page_label} ({len(document['pages'])})"
                 ):
                     for page in document["pages"]:
-                        if document_extension == ".pptx":
-                            page_unit = "Slide"
-                        elif document_extension in IMAGE_EXTENSIONS:
-                            page_unit = "Image"
-                        else:
-                            page_unit = "Page"
+                        page_unit = (
+                            "Slide"
+                            if document_extension == ".pptx"
+                            else ("Image" if is_image_document else "Page")
+                        )
                         st.markdown(
                             f"**{page_unit} {page['page']}** · "
                             f"{len(page['text']):,} characters"
@@ -230,14 +242,21 @@ if st.session_state.show_course_setup:
                 "setup_course_name", ""
             ).strip()
 
+            if st.session_state.pop("course_generation_notice", False):
+                st.success(
+                    "Topics generated. Review them in Study Hub, "
+                    "then confirm your exam scope."
+                )
+
             st.caption(
-                "Generate topics sends the extracted material to Gemini. "
-                "Review the generated topics before confirming exam scope."
+                "Generating topics sends this material to Gemini. "
+                "You can review the topics before choosing your exam scope."
             )
 
             if st.button(
                 "Generate topics",
                 disabled=not course_name,
+                type="primary",
             ):
                 course_id = str(uuid4())
 
@@ -268,16 +287,41 @@ if st.session_state.show_course_setup:
                             f"course_stage_{new_course.course_id}"
                         ] = "topics_only"
                         save_course(st.session_state, new_course)
-
-                        st.success(
-                            "Topics generated. Review them in Study Hub, "
-                            "then confirm your exam scope."
-                        )
+                        # Refresh the global Tutor and sidebar to this course.
+                        st.session_state["course_generation_notice"] = True
+                        st.rerun()
 
             if not course_name:
                 st.info("Enter a course name to enable topic generation.")
+        else:
+            st.caption(
+                "Extract your material to preview the text before generating topics."
+            )
+
 courses = st.session_state.courses
-st.subheader("📚 My courses")
+# Populate the overview after generation so it reflects a newly created course
+# immediately, while keeping it above the setup panel on screen.
+with overview:
+    overview_columns = st.columns(3)
+    with overview_columns[0]:
+        st.metric("Courses", len(courses))
+    with overview_columns[1]:
+        st.metric(
+            "Knowledge points",
+            sum(len(course.topics) for course in courses),
+        )
+    with overview_columns[2]:
+        st.metric(
+            "Practice sessions",
+            sum(
+                len(
+                    st.session_state.get(
+                        f"practice_history_{course.course_id}", {}
+                    )
+                )
+                for course in courses
+            ),
+        )
 
 if not courses:
     st.info("Create a course to get started.")
@@ -290,19 +334,30 @@ else:
             courses[row_start : row_start + 2],
         ):
             with column:
-                with st.container(border=True):
+                with st.container(
+                    border=True,
+                    key=f"dashboard_course_card_{course.course_id}",
+                ):
                     stage = st.session_state.get(
                         f"course_stage_{course.course_id}"
                     )
+                    is_demo = any(
+                        course.course_id == demo_id
+                        for _, _, demo_id in DEMO_COURSES
+                    )
                     st.caption(
-                        "Generated course" if stage else "Demo course"
+                        "Generated course"
+                        if stage
+                        else ("Demo course" if is_demo else "Your course")
                     )
                     st.subheader(course.course_name)
                     st.caption(
                         f"{len(course.topics)} knowledge points · "
                         f"{len(course.questions)} practice questions"
                     )
-                    action_columns = st.columns([5, 1])
+                    if stage == "topics_only":
+                        st.caption("Next: review topics and choose your exam scope.")
+                    action_columns = st.columns([1, 1])
                     with action_columns[0]:
                         if st.button(
                             "Open course",
@@ -310,6 +365,9 @@ else:
                             key=f"open_course_{course.course_id}",
                             use_container_width=True,
                         ):
+                            st.session_state.pop(
+                                f"pending_course_removal_{course.course_id}", None
+                            )
                             select_course(
                                 st.session_state,
                                 course.course_id,
@@ -321,8 +379,45 @@ else:
                             icon=":material/delete:",
                             key=f"remove_course_{course.course_id}",
                             type="secondary",
-                            help="Delete this course and its saved progress.",
+                            use_container_width=True,
+                            help="Review a confirmation before deleting this course.",
                         ):
+                            st.session_state[
+                                f"pending_course_removal_{course.course_id}"
+                            ] = True
+                            st.rerun()
+
+                    if st.session_state.get(
+                        f"pending_course_removal_{course.course_id}", False
+                    ):
+                        st.warning(
+                            f"Delete {course.course_name}? Its materials and practice "
+                            "progress will be removed from this session."
+                        )
+                        confirmation_columns = st.columns(2)
+                        with confirmation_columns[0]:
+                            cancel_removal = st.button(
+                                "Cancel",
+                                key=f"cancel_remove_course_{course.course_id}",
+                                type="secondary",
+                                use_container_width=True,
+                            )
+                        with confirmation_columns[1]:
+                            confirm_removal = st.button(
+                                "Confirm delete",
+                                key=f"confirm_remove_course_{course.course_id}",
+                                type="secondary",
+                                use_container_width=True,
+                            )
+                        if cancel_removal:
+                            st.session_state.pop(
+                                f"pending_course_removal_{course.course_id}", None
+                            )
+                            st.rerun()
+                        if confirm_removal:
+                            st.session_state.pop(
+                                f"pending_course_removal_{course.course_id}", None
+                            )
                             remove_course(
                                 st.session_state,
                                 course.course_id,
