@@ -22,6 +22,10 @@ _BASE64_PATTERN = re.compile(r"[A-Za-z0-9_-]+\Z")
 _MAX_ENCODED_LENGTH = 256
 
 
+class PasswordKDFError(RuntimeError):
+    """A password engine failure with a message safe to display or log."""
+
+
 def validate_password(password: str) -> None:
     """Require 15–128 characters, preserving spaces and Unicode exactly."""
     if not isinstance(password, str):
@@ -37,15 +41,19 @@ def validate_password(password: str) -> None:
 
 
 def _derive_key(password: str, salt: bytes) -> bytes:
-    return hashlib.scrypt(
-        password.encode("utf-8"),
-        salt=salt,
-        n=_SCRYPT_N,
-        r=_SCRYPT_R,
-        p=_SCRYPT_P,
-        maxmem=_SCRYPT_MAX_MEMORY,
-        dklen=_KEY_LENGTH,
-    )
+    password_bytes = password.encode("utf-8")
+    try:
+        return hashlib.scrypt(
+            password_bytes,
+            salt=salt,
+            n=_SCRYPT_N,
+            r=_SCRYPT_R,
+            p=_SCRYPT_P,
+            maxmem=_SCRYPT_MAX_MEMORY,
+            dklen=_KEY_LENGTH,
+        )
+    except Exception:
+        raise PasswordKDFError("The password service is temporarily unavailable.") from None
 
 
 def _encode(value: bytes) -> str:

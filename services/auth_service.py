@@ -3,6 +3,7 @@
 Create missing account tables with ``python -m services.auth_service``.
 Setup runs only ``db/auth_schema_minimal.sql`` and leaves existing permissions,
 RLS settings, policies, and learning tables untouched.
+The C-managed ``public.demo_users`` parent table must already exist.
 Normal login requests never create or alter database tables.
 """
 
@@ -14,7 +15,12 @@ from uuid import uuid4
 import psycopg
 
 from services.database import DatabaseConfigurationError, connect_database
-from services.password_service import hash_password, validate_password, verify_password
+from services.password_service import (
+    PasswordKDFError,
+    hash_password,
+    validate_password,
+    verify_password,
+)
 
 
 _USERNAME_PATTERN = re.compile(r"[A-Za-z0-9_.-]{3,32}\Z", re.ASCII)
@@ -77,8 +83,17 @@ def _database_failure(error: psycopg.Error) -> AuthResult:
     )
 
 
+def _password_failure() -> AuthResult:
+    return AuthResult(
+        False,
+        None,
+        "The account service is temporarily unavailable. Please try again later.",
+        "password_service_unavailable",
+    )
+
+
 def initialize_auth_schema() -> AuthResult:
-    """Create missing account tables without changing existing tables or access."""
+    """Create missing Auth tables, requiring the existing public.demo_users parent."""
     schema_path = (
         Path(__file__).resolve().parents[1] / "db" / "auth_schema_minimal.sql"
     )
@@ -110,7 +125,10 @@ def register_user(username: str, password: str) -> AuthResult:
     except ValueError as error:
         return AuthResult(False, None, str(error), "invalid_password")
 
-    password_hash = hash_password(password)
+    try:
+        password_hash = hash_password(password)
+    except PasswordKDFError:
+        return _password_failure()
     user = AuthUser(str(uuid4()), normalized_username)
     try:
         with connect_database() as connection:
@@ -197,6 +215,9 @@ def login_user(username: str, password: str) -> AuthResult:
                 (next_failures, next_failures, user_id),
             )
             return _invalid_credentials()
+    except PasswordKDFError:
+        # Let the connection context roll back before reporting an engine fault.
+        return _password_failure()
     except DatabaseConfigurationError:
         return AuthResult(
             False,

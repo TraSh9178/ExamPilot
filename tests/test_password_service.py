@@ -4,6 +4,7 @@ import pytest
 
 from services import password_service
 from services.password_service import (
+    PasswordKDFError,
     hash_password,
     validate_password,
     verify_password,
@@ -111,3 +112,60 @@ def test_tampered_key_fails_verification(encoded_password):
     fields[-1] = base64.urlsafe_b64encode(tampered).rstrip(b"=").decode("ascii")
 
     assert not verify_password(PASSWORD, "$".join(fields))
+
+
+@pytest.mark.parametrize("operation", ["hash", "verify"])
+@pytest.mark.parametrize("error_type", [ValueError, MemoryError, RuntimeError, OSError])
+def test_password_engine_failure_raises_safe_error(
+    operation, error_type, encoded_password, monkeypatch
+):
+    private_details = "private engine resource or implementation details"
+
+    def unavailable_engine(*args, **kwargs):
+        raise error_type(private_details)
+
+    monkeypatch.setattr(password_service.hashlib, "scrypt", unavailable_engine)
+
+    with pytest.raises(PasswordKDFError) as failure:
+        if operation == "hash":
+            hash_password(PASSWORD)
+        else:
+            verify_password(PASSWORD, encoded_password)
+
+    assert str(failure.value) == "The password service is temporarily unavailable."
+    assert private_details not in str(failure.value)
+    assert failure.value.__cause__ is None
+    assert failure.value.__suppress_context__ is True
+
+
+def test_invalid_verification_input_fails_closed_without_using_broken_engine(
+    encoded_password, monkeypatch
+):
+    def unexpected_engine(*args, **kwargs):
+        pytest.fail("Invalid verification input must not invoke the password engine")
+
+    monkeypatch.setattr(password_service.hashlib, "scrypt", unexpected_engine)
+
+    assert not verify_password(PASSWORD, "invalid-hash")
+    assert not verify_password("short", encoded_password)
+
+
+@pytest.mark.parametrize("operation", ["hash", "verify"])
+@pytest.mark.parametrize("error_type", [KeyboardInterrupt, SystemExit])
+def test_password_engine_does_not_wrap_process_control_exceptions(
+    operation, error_type, encoded_password, monkeypatch
+):
+    process_control_error = error_type()
+
+    def interrupted_engine(*args, **kwargs):
+        raise process_control_error
+
+    monkeypatch.setattr(password_service.hashlib, "scrypt", interrupted_engine)
+
+    with pytest.raises(error_type) as failure:
+        if operation == "hash":
+            hash_password(PASSWORD)
+        else:
+            verify_password(PASSWORD, encoded_password)
+
+    assert failure.value is process_control_error

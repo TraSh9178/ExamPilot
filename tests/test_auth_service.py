@@ -59,9 +59,12 @@ class FakeConnection:
             return FakeResult()
         if normalized_query.startswith("create table if not exists"):
             table = normalized_query.split()[5]
-            if table == "exampilot_auth.users":
+            if table == "exampilot_auth.users" and table not in self.tables:
                 assert "exampilot_auth" in self.schemas
-                assert "public.demo_users" in self.tables
+                if "public.demo_users" not in self.tables:
+                    raise psycopg.errors.UndefinedTable(
+                        'relation "public.demo_users" does not exist'
+                    )
             self.tables.add(table)
             return FakeResult()
         if normalized_query.startswith("insert into public.demo_users"):
@@ -167,6 +170,49 @@ def test_invalid_registration_password_never_contacts_database(backend, password
     assert backend.calls == []
 
 
+def test_registration_kdf_failure_does_not_create_any_records(backend, monkeypatch):
+    def unavailable_password_engine(password):
+        raise auth_service.PasswordKDFError("private engine details")
+
+    monkeypatch.setattr(auth_service, "hash_password", unavailable_password_engine)
+
+    result = auth_service.register_user("alice", PASSWORD)
+
+    assert not result.success and result.user is None
+    assert result.error_code == "password_service_unavailable"
+    assert "private" not in result.message
+    assert backend.calls == []
+    assert backend.users == {} and backend.demo_users == set()
+    assert backend.commits == 0 and backend.rollbacks == 0
+
+
+@pytest.mark.parametrize("username", ["alice", "unknown"])
+def test_login_kdf_failure_rolls_back_without_changing_counters(
+    backend, monkeypatch, username
+):
+    auth_service.register_user("alice", PASSWORD)
+    backend.users["alice"]["failed_attempts"] = 4
+    existing_users = deepcopy(backend.users)
+    existing_demo_users = backend.demo_users.copy()
+    existing_commits = backend.commits
+    backend.calls.clear()
+
+    def unavailable_password_engine(password, encoded):
+        raise auth_service.PasswordKDFError("private engine details")
+
+    monkeypatch.setattr(auth_service, "verify_password", unavailable_password_engine)
+
+    result = auth_service.login_user(username, PASSWORD)
+
+    assert not result.success and result.user is None
+    assert result.error_code == "password_service_unavailable"
+    assert "private" not in result.message
+    assert backend.users == existing_users and backend.demo_users == existing_demo_users
+    assert backend.commits == existing_commits and backend.rollbacks == 1
+    assert len(backend.calls) == 1
+    assert backend.calls[0][0].strip().startswith("SELECT")
+
+
 def test_login_returns_stable_account_id_and_resets_failed_attempts(backend):
     registered = auth_service.register_user("alice", PASSWORD)
     auth_service.login_user("alice", WRONG_PASSWORD)
@@ -227,6 +273,22 @@ def test_wrong_password_after_expired_lock_starts_new_failure_count(backend):
     assert backend.users["alice"]["locked_until"] is None
 
 
+def test_expired_lock_requires_five_new_failures_to_lock_again(backend):
+    auth_service.register_user("alice", PASSWORD)
+    for _ in range(5):
+        auth_service.login_user("alice", WRONG_PASSWORD)
+    backend.now = backend.users["alice"]["locked_until"]
+
+    for failure_count in range(1, 5):
+        assert not auth_service.login_user("alice", WRONG_PASSWORD).success
+        assert backend.users["alice"]["failed_attempts"] == failure_count
+        assert backend.users["alice"]["locked_until"] is None
+
+    assert not auth_service.login_user("alice", WRONG_PASSWORD).success
+    assert backend.users["alice"]["failed_attempts"] == 5
+    assert backend.users["alice"]["locked_until"] == backend.now + timedelta(minutes=5)
+
+
 @pytest.mark.parametrize("username,password", [("?bad", PASSWORD), ("alice", "short"), (None, PASSWORD)])
 def test_invalid_login_input_has_generic_message_and_no_database_access(backend, username, password):
     result = auth_service.login_user(username, password)
@@ -258,21 +320,34 @@ def test_missing_auth_schema_fails_with_actionable_safe_error(backend, operation
 
 def test_initialization_creates_only_missing_account_schema_and_tables(backend):
     backend.schemas.clear()
-    backend.tables.clear()
+    backend.tables = {"public.demo_users"}
     result = auth_service.initialize_auth_schema()
 
     assert result.success and result.user is None
     assert backend.commits == 1
     queries = [query.decode() for query, _ in backend.calls]
-    assert len(queries) == 3
+    assert len(queries) == 2
     assert all(query.strip().startswith("CREATE ") for query in queries)
-    assert any("CREATE TABLE IF NOT EXISTS public.demo_users" in query for query in queries)
+    assert not any("CREATE TABLE IF NOT EXISTS public.demo_users" in query for query in queries)
     assert any("CREATE SCHEMA IF NOT EXISTS exampilot_auth" in query for query in queries)
     assert any("CREATE TABLE IF NOT EXISTS exampilot_auth.users" in query for query in queries)
     assert any("ON DELETE RESTRICT" in query for query in queries)
     assert backend.schemas == {"exampilot_auth"}
     assert backend.tables == {"public.demo_users", "exampilot_auth.users"}
     assert all(isinstance(query, bytes) for query, _ in backend.calls)
+
+
+def test_initialization_requires_existing_parent_and_rolls_back_auth_schema(backend):
+    backend.schemas.clear()
+    backend.tables.clear()
+
+    result = auth_service.initialize_auth_schema()
+
+    assert not result.success and result.error_code == "schema_unavailable"
+    assert backend.commits == 0 and backend.rollbacks == 1
+    assert backend.schemas == set() and backend.tables == set()
+    assert len(backend.calls) == 2
+    assert all(query.strip().startswith(b"CREATE ") for query, _ in backend.calls)
 
 
 def test_initialization_preserves_existing_parent_data_and_can_be_repeated(backend):
@@ -309,7 +384,7 @@ def test_initialization_reads_only_minimal_schema(monkeypatch, backend):
 
 def test_initialization_rolls_back_created_schema_when_a_later_statement_fails(backend, monkeypatch):
     backend.schemas.clear()
-    backend.tables.clear()
+    backend.tables = {"public.demo_users"}
     execute = backend.execute
 
     def fail_account_table(query, parameters=()):
@@ -322,7 +397,7 @@ def test_initialization_rolls_back_created_schema_when_a_later_statement_fails(b
 
     assert not result.success and "private" not in result.message
     assert backend.rollbacks == 1
-    assert backend.schemas == set() and backend.tables == set()
+    assert backend.schemas == set() and backend.tables == {"public.demo_users"}
 
 
 def test_schema_failure_rolls_back_and_hides_credentials(backend):
