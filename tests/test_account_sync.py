@@ -8,6 +8,7 @@ from streamlit.testing.v1 import AppTest
 from models.schemas import AttemptResult, ExamSession, Question, StudyPackage
 from services import account_sync, postgres_store
 from services.auth_service import AuthUser
+from services.auth_session import start_authenticated_session
 from services.exam_engine import grade_exam
 from services.mastery_engine import calculate_topic_stats
 from tests.auth_helpers import TEST_USER, signed_in_app
@@ -587,3 +588,15 @@ def test_reused_historical_question_id_cannot_overwrite_saved_answers(store):
     outcome = account_sync.save_course_to_account(state, changed)
     assert not outcome.success
     assert store.courses[TEST_USER.user_id][old.course_id] == old
+
+
+def test_has_unresolved_conflicts_tracks_quarantined_records():
+    session_state = {}
+    start_authenticated_session(session_state, TEST_USER)
+    session_state["account_sync"] = {
+        "user_id": TEST_USER.user_id,
+        "restore_conflicts": {"econ101": {"history": {"s1": {}}}},
+    }
+    assert account_sync.has_unresolved_conflicts(session_state)
+    session_state["account_sync"]["restore_conflicts"] = {}
+    assert not account_sync.has_unresolved_conflicts(session_state)

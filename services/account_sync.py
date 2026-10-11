@@ -48,6 +48,14 @@ def _state(session_state: MutableMapping[str, Any], user_id: str) -> dict:
     return state
 
 
+def has_unresolved_conflicts(session_state: MutableMapping[str, Any]) -> bool:
+    """True when quarantined local records would be lost by logging out."""
+    user_id = _user_id(session_state)
+    if user_id is None:
+        return False
+    return bool(_state(session_state, user_id).get("restore_conflicts"))
+
+
 def _history_key(course_id: str) -> str:
     return f"practice_history_{course_id}"
 

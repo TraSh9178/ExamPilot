@@ -1,6 +1,10 @@
 import streamlit as st
 
-from services.account_sync import render_sidebar_status, restore_after_login
+from services.account_sync import (
+    has_unresolved_conflicts,
+    render_sidebar_status,
+    restore_after_login,
+)
 from services.auth_session import current_user, logout_session
 from services.auth_ui import render_auth_page
 
@@ -25,9 +29,16 @@ restore_after_login(st.session_state)
 with st.sidebar:
     st.caption("Signed in as")
     st.text(user.username)
+    discard_confirmed = True
+    if has_unresolved_conflicts(st.session_state):
+        discard_confirmed = st.checkbox(
+            "Discard conflicting local records on log out",
+            key="confirm_discard_conflicts",
+        )
     st.button(
         "Log out",
         key="logout_button",
+        disabled=not discard_confirmed,
         icon=":material/logout:",
         on_click=logout_session,
         args=(st.session_state,),
