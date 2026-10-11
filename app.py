@@ -2,6 +2,7 @@ import streamlit as st
 
 from services.auth_session import current_user, logout_session
 from services.auth_ui import render_auth_page
+from services.tutor_assistant_ui import clear_tutor_browser_state, render_tutor_assistant
 
 st.set_page_config(
     page_title="ExamPilot",
@@ -13,6 +14,7 @@ st.set_page_config(
 user = current_user(st.session_state)
 
 if user is None:
+    clear_tutor_browser_state()
     st.navigation(
         [st.Page(render_auth_page, title="Log in", icon=":material/login:", default=True)],
         position="hidden",
@@ -65,4 +67,18 @@ pages = [
     ),
 ]
 
-st.navigation(pages).run()
+navigation = st.navigation(pages)
+
+# Reserve room for the floating entry at the bottom of narrow study pages.
+st.markdown(
+    """<style>
+    @media (max-width: 480px) {
+        [data-testid="stMain"] [data-testid="stMainBlockContainer"] {
+            padding-bottom: 6rem;
+        }
+    }
+    </style>""",
+    unsafe_allow_html=True,
+)
+render_tutor_assistant()
+navigation.run()
