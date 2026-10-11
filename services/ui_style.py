@@ -211,9 +211,17 @@ def apply_app_styles() -> None:
             width: auto !important;
         }
 
-        [class*="st-key-dashboard_courses_header"] h3 {
+        [data-testid="stMain"] [class*="st-key-dashboard_courses_header"]
+        [data-testid="stMarkdownContainer"] h3 {
             margin: 0;
-            padding: 0;
+            padding: 0 0 0 0.75rem;
+            border-left: 4px solid var(--exam-blue);
+            color: var(--exam-ink);
+            font-size: 2.125rem;
+            font-weight: 800;
+            line-height: 1.2;
+            letter-spacing: -0.035em;
+            white-space: nowrap;
         }
 
         [class*="st-key-dashboard_courses_header"] [data-testid="stMarkdownContainer"] {
@@ -741,6 +749,12 @@ def apply_app_styles() -> None:
             [data-testid="stMain"] [data-testid="stMarkdownContainer"] h1 { font-size: 2.2rem; }
             [data-testid="stMain"] [data-testid="stMarkdownContainer"] h2 { font-size: 1.7rem; }
             [data-testid="stMain"] [data-testid="stMarkdownContainer"] h3 { font-size: 1.5rem; }
+
+            [data-testid="stMain"] [class*="st-key-dashboard_courses_header"]
+            [data-testid="stMarkdownContainer"] h3 {
+                padding-left: 0.5rem;
+                font-size: clamp(1.55rem, 6.7vw, 1.75rem);
+            }
 
             [class*="st-key-dashboard_course_card_"] [data-testid="stMarkdownContainer"] h3,
             [class*="st-key-study_plan_overview"] [data-testid="stMarkdownContainer"] h3,
