@@ -1,5 +1,9 @@
+import json
+from pathlib import Path
+
 import streamlit as st
-from streamlit_agraph import Config, Edge, Node, agraph
+import streamlit.components.v1 as components
+from streamlit_agraph import Config, Edge, Node
 
 from models.schemas import StudyPackage, TopicStats
 from services.graph_service import build_mastery_graph
@@ -39,6 +43,25 @@ _MASTERY_BADGE_COLORS = {
 }
 
 MIN_NODE_SIZE = 36
+
+_bounded_graph_component = components.declare_component(
+    "exampilot_bounded_knowledge_graph",
+    path=str(Path(__file__).with_name("bounded_graph_frontend")),
+)
+
+
+def agraph(nodes, edges, config):
+    return _bounded_graph_component(
+        payload={
+            "graph": {
+                "nodes": [node.to_dict() for node in nodes],
+                "edges": [edge.to_dict() for edge in edges],
+            },
+            "config": config.to_dict(),
+        },
+        default=None,
+        key=f"bounded_graph_{config.layout['randomSeed']}",
+    )
 
 
 def convert_graph_data(graph: dict) -> tuple[list[Node], list[Edge]]:
