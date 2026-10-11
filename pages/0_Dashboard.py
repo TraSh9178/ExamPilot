@@ -118,15 +118,15 @@ if st.session_state.show_course_setup:
 
         uploaded_file = st.file_uploader(
             "Upload course materials",
-            type=["pdf", "txt"],
+            type=["pdf", "txt", "pptx"],
             accept_multiple_files=False,
             key="setup_course_file",
         )
 
         st.caption(
             "Maximum file size: 5 MiB. "
-            "Supports UTF-8 TXT and text-based PDF. "
-            "Scanned PDFs are not supported."
+            "Supports UTF-8 TXT, text-based PDF, and text-based PPTX. "
+            "PPTX images, scanned content, and OCR are not yet in scope."
         )
 
         file_bytes = (
