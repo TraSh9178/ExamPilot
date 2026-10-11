@@ -1,13 +1,12 @@
 from hashlib import sha256
 from pathlib import Path
+from uuid import uuid4
 
 import streamlit as st
 
 from models.schemas import StudyPackage
+from services.course_state import initialize_courses, save_course, select_course
 from services.document_service import extract_document
-
-from uuid import uuid4
-
 from services.gemini_service import generate_topics
 
 st.set_page_config(
@@ -129,31 +128,50 @@ st.markdown(
 st.title("ExamPilot")
 st.write("Turn course materials into focused exam practice.")
 
-if "current_course" not in st.session_state:
-    st.session_state.current_course = None
+initialize_courses(st.session_state)
 
 # Keep the course setup panel open across page reruns.
 if "show_course_setup" not in st.session_state:
     st.session_state.show_course_setup = False
 
-demo_column, create_column = st.columns(2)
+demo_courses = (
+    (
+        "Load Introduction to Microeconomics Demo",
+        "sample_course.json",
+        "load_demo_econ101",
+    ),
+    (
+        "Load Calculus I Demo",
+        "calculus_i_demo.json",
+        "load_demo_calculus_i",
+    ),
+)
+demo_columns = st.columns(3)
 
-with demo_column:
-    if st.button("Load demo course", use_container_width=True):
-        sample_path = (
-            Path(__file__).resolve().parent / "data" / "sample_course.json"
-        )
-
-        try:
-            course = StudyPackage.model_validate_json(
-                sample_path.read_text(encoding="utf-8")
+for column, (button_label, filename, button_key) in zip(
+    demo_columns,
+    demo_courses,
+):
+    with column:
+        if st.button(
+            button_label,
+            use_container_width=True,
+            key=button_key,
+        ):
+            demo_path = (
+                Path(__file__).resolve().parent / "data" / filename
             )
-        except (OSError, ValueError) as error:
-            st.error(f"Could not load the demo course: {error}")
-        else:
-            st.session_state.current_course = course
 
-with create_column:
+            try:
+                course = StudyPackage.model_validate_json(
+                    demo_path.read_text(encoding="utf-8")
+                )
+            except (OSError, ValueError) as error:
+                st.error(f"Could not load the demo course: {error}")
+            else:
+                save_course(st.session_state, course)
+
+with demo_columns[2]:
     if st.button("Create course", use_container_width=True):
         st.session_state.show_course_setup = True
 
@@ -271,7 +289,7 @@ if st.session_state.show_course_setup:
                         st.session_state[
                             f"course_stage_{new_course.course_id}"
                         ] = "topics_only"
-                        st.session_state.current_course = new_course
+                        save_course(st.session_state, new_course)
 
                         st.success(
                             "Topics generated. Review them in Study Hub, "
@@ -282,24 +300,39 @@ if st.session_state.show_course_setup:
                 st.info("Enter a course name to enable topic generation.")
 st.subheader("My courses")
 
-course = st.session_state.current_course
+courses = st.session_state.courses
 
-if course is None:
+if not courses:
     st.info("Load the demo course to get started.")
 else:
-    card_column, _ = st.columns([1, 1])
-    with card_column:
-        with st.container(border=True):
-            stage = st.session_state.get(
-                f"course_stage_{course.course_id}"
-            )
-            st.caption(
-                "Generated course" if stage else "Demo course"
-            )
-            st.subheader(course.course_name)
-            st.caption(
-                f"{len(course.topics)} topics · "
-                f"{len(course.questions)} practice questions"
-            )
-            if st.button("Open course", type="primary"):
-                st.switch_page("pages/1_Study_Hub.py")
+    for row_start in range(0, len(courses), 2):
+        card_columns = st.columns(2)
+
+        for column, course in zip(
+            card_columns,
+            courses[row_start : row_start + 2],
+        ):
+            with column:
+                with st.container(border=True):
+                    stage = st.session_state.get(
+                        f"course_stage_{course.course_id}"
+                    )
+                    st.caption(
+                        "Generated course" if stage else "Demo course"
+                    )
+                    st.subheader(course.course_name)
+                    st.caption(
+                        f"{len(course.topics)} knowledge points · "
+                        f"{len(course.questions)} practice questions"
+                    )
+                    if st.button(
+                        "Open course",
+                        type="primary",
+                        key=f"open_course_{course.course_id}",
+                        use_container_width=True,
+                    ):
+                        select_course(
+                            st.session_state,
+                            course.course_id,
+                        )
+                        st.switch_page("pages/1_Study_Hub.py")

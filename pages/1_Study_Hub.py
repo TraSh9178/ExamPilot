@@ -1,6 +1,7 @@
 import streamlit as st
 
 from models.schemas import StudyPackage
+from services.course_state import save_course
 from services.gemini_service import generate_questions
 
 st.set_page_config(
@@ -119,7 +120,7 @@ if confirmed_topic_ids:
                         f"Could not load generated questions: {error}"
                     )
                 else:
-                    st.session_state.current_course = updated_course
+                    save_course(st.session_state, updated_course)
                     st.session_state[
                         f"course_stage_{course.course_id}"
                     ] = "questions_generated"

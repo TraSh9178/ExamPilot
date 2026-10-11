@@ -1,0 +1,69 @@
+{
+  "course_id": "calculus-i-demo",
+  "course_name": "Calculus I Demo",
+  "topics": [
+    {
+      "id": "calc_limits",
+      "name": "Limits",
+      "summary": "Limits describe the value a function approaches as its input approaches a given point.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_derivatives",
+      "name": "Derivatives",
+      "summary": "The derivative gives a function's instantaneous rate of change and the slope of its tangent line.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_derivative_applications",
+      "name": "Applications of Derivatives",
+      "summary": "Derivatives identify critical points and help analyze increasing, decreasing, and concavity behavior.",
+      "source_pages": []
+    }
+  ],
+  "relationships": [],
+  "questions": [
+    {
+      "id": "calc_q001",
+      "topic_id": "calc_limits",
+      "question": "What is lim(x→2) (x² − 4)/(x − 2)?",
+      "options": [
+        "0",
+        "2",
+        "4",
+        "The limit does not exist"
+      ],
+      "correct_index": 2,
+      "explanation": "For x ≠ 2, (x² − 4)/(x − 2) = (x − 2)(x + 2)/(x − 2) = x + 2. Therefore the limit as x approaches 2 is 4.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_q002",
+      "topic_id": "calc_derivatives",
+      "question": "If f(x) = x³ − 5x, what is f′(x)?",
+      "options": [
+        "3x² − 5",
+        "3x² − 5x",
+        "x² − 5",
+        "3x − 5"
+      ],
+      "correct_index": 0,
+      "explanation": "By the power rule, the derivative of x³ is 3x² and the derivative of −5x is −5, so f′(x) = 3x² − 5.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_q003",
+      "topic_id": "calc_derivative_applications",
+      "question": "For f(x) = x² − 4x, at which x-value does f have its minimum?",
+      "options": [
+        "x = 0",
+        "x = 1",
+        "x = 2",
+        "x = 4"
+      ],
+      "correct_index": 2,
+      "explanation": "f′(x) = 2x − 4, so the critical point is x = 2. Since f″(x) = 2 > 0, the graph is concave up there and f has a minimum at x = 2.",
+      "source_pages": []
+    }
+  ]
+}
