@@ -14,7 +14,6 @@ import streamlit as st
 from models.schemas import AttemptResult, ExamSession, StudyPackage
 from services import postgres_store
 from services.auth_session import current_user
-from services.course_state import initialize_courses
 from services.exam_engine import grade_exam
 from services.ui_adapters import PENDING_INTEGRATION_MESSAGES
 
@@ -58,42 +57,73 @@ def _apply_restored_course(
     state: dict,
     restored: postgres_store.CourseHistoryResult,
 ) -> None:
-    """Database records replace same-ID local copies; the current course stays."""
+    """Validate first; database history is authoritative for active statistics."""
     package = restored.package
-    initialize_courses(session_state)
-    courses = session_state["courses"]
+    if package is None:
+        raise ValueError("Missing course")
+    questions_by_id = {question.id: question for question in package.questions}
+    sessions_by_id = {exam.session_id: exam for exam in restored.sessions}
+    if len(sessions_by_id) != len(restored.sessions):
+        raise ValueError("Duplicate session")
+    answers_by_session: dict[str, dict[str, int | None]] = {}
+    for attempt in restored.attempts:
+        exam = sessions_by_id.get(attempt.session_id)
+        if exam is None or attempt.question_id not in exam.question_ids:
+            raise ValueError("Unmatched attempt")
+        answers = answers_by_session.setdefault(attempt.session_id, {})
+        if attempt.question_id in answers:
+            raise ValueError("Duplicate attempt")
+        answers[attempt.question_id] = attempt.selected_index
+
+    history = {}
+    for exam in restored.sessions:
+        questions = [questions_by_id[qid] for qid in exam.question_ids]
+        answers = answers_by_session.get(exam.session_id, {})
+        if set(answers) != set(exam.question_ids):
+            raise ValueError("Incomplete answer snapshot")
+        result = grade_exam(exam, questions, answers)
+        history[exam.session_id] = {
+            "session": exam, "questions": questions,
+            "attempts": result["attempts"].copy(), "result": result,
+        }
+
+    # Do not mutate existing lists/dicts while preparing the replacement.
+    current = session_state.get("current_course")
+    courses = list(session_state.get("courses", [current] if current else []))
     for index, course in enumerate(courses):
         if course.course_id == package.course_id:
             courses[index] = package
             break
     else:
         courses.append(package)
-
-    current = session_state.get("current_course")
-    if current is not None and current.course_id == package.course_id:
-        session_state["current_course"] = package
-
-    questions_by_id = {question.id: question for question in package.questions}
-    answers_by_session: dict[str, dict[str, int | None]] = {}
-    for attempt in restored.attempts:
-        answers_by_session.setdefault(attempt.session_id, {})[
-            attempt.question_id
-        ] = attempt.selected_index
-
-    history = session_state.setdefault(_history_key(package.course_id), {})
-    for session in restored.sessions:
-        questions = [questions_by_id[qid] for qid in session.question_ids]
-        result = grade_exam(
-            session, questions, answers_by_session.get(session.session_id, {})
-        )
-        history[session.session_id] = {
-            "session": session,
-            "questions": questions,
-            "attempts": result["attempts"].copy(),
-            "result": result,
+    local_history = session_state.get(_history_key(package.course_id), {})
+    conflicts = {
+        sid: record for sid, record in local_history.items()
+        if sid not in history or record != history[sid]
+    }
+    quarantined = dict(state.get("restore_conflicts", {}))
+    if conflicts:
+        previous = quarantined.get(package.course_id, {})
+        quarantined[package.course_id] = {
+            "package": current if current and current.course_id == package.course_id
+                       else next((c for c in session_state.get("courses", [])
+                                  if c.course_id == package.course_id), None),
+            "history": {**previous.get("history", {}), **conflicts},
         }
-        state["unsaved_exams"].discard((package.course_id, session.session_id))
-
+    updates = {"courses": courses, _history_key(package.course_id): history}
+    if "current_course" not in session_state:
+        updates["current_course"] = None
+    elif current is not None and current.course_id == package.course_id:
+        updates["current_course"] = package
+    # All validation and grading has succeeded before any session-state change.
+    session_state.update(updates)
+    state["restore_conflicts"] = quarantined
+    for key in (f"active_practice_{package.course_id}",
+                f"confirmed_scope_{package.course_id}",
+                f"scope_selection_{package.course_id}"):
+        session_state.pop(key, None)
+    for sid in history:
+        state["unsaved_exams"].discard((package.course_id, sid))
     state["unsaved_courses"].discard(package.course_id)
 
 
@@ -167,11 +197,15 @@ def _with_history_questions(
 ) -> StudyPackage:
     """Keep questions that local history still references (e.g. after the
     question bank is regenerated) so the saved history stays restorable."""
-    known = {q.id for q in course.questions}
+    by_id = {q.id: q for q in course.questions}
+    known = set(by_id)
     missing = []
     history = session_state.get(_history_key(course.course_id), {})
     for record in history.values():
         for question in record["questions"]:
+            if question.id in by_id and by_id[question.id] != question:
+                raise ValueError("A regenerated question reuses a historical question ID. "
+                                 "Save was stopped to protect previous exam answers.")
             if question.id not in known:
                 known.add(question.id)
                 missing.append(question)
@@ -187,9 +221,14 @@ def save_course_to_account(
     if user_id is None:
         return None
     state = _state(session_state, user_id)
-    result = postgres_store.save_course(
-        user_id, _with_history_questions(session_state, course)
-    )
+    try:
+        package = _with_history_questions(session_state, course)
+    except ValueError as exc:
+        state["unsaved_courses"].add(course.course_id)
+        outcome = SyncOutcome(False, str(exc))
+        state["last_save"] = outcome
+        return outcome
+    result = postgres_store.save_course(user_id, package)
     if result.success:
         state["unsaved_courses"].discard(course.course_id)
     else:
@@ -298,6 +337,13 @@ def render_sidebar_status() -> None:
             st.rerun()
     elif state["restore_message"]:
         st.caption(state["restore_message"])
+
+    if state.get("restore_conflicts"):
+        st.warning(
+            "Database history is used for statistics. Conflicting local practice "
+            "records are kept separately in this login session and are not counted "
+            "or automatically uploaded. Do not log out before resolving them."
+        )
 
     unsaved = len(state["unsaved_courses"]) + len(state["unsaved_exams"])
     if unsaved:

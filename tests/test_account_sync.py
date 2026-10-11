@@ -220,7 +220,7 @@ def test_restore_twice_does_not_duplicate_or_accumulate_answers(store):
     assert store.names("save_course") == [] and store.names("save_exam") == []
 
 
-def test_database_record_replaces_demo_copy_and_keeps_unsaved_local_sessions(store):
+def test_restore_uses_database_history_and_quarantines_local_sessions(store):
     stored = make_course("econ101", "Saved Economics")
     seed(store, TEST_USER, stored, make_exam(stored, "db-session"))
     state = signed_in_state()
@@ -241,7 +241,10 @@ def test_database_record_replaces_demo_copy_and_keeps_unsaved_local_sessions(sto
 
     assert [c.course_name for c in state["courses"]] == ["Saved Economics"]
     assert state["current_course"].course_name == "Saved Economics"
-    assert set(state["practice_history_econ101"]) == {"db-session", "local-only"}
+    assert set(state["practice_history_econ101"]) == {"db-session"}
+    conflict = state["account_sync"]["restore_conflicts"]["econ101"]
+    assert set(conflict["history"]) == {"local-only"}
+    assert conflict["package"] is local
 
 
 def test_partial_restore_failure_is_reported_and_keeps_other_data(store):
@@ -518,3 +521,69 @@ def test_regenerated_questions_keep_saved_history_restorable(store):
     assert {q.id for q in old.questions} <= saved_ids
     assert {q.id for q in regenerated.questions} <= saved_ids
     assert len(regenerated.questions) == 2  # local bank unchanged
+
+
+def test_invalid_history_restore_leaves_course_history_and_cache_untouched(store, monkeypatch):
+    from copy import deepcopy
+    local = make_course()
+    state = signed_in_state()
+    state.update(courses=[local], current_course=local,
+                 practice_history_course_1={})
+    state["practice_history_course-1"] = {"local": {"result": "unchanged"}}
+    state["active_practice_course-1"] = {"draft": True}
+    before = deepcopy(state)
+    stored = make_course(name="Database replacement")
+    valid, attempts = make_exam(stored, "valid")
+    invalid = valid.model_copy(update={"session_id": "bad", "question_ids": ["missing"]})
+    monkeypatch.setattr(postgres_store, "load_course_history", lambda *args:
+        postgres_store.CourseHistoryResult(True, stored, [valid, invalid], attempts,
+                                          [], {}, "ok"))
+    outcome = account_sync.restore_course(state, local.course_id)
+    assert not outcome.success
+    for key in ("courses", "current_course", "practice_history_course-1",
+                "active_practice_course-1"):
+        assert state[key] == before[key]
+
+
+def test_restore_invalidates_active_practice_cache(store):
+    course = make_course()
+    seed(store, TEST_USER, course, make_exam(course, "db"))
+    state = signed_in_state()
+    state["active_practice_course-1"] = {"stale": True}
+    assert account_sync.restore_course(state, course.course_id).success
+    assert "active_practice_course-1" not in state
+
+
+def test_regenerate_save_then_new_login_restores_old_exam(store):
+    old = make_course()
+    state = signed_in_state()
+    exam, attempts = make_exam(old, "old-exam")
+    state["practice_history_course-1"] = {
+        "old-exam": {"session": exam, "questions": old.questions,
+                     "attempts": attempts, "result": {}}}
+    assert account_sync.save_exam_to_account(state, old, exam, attempts).success
+    regenerated = old.model_copy(update={"questions": [
+        q.model_copy(update={"id": "new-" + q.id}) for q in old.questions]})
+    assert account_sync.save_course_to_account(state, regenerated).success
+    fresh = signed_in_state()
+    assert account_sync.restore_all(fresh).success
+    record = fresh["practice_history_course-1"]["old-exam"]
+    assert record["questions"] == old.questions
+    assert record["result"]["correct_count"] == 1
+    stats = stats_from_history(fresh, fresh["courses"][0], None)
+    assert sum(s.attempted for s in stats) == 2
+
+
+def test_reused_historical_question_id_cannot_overwrite_saved_answers(store):
+    old = make_course()
+    state = signed_in_state()
+    exam, attempts = make_exam(old, "old-exam")
+    state["practice_history_course-1"] = {
+        "old-exam": {"session": exam, "questions": old.questions,
+                     "attempts": attempts, "result": {}}}
+    assert account_sync.save_exam_to_account(state, old, exam, attempts).success
+    changed = old.model_copy(update={"questions": [
+        q.model_copy(update={"correct_index": 1}) for q in old.questions]})
+    outcome = account_sync.save_course_to_account(state, changed)
+    assert not outcome.success
+    assert store.courses[TEST_USER.user_id][old.course_id] == old
