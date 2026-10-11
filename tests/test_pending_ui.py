@@ -43,6 +43,32 @@ def click_extract(app: AppTest) -> None:
     ).click().run()
 
 
+def test_dashboard_create_course_button_toggles_setup_panel():
+    app = AppTest.from_file(str(DASHBOARD_PATH)).run()
+
+    assert not app.exception
+    assert app.button(key="create_course_button").label == "Create course"
+    assert not app.session_state["show_course_setup"]
+
+    app.button(key="create_course_button").click().run()
+
+    assert not app.exception
+    assert app.button(key="create_course_button").label == "Close setup"
+    assert app.session_state["show_course_setup"]
+    assert any(
+        item.key == "setup_course_name" for item in app.text_input
+    )
+
+    app.button(key="create_course_button").click().run()
+
+    assert not app.exception
+    assert app.button(key="create_course_button").label == "Create course"
+    assert not app.session_state["show_course_setup"]
+    assert not any(
+        item.key == "setup_course_name" for item in app.text_input
+    )
+
+
 def test_dashboard_extracts_txt_and_shows_limits_preview_and_source(monkeypatch):
     upload = install_upload_mock(monkeypatch)
     app = AppTest.from_file(str(DASHBOARD_PATH)).run()

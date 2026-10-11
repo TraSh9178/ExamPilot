@@ -71,7 +71,7 @@ def test_all_questions_exports_python_basics_nine_question_utf8_tsv():
     assert len(app.get("download_button")) == 1
     button = app.get("download_button")[0]
     assert button.label == "Download Anki TSV"
-    assert "UTF-8 TSV for Anki text import only." in [
+    assert "Review course knowledge cards here" in [
         item.value for item in app.caption
     ][0]
 
@@ -125,6 +125,7 @@ def test_weak_topics_filter_uses_selected_mode_only(monkeypatch):
     )
     assert len(exported_rows) == 3
     assert all(row[2].endswith(f"topic_{first_topic}") for row in exported_rows)
+    assert len(app.expander) == 3
 
     app.radio[1].set_value("Topic Practice").run()
     assert not app.exception
@@ -136,6 +137,7 @@ def test_weak_topics_filter_uses_selected_mode_only(monkeypatch):
     )
     assert len(exported_rows) == 3
     assert all(row[2].endswith(f"topic_{second_topic}") for row in exported_rows)
+    assert len(app.expander) == 3
 
 
 def test_course_history_and_filter_state_are_isolated(monkeypatch):
@@ -255,12 +257,24 @@ def test_weak_topic_without_course_questions_shows_no_matching_state():
     assert len(app.get("download_button")) == 0
 
 
-def test_preview_uses_exported_front_back_and_card_count():
-    app = _app_with_course(_python_basics_course())
+def test_all_exported_cards_are_available_on_page_for_study():
+    course = _python_basics_course()
+    app = _app_with_course(course)
 
     assert not app.exception
-    assert any("9 cards will be exported." == c.value for c in app.caption)
-    texts = [element.value for element in app.text]
-    assert len(texts) == 6
-    assert texts[0].startswith(_python_basics_course().questions[0].question)
-    assert texts[1].startswith("Correct answer: ")
+    assert any(
+        "9 study cards shown and ready to export." == item.value
+        for item in app.caption
+    )
+    card_questions = [
+        element.value.removeprefix("#### ")
+        for element in app.markdown
+        if element.value.startswith("#### ")
+    ]
+    assert card_questions == [
+        question.question for question in course.questions
+    ]
+    assert len(app.expander) == len(course.questions)
+    assert len(app.success) == len(course.questions)
+    assert app.success[0].value.startswith("A. ")
+    assert app.text[0].value.startswith("A. ")

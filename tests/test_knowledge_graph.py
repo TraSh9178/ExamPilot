@@ -196,6 +196,7 @@ def test_agraph_sends_existing_graph_data_to_bounded_component(monkeypatch):
             "edges": [edge.to_dict() for edge in edges],
         },
         "config": config.to_dict(),
+        "nodeScale": 1.0,
     }
     assert calls[0]["key"] == "bounded_graph_47"
     assert calls[0]["default"] is None
@@ -254,8 +255,10 @@ def test_render_knowledge_graph_builds_config_and_returns_selection(monkeypatch)
         config_calls.append(kwargs)
         return actual_config(**kwargs)
 
-    def render(nodes_arg, edges_arg, config_arg):
-        agraph_calls.append((nodes_arg, edges_arg, config_arg))
+    def render(nodes_arg, edges_arg, config_arg, node_scale_arg):
+        agraph_calls.append(
+            (nodes_arg, edges_arg, config_arg, node_scale_arg)
+        )
         return selected_node_id
 
     monkeypatch.setattr(knowledge_graph, "build_mastery_graph", build)
@@ -263,7 +266,12 @@ def test_render_knowledge_graph_builds_config_and_returns_selection(monkeypatch)
     monkeypatch.setattr(knowledge_graph, "Config", make_config)
     monkeypatch.setattr(knowledge_graph, "agraph", render)
 
-    result = knowledge_graph.render_knowledge_graph(package, stats, "mock")
+    result = knowledge_graph.render_knowledge_graph(
+        package,
+        stats,
+        "mock",
+        node_scale=1.15,
+    )
 
     assert result == selected_node_id
     assert build_calls == [(package, stats, "mock")]
@@ -285,6 +293,7 @@ def test_render_knowledge_graph_builds_config_and_returns_selection(monkeypatch)
     assert len(agraph_calls) == 1
     assert agraph_calls[0][:2] == (nodes, edges)
     actual_config = agraph_calls[0][2]
+    assert agraph_calls[0][3] == 1.15
     assert actual_config.width == "100%"
     assert actual_config.layout["randomSeed"] == 42
 
@@ -310,8 +319,8 @@ def test_render_knowledge_graph_with_isolated_topics(monkeypatch):
     )
     render_calls = []
 
-    def render(nodes, edges, config):
-        render_calls.append((nodes, edges, config))
+    def render(nodes, edges, config, node_scale):
+        render_calls.append((nodes, edges, config, node_scale))
         return None
 
     monkeypatch.setattr(knowledge_graph, "agraph", render)
@@ -319,7 +328,7 @@ def test_render_knowledge_graph_with_isolated_topics(monkeypatch):
     assert knowledge_graph.render_knowledge_graph(package, [], "mock") is None
 
     assert len(render_calls) == 1
-    nodes, edges, config = render_calls[0]
+    nodes, edges, config, node_scale = render_calls[0]
     assert len(nodes) == 3
     assert {node.id for node in nodes} == {
         "limits",
@@ -327,6 +336,7 @@ def test_render_knowledge_graph_with_isolated_topics(monkeypatch):
         "integrals",
     }
     assert edges == []
+    assert node_scale == 1.0
 
     serialized_config = json.loads(json.dumps(config.__dict__))
     assert serialized_config["groups"] == {}
@@ -367,7 +377,9 @@ def test_render_knowledge_graph_changes_layout_seed_for_view_reset(monkeypatch):
     monkeypatch.setattr(
         knowledge_graph,
         "agraph",
-        lambda nodes, edges, config: render_calls.append(config) or None,
+        lambda nodes, edges, config, node_scale: (
+            render_calls.append((config, node_scale)) or None
+        ),
     )
     package = StudyPackage(
         course_id="course",
@@ -384,7 +396,8 @@ def test_render_knowledge_graph_changes_layout_seed_for_view_reset(monkeypatch):
         view_reset=3,
     )
 
-    assert render_calls[0].layout["randomSeed"] == 45
+    assert render_calls[0][0].layout["randomSeed"] == 45
+    assert render_calls[0][1] == 1.0
 
 
 def test_knowledge_graph_zoom_buttons_update_scale_and_are_course_scoped():
@@ -408,8 +421,8 @@ def test_knowledge_graph_zoom_buttons_update_scale_and_are_course_scoped():
     app.run()
 
     assert not app.exception
-    assert any(
-        "transform: scale(1.0)" in item.value
+    assert not any(
+        "transform: scale(" in item.value
         for item in app.markdown
     )
 
@@ -417,8 +430,8 @@ def test_knowledge_graph_zoom_buttons_update_scale_and_are_course_scoped():
 
     assert not app.exception
     assert app.session_state["graph_zoom_zoom-course_mock"] == 1
-    assert any(
-        "transform: scale(1.15)" in item.value
+    assert not any(
+        "transform: scale(" in item.value
         for item in app.markdown
     )
 
@@ -426,6 +439,39 @@ def test_knowledge_graph_zoom_buttons_update_scale_and_are_course_scoped():
 
     assert not app.exception
     assert app.session_state["graph_zoom_zoom-course_mock"] == 0
+
+
+def test_graph_page_updates_cached_calculus_demo_relationships():
+    demo_path = (
+        Path(__file__).resolve().parents[1]
+        / "data"
+        / "calculus_i_demo.json"
+    )
+    current_course = StudyPackage.model_validate_json(
+        demo_path.read_text(encoding="utf-8")
+    )
+    old_course = current_course.model_copy(update={"relationships": []})
+    page_path = (
+        Path(__file__).resolve().parents[1]
+        / "pages"
+        / "4_Knowledge_Graph.py"
+    )
+    app = AppTest.from_file(str(page_path))
+    app.session_state["current_course"] = old_course
+
+    app.run()
+
+    assert not app.exception
+    updated_course = app.session_state["current_course"]
+    assert [
+        (relation.from_topic, relation.to_topic)
+        for relation in updated_course.relationships
+    ] == [
+        ("calc_limits", "calc_derivatives"),
+        ("calc_derivatives", "calc_derivative_applications"),
+    ]
+    assert updated_course.questions == old_course.questions
+    assert app.session_state["courses"][0] == updated_course
 
 
 @pytest.mark.parametrize(

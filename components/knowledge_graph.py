@@ -50,7 +50,7 @@ _bounded_graph_component = components.declare_component(
 )
 
 
-def agraph(nodes, edges, config):
+def agraph(nodes, edges, config, node_scale: float = 1.0):
     return _bounded_graph_component(
         payload={
             "graph": {
@@ -58,6 +58,7 @@ def agraph(nodes, edges, config):
                 "edges": [edge.to_dict() for edge in edges],
             },
             "config": config.to_dict(),
+            "nodeScale": node_scale,
         },
         default=None,
         key=f"bounded_graph_{config.layout['randomSeed']}",
@@ -111,6 +112,7 @@ def render_knowledge_graph(
     stats: list[TopicStats],
     mode: str,
     view_reset: int = 0,
+    node_scale: float = 1.0,
 ) -> str | None:
     graph = build_mastery_graph(package, stats, mode)
     nodes, edges = convert_graph_data(graph)
@@ -143,7 +145,7 @@ def render_knowledge_graph(
         iterations=1000,
     )
 
-    return agraph(nodes, edges, config)
+    return agraph(nodes, edges, config, node_scale)
 
 
 def get_selected_topic_details(
@@ -196,16 +198,17 @@ def render_topic_details(
         )
 
     if topic_stats is not None:
-        stats_columns = st.columns(2)
-        stats_columns[0].metric("Answers", topic_stats.attempted)
-        stats_columns[1].metric(
-            "Accuracy",
-            (
-                "—"
-                if topic_stats.accuracy is None
-                else f"{topic_stats.accuracy:.2f}%"
-            ),
-        )
+        with st.container(key="knowledge_topic_stats"):
+            stats_columns = st.columns(2)
+            stats_columns[0].metric("Answers", topic_stats.attempted)
+            stats_columns[1].metric(
+                "Accuracy",
+                (
+                    "—"
+                    if topic_stats.accuracy is None
+                    else f"{topic_stats.accuracy:.2f}%"
+                ),
+            )
 
     with st.container(border=True):
         st.subheader("Summary")

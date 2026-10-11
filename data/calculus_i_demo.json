@@ -21,7 +21,18 @@
       "source_pages": []
     }
   ],
-  "relationships": [],
+  "relationships": [
+    {
+      "from_topic": "calc_limits",
+      "to_topic": "calc_derivatives",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_derivatives",
+      "to_topic": "calc_derivative_applications",
+      "type": "prerequisite"
+    }
+  ],
   "questions": [
     {
       "id": "calc_q001",

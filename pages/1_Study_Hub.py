@@ -31,7 +31,7 @@ else:
     for topic_number, topic in enumerate(course.topics, start=1):
         with st.container(border=True, key=f"study_topic_{topic.id}"):
             topic_columns = st.columns(
-                [0.32, 4],
+                [0.16, 4],
                 vertical_alignment="top",
             )
             topic_columns[0].markdown(f"### {topic_number:02d}")

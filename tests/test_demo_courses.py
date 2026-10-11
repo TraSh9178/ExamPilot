@@ -50,7 +50,17 @@ def test_both_demo_packages_validate_and_have_distinct_ids(
 
     assert economics_topic_ids.isdisjoint(calculus_topic_ids)
     assert economics_question_ids.isdisjoint(calculus_question_ids)
-    assert calculus.relationships == []
+    assert [
+        (relation.from_topic, relation.to_topic, relation.type)
+        for relation in calculus.relationships
+    ] == [
+        ("calc_limits", "calc_derivatives", "prerequisite"),
+        (
+            "calc_derivatives",
+            "calc_derivative_applications",
+            "prerequisite",
+        ),
+    ]
 
     python_basics = load_demo("demo_python_basics.json")
     assert python_basics.course_id == "python-basics-demo"

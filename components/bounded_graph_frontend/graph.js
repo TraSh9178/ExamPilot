@@ -8,6 +8,7 @@
   let edgeData = null;
   let sourceNodes = [];
   let renderedGraph = "";
+  let renderedNodeScale = 1;
   let selectedNode = null;
   let draggedNode = null;
   let animationFrame = null;
@@ -79,6 +80,39 @@
 
       return { ...node, label: lines.join("\n") };
     });
+  }
+
+  function scaleSourceNodes(scale) {
+    return sourceNodes.map((node) => {
+      const font = typeof node.font === "object" ? node.font : {};
+      return {
+        ...node,
+        size: (Number(node.size) || 20) * scale,
+        font: {
+          ...font,
+          size: (Number(font.size) || 16) * scale,
+        },
+      };
+    });
+  }
+
+  function applyNodeScale(scale) {
+    if (!nodeData || !network || scale === renderedNodeScale) return;
+
+    const updatedNodes = fitNodeLabels(
+      scaleSourceNodes(scale),
+      host.clientWidth,
+    );
+    nodeData.update(
+      updatedNodes.map(({ id, size, font, label }) => ({
+        id,
+        size,
+        font,
+        label,
+      })),
+    );
+    renderedNodeScale = scale;
+    for (const node of nodeData.get()) keepInside(node.id, false);
   }
 
   function getGraphMetrics(nodes) {
@@ -404,7 +438,11 @@
 
     const graph = payload.graph || { nodes: [], edges: [] };
     const graphJson = JSON.stringify(graph);
-    if (network && graphJson === renderedGraph) return;
+    const nodeScale = Number(payload.nodeScale) || 1;
+    if (network && graphJson === renderedGraph) {
+      applyNodeScale(nodeScale);
+      return;
+    }
 
     if (network) {
       network.destroy();
@@ -444,10 +482,12 @@
       { nodes: nodeData, edges: edgeData },
       options,
     );
+    renderedNodeScale = 1;
     if (nodes.length) {
       network.fit({ nodes: nodes.map((node) => node.id), animation: false });
       clampScale();
     }
+    applyNodeScale(nodeScale);
 
     network.on("selectNode", (event) => setValue(event.nodes[0] || null));
     network.on("deselectNode", () => setValue(null));
@@ -486,7 +526,10 @@
 
   const resizeObserver = new ResizeObserver(() => {
     if (!network || !nodeData) return;
-    const updatedLabels = fitNodeLabels(sourceNodes, host.clientWidth);
+    const updatedLabels = fitNodeLabels(
+      scaleSourceNodes(renderedNodeScale),
+      host.clientWidth,
+    );
     nodeData.update(
       updatedLabels.map((node) => ({ id: node.id, label: node.label })),
     );

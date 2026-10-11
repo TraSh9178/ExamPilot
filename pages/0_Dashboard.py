@@ -95,12 +95,17 @@ if "show_course_setup" not in st.session_state:
     st.session_state.show_course_setup = False
 
 if st.button(
-    "Create course",
-    icon=":material/add_circle_outline:",
+    "Close setup" if st.session_state.show_course_setup else "Create course",
+    icon=(
+        ":material/close:"
+        if st.session_state.show_course_setup
+        else ":material/add_circle_outline:"
+    ),
     key="create_course_button",
     type="secondary",
 ):
-    st.session_state.show_course_setup = True
+    st.session_state.show_course_setup = not st.session_state.show_course_setup
+    st.rerun()
 
 if st.session_state.show_course_setup:
     with st.container(border=True):

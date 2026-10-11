@@ -18,11 +18,16 @@ def _safe_filename(course_name: str) -> str:
     return f"anki_{token or 'course'}.tsv"
 
 
+def _topic_tag(topic_id: str) -> str:
+    return "topic_" + re.sub(r"\s+", "_", topic_id.strip())
+
+
 apply_app_styles()
 
 st.title("Export to Anki")
 st.caption(
-    "Download UTF-8 TSV for Anki text import only. "
+    "Review course knowledge cards here or download a UTF-8 TSV file "
+    "for Anki text import. "
     "AnkiWeb sync is not supported; Anki Desktop import has not been verified."
 )
 
@@ -95,14 +100,32 @@ if not content:
     st.stop()
 
 cards = list(csv.reader(StringIO(content), delimiter="\t"))
-st.caption(f"{len(cards)} cards will be exported.")
-with st.expander("Card preview (first 3)"):
-    for front, back, _tags in cards[:3]:
-        with st.container(border=True):
-            st.markdown("**Front**")
-            st.text(front)
-            st.markdown("**Back**")
-            st.text(back)
+st.caption(f"{len(cards)} study cards shown and ready to export.")
+topic_names_by_tag = {
+    _topic_tag(topic.id): topic.name
+    for topic in course.topics
+}
+
+st.subheader("Study cards")
+for index, (front, back, tags) in enumerate(cards, start=1):
+    question, _, options = front.partition("\n")
+    answer, _, explanation = back.partition("\n")
+    topic_name = next(
+        (
+            topic_names_by_tag[tag]
+            for tag in tags.split()
+            if tag in topic_names_by_tag
+        ),
+        "Course review",
+    )
+
+    with st.container(border=True, key=f"anki_study_card_{index}"):
+        st.caption(f"{index:02d} / {len(cards)} · {topic_name}")
+        st.markdown(f"#### {question}")
+        st.text(options)
+        with st.expander("Show answer and explanation"):
+            st.success(answer.removeprefix("Correct answer: "))
+            st.write(explanation.removeprefix("Explanation: "))
 
 st.download_button(
     "Download Anki TSV",

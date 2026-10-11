@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import streamlit as st
 from components.knowledge_graph import (
     render_knowledge_graph,
@@ -6,6 +8,7 @@ from components.knowledge_graph import (
 )
 from services.graph_service import build_mastery_graph
 from services.mastery_engine import calculate_topic_stats
+from services.course_state import save_course
 from services.ui_style import apply_app_styles
 
 apply_app_styles()
@@ -19,6 +22,26 @@ if course is None:
     st.info("Load a course from the dashboard first.")
     st.page_link("pages/0_Dashboard.py", label="Back to Dashboard")
     st.stop()
+
+if course.course_id == "calculus-i-demo" and not course.relationships:
+    demo_path = (
+        Path(__file__).resolve().parents[1]
+        / "data"
+        / "calculus_i_demo.json"
+    )
+    try:
+        demo_course = type(course).model_validate_json(
+            demo_path.read_text(encoding="utf-8")
+        )
+    except (OSError, ValueError) as error:
+        st.error(f"Could not update the Calculus demo course: {error}")
+        st.stop()
+
+    if demo_course.relationships:
+        course = course.model_copy(
+            update={"relationships": demo_course.relationships}
+        )
+        save_course(st.session_state, course)
 
 st.subheader(course.course_name)
 st.caption(f"{len(course.topics)} knowledge points")
@@ -94,7 +117,7 @@ with graph_column:
             if st.button(
                 "−",
                 key=f"graph_zoom_out_{course.course_id}_{mode}",
-                help="Zoom out",
+                help="Make nodes smaller",
                 disabled=zoom_level <= -3,
             ):
                 st.session_state[zoom_key] = zoom_level - 1
@@ -102,30 +125,19 @@ with graph_column:
             if st.button(
                 "+",
                 key=f"graph_zoom_in_{course.course_id}_{mode}",
-                help="Zoom in",
+                help="Make nodes larger",
                 disabled=zoom_level >= 3,
             ):
                 st.session_state[zoom_key] = zoom_level + 1
 
         zoom_level = st.session_state.get(zoom_key, 0)
         zoom_scale = 1 + zoom_level * 0.15
-        st.markdown(
-            f"""
-            <style>
-            [class*="st-key-knowledge_graph_canvas"] iframe {{
-                transform: scale({zoom_scale});
-                transform-origin: center center;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-
         selected_node_id = render_knowledge_graph(
             course,
             stats,
             mode,
             view_reset=st.session_state.get(reset_key, 0),
+            node_scale=zoom_scale,
         )
 
         st.markdown(

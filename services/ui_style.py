@@ -222,6 +222,10 @@ def apply_app_styles() -> None:
             background: #EFF6FF;
         }
 
+        [class*="st-key-knowledge_topic_stats"] [data-testid="stMetricValue"] {
+            font-size: 2.2rem;
+        }
+
         [class*="st-key-study_topic_"]
         [data-testid="stHorizontalBlock"]
         > [data-testid="stColumn"]:first-child
