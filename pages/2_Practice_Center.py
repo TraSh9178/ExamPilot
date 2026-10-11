@@ -1,3 +1,5 @@
+from html import escape
+
 import streamlit as st
 
 from services.exam_engine import create_exam, grade_exam
@@ -5,7 +7,8 @@ from services.ui_style import apply_app_styles
 
 apply_app_styles()
 
-st.title("Practice")
+st.title("📝 Practice")
+st.caption("Choose a mode, then focus on one question at a time.")
 
 course = st.session_state.get("current_course")
 
@@ -34,12 +37,13 @@ if (
     st.page_link("pages/1_Study_Hub.py", label="Go to Study Plan")
     st.stop()
 
-st.subheader(course.course_name)
-
 practice_key = f"active_practice_{course.course_id}"
 active_practice = st.session_state.get(practice_key)
 
-with st.expander("Practice settings", expanded=active_practice is None):
+with st.expander(
+    "Change settings" if active_practice else "Practice settings",
+    expanded=active_practice is None,
+):
     with st.container(border=True):
         st.caption(
             "Confirmed topics: "
@@ -63,8 +67,11 @@ with st.expander("Practice settings", expanded=active_practice is None):
                 format_func=lambda value: topic_names[value],
                 key=f"practice_topic_{course.course_id}",
             )
+            count_column = settings_columns[1]
+        else:
+            count_column = settings_columns[0]
 
-        requested_count = settings_columns[1].number_input(
+        requested_count = count_column.number_input(
             "Number of questions",
             min_value=1,
             max_value=50,
@@ -73,41 +80,37 @@ with st.expander("Practice settings", expanded=active_practice is None):
             key=f"practice_count_{course.course_id}",
         )
 
-# Changing settings invalidates the previous practice session.
-practice_settings = {
-    "mode": mode,
-    "requested_count": int(requested_count),
-    "confirmed_topic_ids": sorted(confirmed_topic_ids),
-    "topic_id": topic_id,
-}
+    practice_settings = {
+        "mode": mode,
+        "requested_count": int(requested_count),
+        "confirmed_topic_ids": sorted(confirmed_topic_ids),
+        "topic_id": topic_id,
+    }
 
-active_practice = st.session_state.get(practice_key)
-
-if (
-    active_practice is not None
-    and active_practice["settings"] != practice_settings
-):
-    st.session_state.pop(practice_key, None)
-    active_practice = None
-
-if active_practice is None and st.button("Start practice", type="primary"):
-    try:
-        exam = create_exam(
-            package=course,
-            mode=mode,
-            requested_count=int(requested_count),
-            confirmed_topic_ids=list(confirmed_topic_ids),
-            topic_id=topic_id,
-        )
-    except ValueError as error:
-        st.error(f"Could not create practice: {error}")
-    else:
-        st.session_state[practice_key] = {
-            "settings": practice_settings,
-            "session": exam["session"],
-            "questions": exam["questions"],
-            "warning": exam["warning"],
-        }
+    start_label = (
+        "Start new practice"
+        if active_practice is not None
+        else "Start practice"
+    )
+    if st.button(start_label, type="primary"):
+        try:
+            exam = create_exam(
+                package=course,
+                mode=mode,
+                requested_count=int(requested_count),
+                confirmed_topic_ids=list(confirmed_topic_ids),
+                topic_id=topic_id,
+            )
+        except ValueError as error:
+            st.error(f"Could not create practice: {error}")
+        else:
+            st.session_state[practice_key] = {
+                "settings": practice_settings,
+                "session": exam["session"],
+                "questions": exam["questions"],
+                "warning": exam["warning"],
+            }
+            st.rerun()
 
 active_practice = st.session_state.get(practice_key)
 
@@ -117,14 +120,17 @@ if active_practice is not None:
     mode_name = "Mock Exam" if session.mode == "mock" else "Topic Practice"
 
     st.subheader("Practice session")
-    overview = st.columns(3)
-    for column, label, value in (
-        (overview[0], "Course", course.course_name),
-        (overview[1], "Mode", mode_name),
-        (overview[2], "Questions", len(questions)),
-    ):
-        with column.container(border=True):
-            st.metric(label, value)
+    with st.container(border=True, key="practice_overview"):
+        overview = st.columns([3, 1.25, 0.7])
+        with overview[0]:
+            st.caption("Course")
+            st.markdown(f"**{escape(course.course_name)}**")
+        with overview[1]:
+            st.caption("Mode")
+            st.markdown(f"**{mode_name}**")
+        with overview[2]:
+            st.caption("Questions")
+            st.markdown(f"**{len(questions)}**")
 
     if active_practice["warning"]:
         st.warning(active_practice["warning"])
@@ -135,9 +141,12 @@ if active_practice is not None:
         st.subheader("Questions")
 
         for question_number, question in enumerate(questions, start=1):
-            with st.container(border=True):
+            with st.container(
+                border=True,
+                key=f"practice_question_{question.id}",
+            ):
                 st.caption(f"QUESTION {question_number} OF {len(questions)}")
-                st.markdown(f"**{question.question}**")
+                st.markdown(f"### {question.question}")
 
                 st.radio(
                     "Choose an answer",
@@ -204,29 +213,32 @@ if active_practice is not None:
         ):
             question = questions_by_id[review["question_id"]]
 
-            with st.container(border=True):
+            with st.container(
+                border=True,
+                key=f"practice_review_{question.id}",
+            ):
                 st.caption(f"QUESTION {question_number}")
-                st.markdown(f"**{question.question}**")
+                st.markdown(f"### {question.question}")
 
                 selected_index = review["selected_index"]
-                selected_answer = (
-                    "Unanswered"
-                    if selected_index is None
-                    else question.options[selected_index]
-                )
-                st.write(f"Your answer: {selected_answer}")
-
-                if review["is_correct"]:
-                    st.success("Correct — your answer is right.")
-                else:
-                    st.error("Incorrect — review the correct answer below.")
-
                 correct_answer = question.options[
                     review["correct_index"]
                 ]
-                st.write(f"Correct answer: {correct_answer}")
-                st.caption("Explanation")
-                st.write(review["explanation"])
+
+                if selected_index is None:
+                    st.warning("Unanswered")
+                    st.success(f"✓ Correct answer: {correct_answer}")
+                else:
+                    selected_answer = question.options[selected_index]
+                    if review["is_correct"]:
+                        st.success(f"✓ Your answer: {selected_answer}")
+                    else:
+                        st.error(f"✕ Your answer: {selected_answer}")
+                        st.success(f"✓ Correct answer: {correct_answer}")
+
+                with st.container(border=True):
+                    st.subheader("Explanation")
+                    st.write(review["explanation"])
 # Show the number of graded sessions saved for this course.
 history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})

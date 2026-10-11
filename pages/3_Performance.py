@@ -9,7 +9,8 @@ from services.ui_style import apply_app_styles
 
 apply_app_styles()
 
-st.title("Progress")
+st.title("📈 Progress")
+st.caption("Review practice results and see which topics need more evidence.")
 
 course = st.session_state.get("current_course")
 
@@ -58,6 +59,7 @@ mode_label = st.radio(
 )
 mode = "mock" if mode_label == "Mock Exam" else "topic"
 mode_name = mode_label
+st.caption(f"Statistics for {mode_name}")
 
 mode_sessions = [
     session for session in sessions if session.mode == mode
@@ -72,20 +74,19 @@ overall_accuracy = (
     correct_count / len(mode_attempts) * 100 if mode_attempts else None
 )
 
-st.caption(f"Statistics for {mode_name}")
-
-overview = st.columns(3)
-for column, label, value in (
-    (overview[0], "Graded practice sessions", len(mode_sessions)),
-    (overview[1], "Answers", len(mode_attempts)),
-    (
-        overview[2],
-        "Accuracy",
-        "—" if overall_accuracy is None else f"{overall_accuracy:.2f}%",
-    ),
-):
-    with column.container(border=True):
-        st.metric(label, value)
+with st.container(key="progress_overview"):
+    overview = st.columns(3)
+    for column, label, value in (
+        (overview[0], "Graded practice sessions", len(mode_sessions)),
+        (overview[1], "Answers", len(mode_attempts)),
+        (
+            overview[2],
+            "Accuracy",
+            "—" if overall_accuracy is None else f"{overall_accuracy:.2f}%",
+        ),
+    ):
+        with column.container(border=True):
+            st.metric(label, value)
 
 if not history:
     st.info(
@@ -99,6 +100,13 @@ status_labels = {
     "weak": "Weak",
     "developing": "Developing",
     "mastered": "Mastered",
+}
+status_colors = {
+    "unattempted": "gray",
+    "insufficient_evidence": "violet",
+    "weak": "red",
+    "developing": "orange",
+    "mastered": "green",
 }
 
 stats_by_topic = {
@@ -121,21 +129,17 @@ for topic in course.topics:
         accuracy = topic_stats.accuracy
         status = get_mastery_status(topic_stats)
 
-    with st.container(border=True):
-        topic_columns = st.columns([2.5, 1, 1, 1.3])
-        topic_columns[0].markdown(f"**{topic.name}**")
-        topic_columns[1].metric("Answers", attempted)
-        topic_columns[2].metric(
+    with st.container(border=True, key=f"progress_topic_{topic.id}"):
+        st.subheader(topic.name)
+        topic_columns = st.columns([1, 1, 1.5])
+        topic_columns[0].metric("Answers", attempted)
+        topic_columns[1].metric(
             "Accuracy",
             "—" if accuracy is None else f"{accuracy:.2f}%",
         )
-        topic_columns[3].markdown(
-            (
-                f'<span class="mastery-badge mastery-{status}">'
-                f"{status_labels[status]}</span>"
-            ),
-            unsafe_allow_html=True,
-        )
+        with topic_columns[2]:
+            st.caption("Mastery")
+            st.badge(status_labels[status], color=status_colors[status])
         st.caption(
             (
                 f"{correct} correct out of {attempted} answers."

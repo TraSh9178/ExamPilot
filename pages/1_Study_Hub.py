@@ -7,7 +7,8 @@ from services.ui_style import apply_app_styles
 
 apply_app_styles()
 
-st.title("Study Plan")
+st.title("📚 Study Plan")
+st.caption("Review course topics and choose the scope for your exam.")
 
 course = st.session_state.get("current_course")
 
@@ -23,13 +24,13 @@ if not course.topics:
     st.info("This course has no topics yet.")
 else:
     for topic_number, topic in enumerate(course.topics, start=1):
-        with st.container(border=True):
-            topic_columns = st.columns([0.55, 4])
-            topic_columns[0].markdown(
-                f"### {topic_number:02d}",
-                help=f"Knowledge point {topic_number}",
+        with st.container(border=True, key=f"study_topic_{topic.id}"):
+            topic_columns = st.columns(
+                [0.32, 4],
+                vertical_alignment="top",
             )
-            topic_columns[1].markdown(f"**{topic.name}**")
+            topic_columns[0].markdown(f"### {topic_number:02d}")
+            topic_columns[1].markdown(f"### {topic.name}")
             st.write(topic.summary)
 
             if topic.source_pages:
