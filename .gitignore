@@ -226,3 +226,6 @@ __marimo__/
 .env
 .env.*
 !.env.example
+# Private PostgreSQL backup archives
+*.dump
+db-backups/

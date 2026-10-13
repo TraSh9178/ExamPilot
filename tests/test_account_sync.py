@@ -70,6 +70,7 @@ class FakeStore:
             "load_course_history",
             "save_course",
             "save_exam_result",
+            "save_course_history",
         ):
             monkeypatch.setattr(postgres_store, name, getattr(self, name))
 
@@ -121,6 +122,20 @@ class FakeStore:
             list(attempts),
         )
         return postgres_store.PersistenceResult(True, "saved")
+
+    def save_course_history(self, user_id, package, results):
+        from copy import deepcopy
+        original = deepcopy((self.courses, self.exams))
+        result = self.save_course(user_id, package)
+        if result.success:
+            for session, attempts in results:
+                result = self.save_exam_result(user_id, package.course_id, session, attempts)
+                if not result.success:
+                    break
+        if not result.success:
+            self.courses, self.exams = original
+            return result
+        return postgres_store.PersistenceResult(True, "Course and practice history saved to your account.")
 
     def names(self, kind):
         return [call for call in self.calls if call[0] == kind]
