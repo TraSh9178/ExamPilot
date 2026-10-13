@@ -24,7 +24,7 @@ def _topic_tag(topic_id: str) -> str:
 
 apply_app_styles()
 
-st.title("🗂️ Export to Anki")
+st.title("Export to Anki")
 st.caption(
     "Review course knowledge cards here or download a UTF-8 TSV file "
     "for Anki text import. "
@@ -49,6 +49,7 @@ export_scope = st.radio(
     options=["All Questions", "Weak Topics"],
     key=f"anki_export_scope_{course.course_id}",
     horizontal=True,
+    width="stretch",
 )
 
 topic_ids = None
@@ -59,6 +60,7 @@ if export_scope == "Weak Topics":
         options=["Mock Exam", "Topic Practice"],
         key=f"anki_export_mode_{course.course_id}",
         horizontal=True,
+    width="stretch",
     )
     mode = "mock" if mode_label == "Mock Exam" else "topic"
 
@@ -107,7 +109,23 @@ topic_names_by_tag = {
     for topic in course.topics
 }
 
+with st.container(border=True, key="anki_export_summary"):
+    summary_column, download_column = st.columns([1.4, 1], vertical_alignment="center")
+    with summary_column:
+        st.markdown("**Your review deck**")
+        st.caption(f"{len(cards)} cards · {export_scope} · UTF-8 TSV")
+    with download_column:
+        st.download_button(
+            "Download Anki TSV",
+            data=content.encode("utf-8"),
+            file_name=_safe_filename(course.course_name),
+            mime="text/tab-separated-values; charset=utf-8",
+            type="primary",
+            use_container_width=True,
+        )
+
 st.subheader("Study cards")
+st.caption("Try each question, then reveal its answer and explanation.")
 for index, (front, back, tags) in enumerate(cards, start=1):
     question, _, options = front.partition("\n")
     answer, _, explanation = back.partition("\n")
@@ -123,15 +141,7 @@ for index, (front, back, tags) in enumerate(cards, start=1):
     with st.container(border=True, key=f"anki_study_card_{index}"):
         st.caption(f"{index:02d} / {len(cards)} · {topic_name}")
         st.markdown(f"#### {question}")
-        st.text(options)
+        st.text(options, width="stretch")
         with st.expander("Show answer and explanation"):
             st.success(answer.removeprefix("Correct answer: "))
             st.write(explanation.removeprefix("Explanation: "))
-
-st.download_button(
-    "Download Anki TSV",
-    data=content.encode("utf-8"),
-    file_name=_safe_filename(course.course_name),
-    mime="text/tab-separated-values; charset=utf-8",
-    type="primary",
-)

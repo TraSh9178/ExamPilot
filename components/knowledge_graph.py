@@ -191,26 +191,8 @@ def render_topic_details(
 
     with st.container(key="knowledge_topic_heading"):
         st.subheader(details["name"])
-        status = details["status"]
-        st.badge(
-            _MASTERY_LABELS[status],
-            color=_MASTERY_BADGE_COLORS[status],
-        )
 
-    if topic_stats is not None:
-        with st.container(key="knowledge_topic_stats"):
-            stats_columns = st.columns(2)
-            stats_columns[0].metric("Answers", topic_stats.attempted)
-            stats_columns[1].metric(
-                "Accuracy",
-                (
-                    "—"
-                    if topic_stats.accuracy is None
-                    else f"{topic_stats.accuracy:.2f}%"
-                ),
-            )
-
-    with st.container(border=True):
+    with st.container(key="knowledge_topic_summary"):
         st.subheader("Summary")
         st.write(details["summary"])
 
@@ -219,3 +201,16 @@ def render_topic_details(
         st.caption(f"Source pages: {', '.join(map(str, source_pages))}")
     else:
         st.caption("Source pages not provided")
+
+    st.divider()
+    st.markdown("**Your Progress**")
+    if topic_stats is not None:
+        with st.container(key="knowledge_topic_stats"):
+            stats_columns = st.columns(2)
+            stats_columns[0].metric("Answers", topic_stats.attempted)
+            stats_columns[1].metric(
+                "Accuracy",
+                "—" if topic_stats.accuracy is None else f"{topic_stats.accuracy:.2f}%",
+            )
+    status = details["status"]
+    st.badge(_MASTERY_LABELS[status], color=_MASTERY_BADGE_COLORS[status])

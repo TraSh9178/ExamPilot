@@ -15,6 +15,7 @@ from services.course_state import (
 )
 from services.document_service import extract_document
 from services.gemini_service import generate_topics
+from services.course_icons import course_icon_svg
 from services.ui_style import apply_app_styles
 
 DEMO_COURSES = (
@@ -51,8 +52,8 @@ st.markdown(
     f"""
     <section class="exam-hero exam-hero-compact" style="--campus-art: url('data:image/svg+xml;base64,{campus_art}')">
         <p class="exam-eyebrow">YOUR STUDY SPACE</p>
-        <h1>Make your next<br><span>study session count.</span></h1>
-        <p>Pick up a course, practise a topic, or bring your own materials.</p>
+        <h1>Your next study session<br><span>starts here.</span></h1>
+        <p>Turn course materials into focused exam practice.</p>
     </section>
     """,
     unsafe_allow_html=True,
@@ -92,32 +93,27 @@ if not st.session_state.get("default_demo_courses_v3_loaded", False):
         st.session_state["default_demo_courses_loaded"] = True
         st.session_state["default_demo_courses_v3_loaded"] = True
 
-overview = st.container(key="dashboard_overview")
-st.caption("Your courses and practice progress are available in this session.")
 
 # Keep the course setup panel open across page reruns.
 if "show_course_setup" not in st.session_state:
     st.session_state.show_course_setup = False
 
-with st.container(key="dashboard_courses_header"):
-    title_column, action_column = st.columns([1, 1], vertical_alignment="center")
-    with title_column:
-        st.subheader("My courses")
-    with action_column:
-        if st.button(
-            "Close setup" if st.session_state.show_course_setup else "Create course",
-            icon=(
-                ":material/close:"
-                if st.session_state.show_course_setup
-                else ":material/add_circle_outline:"
-            ),
-            key="create_course_button",
-            type="secondary" if st.session_state.show_course_setup else "primary",
-        ):
-            st.session_state.show_course_setup = not st.session_state.show_course_setup
-            st.rerun()
+with st.container(key="dashboard_actions"):
+    if st.button(
+        "Close setup" if st.session_state.show_course_setup else "Create course",
+        icon=(":material/close:" if st.session_state.show_course_setup
+              else ":material/add_circle_outline:"),
+        key="create_course_button",
+        type="secondary",
+        use_container_width=True,
+    ):
+        st.session_state.show_course_setup = not st.session_state.show_course_setup
+        st.rerun()
 
-st.caption("Start with a demo or open a course to choose what to practise.")
+overview = st.container(key="dashboard_overview")
+
+with st.container(key="dashboard_courses_header"):
+    st.subheader("My courses")
 
 if st.session_state.show_course_setup:
     with st.container(border=True, key="dashboard_course_setup"):
@@ -365,11 +361,20 @@ else:
                         if stage
                         else ("Demo course" if is_demo else "Your course")
                     )
-                    st.subheader(course.course_name)
-                    st.caption(
-                        f"{len(course.topics)} knowledge points · "
-                        f"{len(course.questions)} practice questions"
-                    )
+                    course_icon, course_details = st.columns([1, 3.5], vertical_alignment="center")
+                    with course_icon:
+                        st.markdown(
+                            '<div class="academic-course-icon" aria-hidden="true">'
+                            + course_icon_svg(course.course_id, course.course_name)
+                            + '</div>',
+                            unsafe_allow_html=True,
+                        )
+                    with course_details:
+                        st.subheader(course.course_name)
+                        st.caption(
+                            f"{len(course.topics)} topics · "
+                            f"{len(course.questions)} practice questions"
+                        )
                     if stage == "topics_only":
                         st.caption("Next: review topics and choose your exam scope.")
                     action_columns = st.columns([1, 1])

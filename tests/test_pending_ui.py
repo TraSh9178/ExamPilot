@@ -270,3 +270,23 @@ def test_dashboard_extracts_pptx_and_displays_actual_slide_sources(monkeypatch):
         and "text-based PDF or PPTX" in item.value
         for item in app.caption
     )
+
+
+def test_topic_cards_sync_scope_and_require_reconfirmation():
+    course = make_study_course("checkbox-course", "Checkbox course")
+    app = AppTest.from_file(str(STUDY_PLAN_PATH))
+    app.session_state["current_course"] = course
+    app.run()
+    checkbox_key = "topic_selected_checkbox-course_checkbox-course-topic"
+    app.checkbox(key=checkbox_key).check().run()
+    assert not app.exception
+    assert app.multiselect[0].value == ["checkbox-course-topic"]
+    next(button for button in app.button if button.label == "Confirm exam scope").click().run()
+    assert app.session_state["confirmed_scope_checkbox-course"] == ["checkbox-course-topic"]
+    app.checkbox(key=checkbox_key).uncheck().run()
+    assert not app.exception
+    assert app.multiselect[0].value == []
+    assert "confirmed_scope_checkbox-course" not in app.session_state
+    app.multiselect[0].set_value(["checkbox-course-topic"]).run()
+    assert not app.exception
+    assert app.checkbox(key=checkbox_key).value

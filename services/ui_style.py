@@ -8,6 +8,9 @@ def apply_app_styles() -> None:
     typography = (
         Path(__file__).resolve().parents[1] / "assets" / "ui_typography.css"
     ).read_text(encoding="utf-8")
+    academic = (
+        Path(__file__).resolve().parents[1] / "assets" / "academic_ui.css"
+    ).read_text(encoding="utf-8")
     st.markdown(
         "<style>\n" + typography + """
         :root {
@@ -987,7 +990,6 @@ def apply_app_styles() -> None:
         @media (prefers-reduced-motion: reduce) {
             button[data-testid^="stBaseButton-"] { transition: none; }
         }
-        </style>
-        """,
+        """ + academic + "</style>",
         unsafe_allow_html=True,
     )

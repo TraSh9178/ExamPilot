@@ -9,7 +9,7 @@ from services.ui_style import apply_app_styles
 
 apply_app_styles()
 
-st.title("📈 Progress")
+st.title("Progress")
 st.caption("Review practice results and see which topics need more evidence.")
 
 course = st.session_state.get("current_course")
@@ -57,6 +57,7 @@ mode_label = st.radio(
     options=["Mock Exam", "Topic Practice"],
     key=f"performance_mode_{course.course_id}",
     horizontal=True,
+    width="stretch",
 )
 mode = "mock" if mode_label == "Mock Exam" else "topic"
 mode_name = mode_label
