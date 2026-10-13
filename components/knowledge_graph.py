@@ -113,6 +113,7 @@ def render_knowledge_graph(
     mode: str,
     view_reset: int = 0,
     node_scale: float = 1.0,
+    focus_topic_id: str | None = None,
 ) -> str | None:
     graph = build_mastery_graph(package, stats, mode)
     nodes, edges = convert_graph_data(graph)
@@ -129,6 +130,7 @@ def render_knowledge_graph(
         },
     )
     config.width = "100%"
+    config.focusTopic = focus_topic_id
     config.layout["randomSeed"] = 42 + view_reset
     config.physics["forceAtlas2Based"] = {
         "gravitationalConstant": -50,
