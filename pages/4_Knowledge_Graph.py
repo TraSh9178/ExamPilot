@@ -6,6 +6,7 @@ from components.knowledge_graph import (
     get_selected_topic_details,
     render_topic_details,
 )
+from services.graph_exploration import local_graph, related_topics
 from services.graph_service import build_mastery_graph
 from services.mastery_engine import calculate_topic_stats
 from services.course_state import save_course
@@ -14,7 +15,7 @@ from services.ui_style import apply_app_styles
 apply_app_styles()
 
 st.title("Knowledge Map")
-st.caption("Explore topic relationships and inspect their learning status.")
+st.caption("Explore connected ideas. Click a topic to read its summary and learning progress.")
 
 course = st.session_state.get("current_course")
 
@@ -51,16 +52,29 @@ if not course.topics:
     st.info("This course has no topics yet.")
     st.stop()
 
-with st.container(border=True):
-    st.caption("Mastery mode")
-    mode_label = st.radio(
-        "Mastery mode",
-        options=["Mock Exam", "Topic Practice"],
-        key=f"graph_mode_{course.course_id}",
-        horizontal=True,
-        label_visibility="collapsed",
-    )
+mode_column, search_column, local_column = st.columns([1.4, 1.8, .8], vertical_alignment="bottom")
+mode_label = mode_column.radio(
+    "Progress mode", options=["Mock Exam", "Topic Practice"],
+    key=f"graph_mode_{course.course_id}", horizontal=True,
+)
 mode = "mock" if mode_label == "Mock Exam" else "topic"
+
+topic_names = {topic.id: topic.name for topic in course.topics}
+pending_key = f"graph_pending_focus_{course.course_id}"
+if pending_key in st.session_state:
+    st.session_state[f"graph_focus_{course.course_id}"] = st.session_state.pop(pending_key)
+focus_id = search_column.selectbox(
+    "Find a topic", options=[None, *topic_names],
+    format_func=lambda value: "All topics" if value is None else topic_names[value],
+    key=f"graph_focus_{course.course_id}",
+)
+local_view = local_column.toggle(
+    "Local graph", disabled=focus_id is None,
+    key=f"graph_local_{course.course_id}",
+    help="Show only this topic and its directly connected neighbors.",
+)
+view_course = local_graph(course, focus_id) if focus_id and local_view else course
+st.caption(f"Showing {len(view_course.topics)} of {len(course.topics)} topics · Connections: {len(view_course.relationships)}")
 
 reset_key = f"graph_view_reset_{course.course_id}_{mode}"
 zoom_key = f"graph_zoom_{course.course_id}_{mode}"
@@ -78,7 +92,7 @@ with graph_controls[0]:
         st.session_state[zoom_key] = 0
         st.rerun()
 with graph_controls[1]:
-    st.caption("Click a node for details · Drag to move · Scroll to zoom")
+    st.caption("Click for details · Drag to rearrange · Scroll to zoom")
 
 history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})
@@ -134,16 +148,26 @@ with graph_column:
         zoom_level = st.session_state.get(zoom_key, 0)
         zoom_scale = 1 + zoom_level * 0.15
         selected_node_id = render_knowledge_graph(
-            course,
+            view_course,
             stats,
             mode,
             view_reset=st.session_state.get(reset_key, 0),
             node_scale=zoom_scale,
+            focus_topic_id=focus_id,
         )
 
 
     if not course.relationships:
         st.info("This course has no topic relationships yet.")
+
+# Synchronize canvas clicks with the keyboard-accessible topic picker.
+last_click_key = f"graph_last_click_{course.course_id}_{mode}"
+if selected_node_id != st.session_state.get(last_click_key):
+    st.session_state[last_click_key] = selected_node_id
+    if selected_node_id is None or selected_node_id in topic_names:
+        st.session_state[pending_key] = selected_node_id
+        st.rerun()
+selected_node_id = focus_id
 
 with details_column:
     with st.container(border=True, key="knowledge_graph_details"):
@@ -164,6 +188,16 @@ with details_column:
                 None,
             )
         render_topic_details(details, topic_stats)
+        if details is not None:
+            links = related_topics(course, selected_node_id)
+            st.divider()
+            st.markdown("**Connected topics**")
+            for label, group in (("Prerequisites", "prerequisites"), ("Leads to", "next_topics"), ("Related", "related")):
+                if links[group]:
+                    st.caption(label + ": " + ", ".join(topic_names[item] for item in links[group]))
+            if not any(links.values()):
+                st.caption("No connections recorded for this topic.")
+            st.caption("These are course-provided relationships, not a diagnosis of your understanding.")
 
     with st.container(border=True, key="knowledge_graph_legend"):
         st.markdown("**Status Legend**")

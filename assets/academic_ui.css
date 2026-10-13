@@ -232,3 +232,6 @@ div.st-key-create_course_button button > div > span { justify-content: flex-star
 [data-testid="stMain"] .st-key-graph_course_heading h3 { font-size: 1.1rem; color: var(--exam-muted); }
 .st-key-knowledge_topic_heading h3, .st-key-knowledge_topic_summary h3 { margin: 0; padding: 0; }
 .st-key-knowledge_topic_summary [data-testid="stMarkdownContainer"] p { margin-bottom: .3rem; }
+
+.st-key-knowledge_graph_canvas { padding: .75rem !important; }
+.st-key-knowledge_graph_canvas iframe { border-radius: .65rem; }
