@@ -13,7 +13,7 @@ from services.ui_style import apply_app_styles
 
 apply_app_styles()
 
-st.title("🕸️ Knowledge Map")
+st.title("Knowledge Map")
 st.caption("Explore topic relationships and inspect their learning status.")
 
 course = st.session_state.get("current_course")
@@ -109,7 +109,7 @@ except ValueError as error:
     st.error(f"Could not calculate mastery: {error}")
     st.stop()
 
-graph_column, details_column = st.columns([2.2, 1])
+graph_column, details_column = st.columns([2.5, 1], gap="medium")
 
 with graph_column:
     with st.container(border=True, key="knowledge_graph_canvas"):
@@ -141,24 +141,12 @@ with graph_column:
             node_scale=zoom_scale,
         )
 
-        st.markdown(
-            """
-            <div class="graph-legend">
-                <span><i style="background:#94A3B8"></i>Unattempted</span>
-                <span><i style="background:#A78BFA"></i>Insufficient evidence</span>
-                <span><i style="background:#EF4444"></i>Weak</span>
-                <span><i style="background:#F59E0B"></i>Developing</span>
-                <span><i style="background:#22C55E"></i>Mastered</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
     if not course.relationships:
         st.info("This course has no topic relationships yet.")
 
 with details_column:
-    with st.container(border=True):
+    with st.container(border=True, key="knowledge_graph_details"):
         details = None
         topic_stats = None
         if selected_node_id is not None:
@@ -176,3 +164,18 @@ with details_column:
                 None,
             )
         render_topic_details(details, topic_stats)
+
+    with st.container(border=True, key="knowledge_graph_legend"):
+        st.markdown("**Status Legend**")
+        st.markdown(
+            """
+            <div class="graph-legend">
+                <span><i style="background:#94A3B8"></i>Unattempted</span>
+                <span><i style="background:#A78BFA"></i>Insufficient evidence</span>
+                <span><i style="background:#EF4444"></i>Weak</span>
+                <span><i style="background:#F59E0B"></i>Developing</span>
+                <span><i style="background:#22C55E"></i>Mastered</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )

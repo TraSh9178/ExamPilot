@@ -11,7 +11,7 @@ from services.ui_style import apply_app_styles
 
 apply_app_styles()
 
-st.title("📚 Study Plan")
+st.title("Study Plan")
 st.caption("Review course topics and choose the scope for your exam.")
 
 course = st.session_state.get("current_course")
@@ -25,27 +25,6 @@ with st.container(key="study_plan_overview"):
     st.subheader(course.course_name)
     st.caption(f"{len(course.topics)} knowledge points")
 
-if not course.topics:
-    st.info("This course has no topics yet.")
-else:
-    for topic_number, topic in enumerate(course.topics, start=1):
-        with st.container(border=True, key=f"study_topic_{topic.id}"):
-            topic_columns = st.columns(
-                [0.16, 4],
-                vertical_alignment="top",
-            )
-            topic_columns[0].markdown(f"### {topic_number:02d}")
-            topic_columns[1].markdown(f"### {topic.name}")
-            st.write(topic.summary)
-
-            if topic.source_pages:
-                pages = ", ".join(
-                    str(page) for page in topic.source_pages
-                )
-                st.caption(f"Source pages: {pages}")
-            else:
-                st.caption("Source pages not provided.")
-
 # Keep scope confirmation separate for each course.
 scope_key = f"scope_selection_{course.course_id}"
 confirmed_key = f"confirmed_scope_{course.course_id}"
@@ -54,6 +33,41 @@ if scope_key not in st.session_state:
     st.session_state[scope_key] = list(
         st.session_state.get(confirmed_key, [])
     )
+
+def update_topic_selection(topic_id: str, checkbox_key: str) -> None:
+    selected = list(st.session_state[scope_key])
+    if st.session_state[checkbox_key] and topic_id not in selected:
+        selected.append(topic_id)
+    elif not st.session_state[checkbox_key] and topic_id in selected:
+        selected.remove(topic_id)
+    st.session_state[scope_key] = selected
+
+
+if not course.topics:
+    st.info("This course has no topics yet.")
+else:
+    for topic in course.topics:
+        with st.container(border=True, key=f"study_topic_{topic.id}"):
+            topic_columns = st.columns(
+                [0.16, 4],
+                vertical_alignment="top",
+            )
+            checkbox_key = f"topic_selected_{course.course_id}_{topic.id}"
+            st.session_state[checkbox_key] = topic.id in st.session_state[scope_key]
+            with topic_columns[0]:
+                st.checkbox(
+                    f"Select {topic.name}",
+                    key=checkbox_key,
+                    label_visibility="collapsed",
+                    on_change=update_topic_selection,
+                    args=(topic.id, checkbox_key),
+                )
+            with topic_columns[1]:
+                st.markdown(f"### {topic.name}")
+                st.write(topic.summary)
+                if topic.source_pages:
+                    pages = ", ".join(str(page) for page in topic.source_pages)
+                    st.caption(f"Source pages: {pages}")
 
 with st.container(border=True, key="study_scope_panel"):
     st.subheader("Choose your exam scope")

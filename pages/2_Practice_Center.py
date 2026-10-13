@@ -8,7 +8,7 @@ from services.ui_style import apply_app_styles
 
 apply_app_styles()
 
-st.title("📝 Practice")
+st.title("Practice")
 st.caption("Choose a mode, then focus on one question at a time.")
 
 course = st.session_state.get("current_course")
@@ -55,6 +55,7 @@ with st.expander(
             options=["Mock Exam", "Topic Practice"],
             key=f"practice_mode_{course.course_id}",
             horizontal=True,
+            width="stretch",
         )
 
         mode = "mock" if mode_label == "Mock Exam" else "topic"
@@ -157,6 +158,7 @@ if active_practice is not None:
                         options[index]
                     ),
                     index=None,
+                    width="stretch",
                     key=f"answer_{session.session_id}_{question.id}",
                 )
 
