@@ -30,3 +30,12 @@ def app_test_component_registry(monkeypatch):
     yield
     _component.cache_clear()
     _cleanup_component.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def isolate_database_configuration(monkeypatch):
+    """Tests must never fall through to the developer's configured database."""
+    from services import database, postgres_store
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr(database, "load_dotenv", lambda **kwargs: False)
+    monkeypatch.setattr(postgres_store, "load_dotenv", lambda **kwargs: False)

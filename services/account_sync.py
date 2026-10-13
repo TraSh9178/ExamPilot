@@ -246,71 +246,46 @@ def save_course_to_account(
     return outcome
 
 
-def save_exam_to_account(
-    session_state: MutableMapping[str, Any],
-    course: StudyPackage,
-    session: ExamSession,
-    attempts: list[AttemptResult],
+def _save_account_snapshot(
+    session_state: MutableMapping[str, Any], course: StudyPackage,
+    results: list[tuple[ExamSession, list[AttemptResult]]],
 ) -> SyncOutcome | None:
-    """Save the course first, then the session and full answer snapshot."""
     user_id = _user_id(session_state)
     if user_id is None:
         return None
     state = _state(session_state, user_id)
-    key = (course.course_id, session.session_id)
-
-    course_outcome = save_course_to_account(session_state, course)
-    if not course_outcome.success:
-        state["unsaved_exams"].add(key)
-        outcome = SyncOutcome(
-            False,
-            "Course could not be saved, so this practice result is only kept "
-            f"in this session. {course_outcome.message}",
-        )
-        state["last_save"] = outcome
-        return outcome
-
-    result = postgres_store.save_exam_result(
-        user_id, course.course_id, session, attempts
-    )
-    if result.success:
-        state["unsaved_exams"].discard(key)
+    keys = {(course.course_id, session.session_id) for session, _ in results}
+    try:
+        package = _with_history_questions(session_state, course)
+        result = postgres_store.save_course_history(user_id, package, results)
+        outcome = SyncOutcome(result.success, result.message)
+    except ValueError as exc:
+        outcome = SyncOutcome(False, str(exc))
+    if outcome.success:
+        state["unsaved_courses"].discard(course.course_id)
+        state["unsaved_exams"].difference_update(keys)
     else:
-        state["unsaved_exams"].add(key)
-    outcome = SyncOutcome(result.success, result.message)
+        state["unsaved_courses"].add(course.course_id)
+        state["unsaved_exams"].update(keys)
     state["last_save"] = outcome
     return outcome
+
+
+def save_exam_to_account(
+    session_state: MutableMapping[str, Any], course: StudyPackage,
+    session: ExamSession, attempts: list[AttemptResult],
+) -> SyncOutcome | None:
+    """Save course and graded session in one transaction; retain local data on failure."""
+    return _save_account_snapshot(session_state, course, [(session, attempts)])
 
 
 def save_course_with_history(
     session_state: MutableMapping[str, Any], course: StudyPackage,
 ) -> SyncOutcome | None:
-    """Save a course and all of its local graded sessions (idempotent retry)."""
-    user_id = _user_id(session_state)
-    if user_id is None:
-        return None
-    state = _state(session_state, user_id)
-    outcome = save_course_to_account(session_state, course)
-    if not outcome.success:
-        return outcome
-
+    """Save the full local course history atomically, including retries."""
     history = session_state.get(_history_key(course.course_id), {})
-    for session_id, record in history.items():
-        result = postgres_store.save_exam_result(
-            user_id, course.course_id, record["session"], record["attempts"]
-        )
-        key = (course.course_id, session_id)
-        if result.success:
-            state["unsaved_exams"].discard(key)
-        else:
-            state["unsaved_exams"].add(key)
-            outcome = SyncOutcome(False, result.message)
-            state["last_save"] = outcome
-            return outcome
-
-    outcome = SyncOutcome(True, "Course and practice history saved to your account.")
-    state["last_save"] = outcome
-    return outcome
+    results = [(record["session"], record["attempts"]) for record in history.values()]
+    return _save_account_snapshot(session_state, course, results)
 
 
 def restore_course(

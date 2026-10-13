@@ -57,7 +57,10 @@ class _PersistenceError(Exception):
 
 
 def _connect() -> psycopg.Connection:
-    load_dotenv(override=False)
+    load_dotenv(
+        dotenv_path=Path(__file__).resolve().parents[1] / ".env",
+        override=False,
+    )
 
     database_url = os.getenv("DATABASE_URL", "").strip()
     if not database_url:
@@ -75,6 +78,7 @@ def _connect() -> psycopg.Connection:
         database_url,
         sslmode=sslmode,
         connect_timeout=5,
+        prepare_threshold=None,
     )
 
 
@@ -173,11 +177,265 @@ def initialize_schema() -> PersistenceResult:
     return PersistenceResult(True, "Database schema is ready.")
 
 
+def _save_course_in_transaction(
+    connection: psycopg.Connection, user_id: str, validated_package: StudyPackage,
+) -> StudyPackage:
+    _lock_course(
+        connection, user_id, validated_package.course_id
+    )
+    existing_row = connection.execute(
+        """
+        SELECT package_json
+        FROM courses
+        WHERE demo_user_id = %s AND course_id = %s
+        FOR UPDATE
+        """,
+        (user_id, validated_package.course_id),
+    ).fetchone()
+    existing_package = None
+    if existing_row is not None:
+        package_data = existing_row[0]
+        if isinstance(package_data, str):
+            package_data = json.loads(package_data)
+        existing_package = StudyPackage.model_validate(package_data)
+        if existing_package.course_id != validated_package.course_id:
+            raise _PersistenceError("Stored course identity does not match the requested course.")
+    package_to_save = _merge_course_packages(
+        existing_package, validated_package
+    )
+
+    connection.execute(
+        """
+        INSERT INTO demo_users (demo_user_id)
+        VALUES (%s)
+        ON CONFLICT (demo_user_id) DO NOTHING
+        """,
+        (user_id,),
+    )
+    connection.execute(
+        """
+        INSERT INTO courses (
+            demo_user_id, course_id, course_name, package_json
+        )
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (demo_user_id, course_id)
+        DO UPDATE SET
+            course_name = EXCLUDED.course_name,
+            package_json = EXCLUDED.package_json,
+            updated_at = NOW()
+        """,
+        (
+            user_id,
+            package_to_save.course_id,
+            package_to_save.course_name,
+            Jsonb(package_to_save.model_dump(mode="json")),
+        ),
+    )
+    return package_to_save
+
+
+def _validated_exam(
+    session: ExamSession, attempts: Sequence[AttemptResult],
+) -> tuple[ExamSession, list[AttemptResult]]:
+    validated_session = ExamSession.model_validate(
+        session.model_dump(mode="json")
+    )
+    validated_attempts = [
+        AttemptResult.model_validate(attempt.model_dump(mode="json"))
+        for attempt in attempts
+    ]
+
+    question_ids = validated_session.question_ids
+    attempt_question_ids = [
+        attempt.question_id for attempt in validated_attempts
+    ]
+
+    if not question_ids or len(question_ids) != len(set(question_ids)):
+        raise ValueError("Session question IDs must be non-empty and unique.")
+
+    if (
+        len(attempt_question_ids) != len(set(attempt_question_ids))
+        or set(attempt_question_ids) != set(question_ids)
+    ):
+        raise ValueError(
+            "Attempts must contain exactly one result for every session question."
+        )
+
+    for attempt in validated_attempts:
+        if attempt.session_id != validated_session.session_id:
+            raise ValueError("Attempt session ID does not match the session.")
+        if (
+            attempt.selected_index is not None
+            and (
+                isinstance(attempt.selected_index, bool)
+                or not isinstance(attempt.selected_index, int)
+                or not 0 <= attempt.selected_index <= 3
+            )
+        ):
+            raise ValueError("Selected answer index must be 0–3 or None.")
+        if attempt.selected_index is None and attempt.is_correct:
+            raise ValueError("An unanswered question cannot be correct.")
+
+    return validated_session, validated_attempts
+
+
+def _validate_grades(
+    package: StudyPackage, session: ExamSession, attempts: Sequence[AttemptResult],
+) -> None:
+    questions = {question.id: question for question in package.questions}
+    for attempt in attempts:
+        question = questions.get(attempt.question_id)
+        if question is None:
+            raise _PersistenceError("Exam contains a question missing from the saved course.")
+        correct = attempt.selected_index is not None and attempt.selected_index == question.correct_index
+        if attempt.is_correct != correct:
+            raise _PersistenceError("Exam grading does not match the saved question answers; nothing was saved or restored.")
+
+
+def _save_exam_in_transaction(
+    connection: psycopg.Connection, user_id: str, course_id: str,
+    validated_session: ExamSession, validated_attempts: Sequence[AttemptResult],
+) -> None:
+    question_ids = validated_session.question_ids
+    _lock_course(connection, user_id, course_id)
+    connection.execute(
+        "SELECT pg_advisory_xact_lock(hashtextextended(jsonb_build_array('exam-session', %s::text, %s::text)::text, 0))",
+        (user_id, validated_session.session_id),
+    )
+    course_row = connection.execute(
+        """
+        SELECT package_json
+        FROM courses
+        WHERE demo_user_id = %s AND course_id = %s
+        """,
+        (user_id, course_id),
+    ).fetchone()
+
+    if course_row is None:
+        raise _PersistenceError(
+            "Save the course before saving its exam result."
+        )
+
+    package_data = course_row[0]
+    if isinstance(package_data, str):
+        package_data = json.loads(package_data)
+    package = StudyPackage.model_validate(package_data)
+    if package.course_id != course_id:
+        raise _PersistenceError("Stored course identity does not match the requested course.")
+    unknown_question_ids = set(question_ids) - {
+        question.id for question in package.questions
+    }
+    if unknown_question_ids:
+        raise _PersistenceError(
+            "Exam session contains question IDs not found in the course."
+        )
+
+    _validate_grades(package, validated_session, validated_attempts)
+
+    existing_session = connection.execute(
+        """
+        SELECT course_id
+        FROM exam_sessions
+        WHERE demo_user_id = %s AND session_id = %s
+        FOR UPDATE
+        """,
+        (user_id, validated_session.session_id),
+    ).fetchone()
+
+    if existing_session is not None and existing_session[0] != course_id:
+        raise _PersistenceError(
+            "This session ID already belongs to another course."
+        )
+
+    if existing_session is not None:
+        saved_session = connection.execute(
+            "SELECT mode, question_ids FROM exam_sessions WHERE demo_user_id = %s AND session_id = %s",
+            (user_id, validated_session.session_id),
+        ).fetchone()
+        saved_answers = connection.execute(
+            "SELECT question_id, selected_index, is_correct FROM attempt_results WHERE demo_user_id = %s AND session_id = %s ORDER BY question_id",
+            (user_id, validated_session.session_id),
+        ).fetchall()
+        incoming_answers = sorted((a.question_id, a.selected_index, a.is_correct) for a in validated_attempts)
+        if saved_session != (validated_session.mode, question_ids) or sorted(saved_answers) != incoming_answers:
+            raise _PersistenceError("This practice session was already saved with different content; start a new practice session instead.")
+        return
+
+    connection.execute(
+        """
+        INSERT INTO exam_sessions (
+            demo_user_id, session_id, course_id, mode, question_ids
+        )
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (demo_user_id, session_id) DO NOTHING
+        """,
+        (
+            user_id,
+            validated_session.session_id,
+            course_id,
+            validated_session.mode,
+            Jsonb(question_ids),
+        ),
+    )
+
+    with connection.cursor() as cursor:
+        cursor.executemany(
+            """
+            INSERT INTO attempt_results (
+                demo_user_id, session_id, question_id,
+                selected_index, is_correct
+            )
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            [
+                (
+                    user_id,
+                    attempt.session_id,
+                    attempt.question_id,
+                    attempt.selected_index,
+                    attempt.is_correct,
+                )
+                for attempt in validated_attempts
+            ],
+        )
+
+
+
+def save_course_history(
+    demo_user_id: str, package: StudyPackage,
+    results: Sequence[tuple[ExamSession, Sequence[AttemptResult]]],
+) -> PersistenceResult:
+    """Commit a course and all supplied graded sessions together, or none.
+
+    Identical retries are accepted; a saved session ID cannot change its
+    course, mode, question order, answers or grades. New question versions
+    must use new IDs, enforced by the append-only package merge.
+    """
+    try:
+        user_id = _validate_demo_user_id(demo_user_id)
+        validated_package = StudyPackage.model_validate(package.model_dump(mode="json"))
+        validated_results = [_validated_exam(session, attempts) for session, attempts in results]
+        ids = [session.session_id for session, _ in validated_results]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Duplicate sessions in one save.")
+        with _connect() as connection:
+            _save_course_in_transaction(connection, user_id, validated_package)
+            for session, attempts in sorted(validated_results, key=lambda item: item[0].session_id):
+                _save_exam_in_transaction(connection, user_id, validated_package.course_id, session, attempts)
+    except _PersistenceError as exc:
+        return PersistenceResult(False, str(exc))
+    except (ValueError, TypeError, ValidationError):
+        return PersistenceResult(False, "Course or exam data is invalid; nothing was saved.")
+    except psycopg.Error:
+        return _database_failure("save the course and practice history")
+    return PersistenceResult(True, "Course and practice history saved to your account.")
+
+
 def save_course(
     demo_user_id: str,
     package: StudyPackage,
 ) -> PersistenceResult:
-    """Save or replace one course package for a demo user."""
+    """Merge one course package without changing existing question or topic IDs."""
     try:
         user_id = _validate_demo_user_id(demo_user_id)
         validated_package = StudyPackage.model_validate(
@@ -185,55 +443,7 @@ def save_course(
         )
 
         with _connect() as connection:
-            _lock_course(
-                connection, user_id, validated_package.course_id
-            )
-            existing_row = connection.execute(
-                """
-                SELECT package_json
-                FROM courses
-                WHERE demo_user_id = %s AND course_id = %s
-                FOR UPDATE
-                """,
-                (user_id, validated_package.course_id),
-            ).fetchone()
-            existing_package = None
-            if existing_row is not None:
-                package_data = existing_row[0]
-                if isinstance(package_data, str):
-                    package_data = json.loads(package_data)
-                existing_package = StudyPackage.model_validate(package_data)
-            package_to_save = _merge_course_packages(
-                existing_package, validated_package
-            )
-
-            connection.execute(
-                """
-                INSERT INTO demo_users (demo_user_id)
-                VALUES (%s)
-                ON CONFLICT (demo_user_id) DO NOTHING
-                """,
-                (user_id,),
-            )
-            connection.execute(
-                """
-                INSERT INTO courses (
-                    demo_user_id, course_id, course_name, package_json
-                )
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (demo_user_id, course_id)
-                DO UPDATE SET
-                    course_name = EXCLUDED.course_name,
-                    package_json = EXCLUDED.package_json,
-                    updated_at = NOW()
-                """,
-                (
-                    user_id,
-                    package_to_save.course_id,
-                    package_to_save.course_name,
-                    Jsonb(package_to_save.model_dump(mode="json")),
-                ),
-            )
+            _save_course_in_transaction(connection, user_id, validated_package)
     except _PersistenceError as exc:
         return PersistenceResult(False, str(exc))
     except (ValueError, TypeError, ValidationError):
@@ -271,6 +481,8 @@ def load_course(
             package_data = json.loads(package_data)
 
         package = StudyPackage.model_validate(package_data)
+        if package.course_id != course_id:
+            raise _PersistenceError("Stored course identity does not match the requested course.")
         return LoadCourseResult(True, package, "Course restored.")
 
     except _PersistenceError as exc:
@@ -337,142 +549,15 @@ def save_exam_result(
     """
     Save one complete exam result as a transaction.
 
-    Re-saving the same session replaces its full answer snapshot.
+    Re-saving an identical session succeeds without changing its snapshot.
+    Conflicting reuse of the session ID is rejected.
     Different sessions remain separate.
     """
     try:
         user_id = _validate_demo_user_id(demo_user_id)
-        validated_session = ExamSession.model_validate(
-            session.model_dump(mode="json")
-        )
-        validated_attempts = [
-            AttemptResult.model_validate(attempt.model_dump(mode="json"))
-            for attempt in attempts
-        ]
-
-        question_ids = validated_session.question_ids
-        attempt_question_ids = [
-            attempt.question_id for attempt in validated_attempts
-        ]
-
-        if not question_ids or len(question_ids) != len(set(question_ids)):
-            raise ValueError("Session question IDs must be non-empty and unique.")
-
-        if (
-            len(attempt_question_ids) != len(set(attempt_question_ids))
-            or set(attempt_question_ids) != set(question_ids)
-        ):
-            raise ValueError(
-                "Attempts must contain exactly one result for every session question."
-            )
-
-        for attempt in validated_attempts:
-            if attempt.session_id != validated_session.session_id:
-                raise ValueError("Attempt session ID does not match the session.")
-            if (
-                attempt.selected_index is not None
-                and (
-                    isinstance(attempt.selected_index, bool)
-                    or not isinstance(attempt.selected_index, int)
-                    or not 0 <= attempt.selected_index <= 3
-                )
-            ):
-                raise ValueError("Selected answer index must be 0–3 or None.")
-            if attempt.selected_index is None and attempt.is_correct:
-                raise ValueError("An unanswered question cannot be correct.")
-
+        validated_session, validated_attempts = _validated_exam(session, attempts)
         with _connect() as connection:
-            _lock_course(connection, user_id, course_id)
-            course_row = connection.execute(
-                """
-                SELECT package_json
-                FROM courses
-                WHERE demo_user_id = %s AND course_id = %s
-                """,
-                (user_id, course_id),
-            ).fetchone()
-
-            if course_row is None:
-                raise _PersistenceError(
-                    "Save the course before saving its exam result."
-                )
-
-            package_data = course_row[0]
-            if isinstance(package_data, str):
-                package_data = json.loads(package_data)
-            package = StudyPackage.model_validate(package_data)
-            unknown_question_ids = set(question_ids) - {
-                question.id for question in package.questions
-            }
-            if unknown_question_ids:
-                raise _PersistenceError(
-                    "Exam session contains question IDs not found in the course."
-                )
-
-            existing_session = connection.execute(
-                """
-                SELECT course_id
-                FROM exam_sessions
-                WHERE demo_user_id = %s AND session_id = %s
-                FOR UPDATE
-                """,
-                (user_id, validated_session.session_id),
-            ).fetchone()
-
-            if existing_session is not None and existing_session[0] != course_id:
-                raise _PersistenceError(
-                    "This session ID already belongs to another course."
-                )
-
-            connection.execute(
-                """
-                INSERT INTO exam_sessions (
-                    demo_user_id, session_id, course_id, mode, question_ids
-                )
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (demo_user_id, session_id)
-                DO UPDATE SET
-                    mode = EXCLUDED.mode,
-                    question_ids = EXCLUDED.question_ids
-                """,
-                (
-                    user_id,
-                    validated_session.session_id,
-                    course_id,
-                    validated_session.mode,
-                    Jsonb(question_ids),
-                ),
-            )
-
-            # Full snapshot replacement: remove this session's previous answers.
-            connection.execute(
-                """
-                DELETE FROM attempt_results
-                WHERE demo_user_id = %s AND session_id = %s
-                """,
-                (user_id, validated_session.session_id),
-            )
-
-            with connection.cursor() as cursor:
-                cursor.executemany(
-                    """
-                    INSERT INTO attempt_results (
-                        demo_user_id, session_id, question_id,
-                        selected_index, is_correct
-                    )
-                    VALUES (%s, %s, %s, %s, %s)
-                    """,
-                    [
-                        (
-                            user_id,
-                            attempt.session_id,
-                            attempt.question_id,
-                            attempt.selected_index,
-                            attempt.is_correct,
-                        )
-                        for attempt in validated_attempts
-                    ],
-                )
+            _save_exam_in_transaction(connection, user_id, course_id, validated_session, validated_attempts)
 
     except _PersistenceError as exc:
         return PersistenceResult(False, str(exc))
@@ -517,6 +602,8 @@ def load_course_history(
             if isinstance(package_data, str):
                 package_data = json.loads(package_data)
             package = StudyPackage.model_validate(package_data)
+            if package.course_id != course_id:
+                raise _PersistenceError("Stored course identity does not match the requested course.")
 
             session_rows = connection.execute(
                 """
@@ -576,6 +663,15 @@ def load_course_history(
                 for session_id, question_id, selected_index, is_correct
                 in attempt_rows
             ]
+
+        attempts_by_session = {session.session_id: [] for session in sessions}
+        for attempt in attempts:
+            if attempt.session_id not in attempts_by_session:
+                raise ValueError("Unmatched stored attempt.")
+            attempts_by_session[attempt.session_id].append(attempt)
+        for session in sessions:
+            validated_session, validated_attempts = _validated_exam(session, attempts_by_session[session.session_id])
+            _validate_grades(package, validated_session, validated_attempts)
 
         # Existing Mastery Engine validates references and recalculates results.
         topic_stats = calculate_topic_stats(

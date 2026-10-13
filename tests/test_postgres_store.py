@@ -155,6 +155,12 @@ class FakeConnection:
             key = (parameters[0], parameters[1])
             return FakeResult((1,) if key in self.course_packages else None)
 
+        if normalized_query.startswith("select mode, question_ids from exam_sessions"):
+            session = self.sessions.get((parameters[0], parameters[1]))
+            return FakeResult((session[1], deepcopy(session[2])) if session else None)
+        if normalized_query.startswith("select question_id, selected_index, is_correct from attempt_results"):
+            return FakeResult(rows=deepcopy(self.attempt_snapshots.get((parameters[0], parameters[1]), [])))
+
         if normalized_query.startswith("select course_id from exam_sessions"):
             session = self.sessions.get((parameters[0], parameters[1]))
             return FakeResult((session[0],) if session is not None else None)
@@ -556,7 +562,7 @@ def test_write_entry_points_take_same_course_lock_before_database_access(
         ("demo-user", package.course_id),
     ]
     assert "select package_json" in " ".join(save_course_calls[1][0].lower().split())
-    assert "select package_json" in " ".join(save_exam_calls[1][0].lower().split())
+    assert "select package_json" in " ".join(save_exam_calls[2][0].lower().split())
     assert connection.enter_count == 2
     assert connection.commit_count == 2
 
@@ -590,14 +596,14 @@ def test_saving_exam_and_answers_uses_one_transaction(
         "insert into exam_sessions" in sql.lower()
         for sql, _ in connection.execute_calls
     )
-    assert any(
+    assert not any(
         "delete from attempt_results" in sql.lower()
         for sql, _ in connection.execute_calls
     )
     assert len(connection.executemany_calls) == 1
 
 
-def test_resaving_same_session_replaces_its_answer_snapshot(
+def test_resaving_same_session_rejects_changed_answer_snapshot(
     monkeypatch: pytest.MonkeyPatch, package: StudyPackage
 ) -> None:
     connection = FakeConnection()
@@ -630,10 +636,10 @@ def test_resaving_same_session_replaces_its_answer_snapshot(
     )
 
     assert first.success is True
-    assert second.success is True
+    assert second.success is False
+    assert "different content" in second.message
     assert connection.attempt_snapshots[("demo-user", "session-1")] == [
-        ("q-0", 1, False),
-        ("q-1", 1, False),
+        ("q-0", 0, True), ("q-1", 0, True),
     ]
 
 
@@ -942,3 +948,64 @@ def test_initialize_schema_skips_empty_sql_fragments(
     assert connection.execute_calls == [
         b" CREATE TABLE test_schema (id INTEGER)"
     ]
+
+def test_atomic_course_history_failure_rolls_back_new_course(monkeypatch, package):
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+    connection.fail_on_executemany = True
+    session = ExamSession(session_id="new", mode="mock", question_ids=["q-0"])
+    result = postgres_store.save_course_history("user", package, [(session, make_attempts("new", ["q-0"]))])
+    assert not result.success
+    assert connection.course_packages == {} and connection.sessions == {}
+    assert connection.rollback_count == 1 and connection.commit_count == 0
+
+
+def test_identical_retry_does_not_rewrite_saved_answers(monkeypatch, package):
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+    session = ExamSession(session_id="retry", mode="mock", question_ids=["q-0"])
+    results = [(session, make_attempts("retry", ["q-0"]))]
+    assert postgres_store.save_course_history("user", package, results).success
+    writes = len(connection.executemany_calls)
+    assert postgres_store.save_course_history("user", package, results).success
+    assert len(connection.executemany_calls) == writes
+    assert len(connection.sessions) == 1
+
+
+def test_invalid_grading_cannot_be_saved(monkeypatch, package):
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+    session = ExamSession(session_id="bad", mode="mock", question_ids=["q-0"])
+    result = postgres_store.save_course_history("user", package, [(session, make_attempts("bad", ["q-0"], selected_index=1, is_correct=True))])
+    assert not result.success and "grading" in result.message
+    assert connection.course_packages == {}
+
+
+def test_incomplete_stored_history_is_not_restored(monkeypatch, package):
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+    session = ExamSession(session_id="incomplete", mode="mock", question_ids=["q-0", "q-1"])
+    assert postgres_store.save_course_history("user", package, [(session, make_attempts("incomplete", session.question_ids))]).success
+    connection.attempt_snapshots[("user", "incomplete")].pop()
+    result = postgres_store.load_course_history("user", package.course_id)
+    assert not result.success and result.package is None
+
+
+def test_stored_incorrect_grading_is_not_restored(monkeypatch, package):
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+    session = ExamSession(session_id="badgrade", mode="mock", question_ids=["q-0"])
+    assert postgres_store.save_course_history("user", package, [(session, make_attempts("badgrade", session.question_ids))]).success
+    connection.attempt_snapshots[("user", "badgrade")] = [("q-0", 1, True)]
+    result = postgres_store.load_course_history("user", package.course_id)
+    assert not result.success and "grading" in result.message
+
+
+def test_corrupt_stored_course_identity_cannot_be_saved_or_restored(monkeypatch, package):
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+    assert postgres_store.save_course("user", package).success
+    connection.course_packages[("user", package.course_id)]["course_id"] = "wrong-course"
+    assert not postgres_store.load_course("user", package.course_id).success
+    assert not postgres_store.load_course_history("user", package.course_id).success
+    assert not postgres_store.save_course("user", package).success
