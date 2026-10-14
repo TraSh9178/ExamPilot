@@ -7,6 +7,7 @@ from google.genai.types import GenerateContentConfig, HttpOptions
 from pydantic import TypeAdapter, ValidationError
 
 from models.schemas import Question, Relationship, StudyPackage, Topic
+from services.question_review import validate_question_content
 
 
 MAX_DOCUMENT_TEXT_CHARS = 50_000
@@ -645,6 +646,15 @@ def generate_questions(
                 "error_code": "INVALID_CITATION",
                 "message": "候选题引用了课程资料中不存在的页码。",
             }
+
+    try:
+        validate_question_content(questions, validated_package.questions)
+    except ValueError:
+        return {
+            "ok": False,
+            "error_code": "INVALID_QUESTIONS",
+            "message": "候选题内容／选项重复，或复用了已有题目 ID；请重新生成并人工复核。",
+        }
 
     package_data = validated_package.model_dump()
     package_data["questions"] = [question.model_dump() for question in questions]

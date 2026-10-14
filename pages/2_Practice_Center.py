@@ -4,6 +4,7 @@ import streamlit as st
 
 from services.account_sync import render_last_save_status, save_exam_to_account
 from services.exam_engine import create_exam, grade_exam
+from services.question_review import create_mistake_review, mistake_questions, question_sources
 from services.ui_style import apply_app_styles
 
 apply_app_styles()
@@ -207,6 +208,8 @@ if active_practice is not None:
         render_last_save_status()
 
         st.subheader("Your result")
+        if st.session_state.get(f"course_stage_{course.course_id}") == "questions_generated":
+            st.caption("AI-generated questions: verify the answer and explanation against your material.")
         with st.container(key="practice_result_overview"):
             score_columns = st.columns(2)
             with score_columns[0].container(border=True):
@@ -220,6 +223,33 @@ if active_practice is not None:
         questions_by_id = {
             question.id: question for question in questions
         }
+
+        with st.container(border=True, key="practice_mistake_review"):
+            try:
+                missed = mistake_questions(session, questions, result["attempts"])
+            except ValueError:
+                missed = []
+                st.warning("This result could not be prepared for mistake review.")
+            if missed:
+                st.markdown("**Review missed questions**")
+                st.caption(f"{len(missed)} incorrect or unanswered questions. A review creates a new graded session; your original score is preserved.")
+                missed_topics = list(dict.fromkeys(q.topic_id for q in missed if q.topic_id in confirmed_topic_ids))
+                review_topic = st.selectbox(
+                    "Review topic", [None, *missed_topics],
+                    format_func=lambda value: "All missed topics" if value is None else topic_names[value],
+                    key=f"mistake_topic_{course.course_id}_{session.session_id}",
+                )
+                if st.button("Practise missed questions", type="primary", key=f"review_mistakes_{session.session_id}"):
+                    try:
+                        st.session_state[practice_key] = create_mistake_review(
+                            session, questions, result["attempts"], confirmed_topic_ids, review_topic,
+                        )
+                    except ValueError as error:
+                        st.error(str(error))
+                    else:
+                        st.rerun()
+            else:
+                st.caption("No missed questions to review in this session.")
 
         for question_number, review in enumerate(
             result["question_results"], start=1
@@ -252,6 +282,19 @@ if active_practice is not None:
                 with st.container(border=True):
                     st.subheader("Explanation")
                     st.write(review["explanation"])
+                if question.source_pages:
+                    st.caption("Cited pages: " + ", ".join(map(str, question.source_pages)))
+                    sources = question_sources(question, st.session_state.get(f"course_document_{course.course_id}"))
+                    if sources:
+                        with st.expander("Check source material"):
+                            for page, text in sources:
+                                st.caption(f"Page / slide {page}")
+                                st.text(text, width="stretch")
+                    else:
+                        st.caption("Source text is not available in this session; check the original material.")
+                else:
+                    st.caption("No source page was provided for this question.")
+
 # Show the number of graded sessions saved for this course.
 history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})
