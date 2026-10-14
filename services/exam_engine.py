@@ -3,6 +3,7 @@ from typing import TypedDict
 from uuid import uuid4
 
 from models.schemas import AttemptResult, ExamSession, Question, StudyPackage
+from services.question_editor import available_questions
 
 
 class QuestionReview(TypedDict):
@@ -79,7 +80,7 @@ def create_exam(
     questions_by_topic = {
         confirmed_topic_id: [
             question
-            for question in package.questions
+            for question in available_questions(package)
             if question.topic_id == confirmed_topic_id
         ]
         for confirmed_topic_id in confirmed_ids

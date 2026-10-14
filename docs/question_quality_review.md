@@ -6,7 +6,7 @@ Generation keeps existing quantity, schema, confirmed-topic and citation checks.
 
 After grading, Review missed questions includes incorrect and unanswered questions and supports a topic filter. Starting review creates a fresh session ID with blank answers, preserving the previous score and question snapshot. Review answers count as further practice evidence in the selected mode, not an independent assessment of mastery.
 
-Cited page numbers appear with feedback. Source material shows only real extracted text retained in the current session. Missing pages or documents are reported honestly; no evidence is invented. Uploaded documents are not newly persisted by this change, so source excerpts may be unavailable after login restore.
+Cited page numbers appear with feedback. Source material shows only real extracted text retained in the current session. Missing pages or documents are reported honestly; no evidence is invented. Extracted material can now be saved with learning_state and restored after login; original uploaded files are not stored. Courses without saved material still report unavailable source text. See learning_continuity_review.md for the current persistence and approval flow.
 
 Review: submit one wrong or unanswered response, start a mistake review, check blank answers and an unchanged original result, then submit again and verify the session count increases by one.
 

@@ -5,6 +5,7 @@ import re
 
 from models.schemas import StudyPackage, TopicStats
 from services.mastery_engine import get_mastery_status
+from services.question_editor import available_questions
 
 
 def _tag_token(value: str) -> str:
@@ -52,7 +53,7 @@ def export_anki_tsv(
     )
 
     seen_question_ids: set[str] = set()
-    for question in package.questions:
+    for question in available_questions(package):
         if topic_ids is not None and question.topic_id not in topic_ids:
             continue
         if question.id in seen_question_ids:

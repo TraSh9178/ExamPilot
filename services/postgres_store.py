@@ -156,6 +156,17 @@ def _merge_course_packages(
     merged_data["questions"] = [
         question.model_dump(mode="json") for question in questions
     ]
+    metadata = {**existing.learning_state, **incoming.learning_state}
+    reviews = {**existing.learning_state.get("question_reviews", {}), **incoming.learning_state.get("question_reviews", {})}
+    if reviews:
+        metadata["question_reviews"] = reviews
+    merged_data["learning_state"] = metadata
+    order = list(existing.learning_state.get("session_order", []))
+    for session_id in incoming.learning_state.get("session_order", []):
+        if session_id not in order:
+            order.append(session_id)
+    if order:
+        merged_data.setdefault("learning_state", {})["session_order"] = order
     return StudyPackage.model_validate(merged_data)
 
 
@@ -416,6 +427,12 @@ def save_course_history(
         validated_package = StudyPackage.model_validate(package.model_dump(mode="json"))
         validated_results = [_validated_exam(session, attempts) for session, attempts in results]
         ids = [session.session_id for session, _ in validated_results]
+        order = list(validated_package.learning_state.get("session_order", []))
+        for session_id in ids:
+            if session_id not in order:
+                order.append(session_id)
+        if order:
+            validated_package.learning_state["session_order"] = order
         if len(ids) != len(set(ids)):
             raise ValueError("Duplicate sessions in one save.")
         with _connect() as connection:
@@ -628,6 +645,10 @@ def load_course_history(
                         }
                     )
                 )
+
+            saved_order = {sid: index for index, sid in enumerate(package.learning_state.get("session_order", []))}
+            fallback_order = {session.session_id: index for index, session in enumerate(sessions)}
+            sessions.sort(key=lambda session: (0, saved_order[session.session_id]) if session.session_id in saved_order else (1, fallback_order[session.session_id]))
 
             question_ids = {question.id for question in package.questions}
             if any(

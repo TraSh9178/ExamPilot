@@ -15,6 +15,7 @@ from models.schemas import AttemptResult, ExamSession, StudyPackage
 from services import postgres_store
 from services.auth_session import current_user
 from services.exam_engine import grade_exam
+from services.learning_state import capture_learning_state, restored_learning_state
 from services.ui_adapters import PENDING_INTEGRATION_MESSAGES
 
 STATE_KEY = "account_sync"
@@ -123,13 +124,18 @@ def _apply_restored_course(
         updates["current_course"] = None
     elif current is not None and current.course_id == package.course_id:
         updates["current_course"] = package
+    updates.update(restored_learning_state(package))
     # All validation and grading has succeeded before any session-state change.
     session_state.update(updates)
     state["restore_conflicts"] = quarantined
     for key in (f"active_practice_{package.course_id}",
                 f"confirmed_scope_{package.course_id}",
-                f"scope_selection_{package.course_id}"):
-        session_state.pop(key, None)
+                f"scope_selection_{package.course_id}",
+                f"course_document_{package.course_id}",
+                f"course_stage_{package.course_id}",
+                f"scope_initialised_{package.course_id}"):
+        if key not in updates:
+            session_state.pop(key, None)
     for sid in history:
         state["unsaved_exams"].discard((package.course_id, sid))
     state["unsaved_courses"].discard(package.course_id)
@@ -230,7 +236,7 @@ def save_course_to_account(
         return None
     state = _state(session_state, user_id)
     try:
-        package = _with_history_questions(session_state, course)
+        package = capture_learning_state(_with_history_questions(session_state, course), session_state)
     except ValueError as exc:
         state["unsaved_courses"].add(course.course_id)
         outcome = SyncOutcome(False, str(exc))
@@ -256,7 +262,7 @@ def _save_account_snapshot(
     state = _state(session_state, user_id)
     keys = {(course.course_id, session.session_id) for session, _ in results}
     try:
-        package = _with_history_questions(session_state, course)
+        package = capture_learning_state(_with_history_questions(session_state, course), session_state)
         result = postgres_store.save_course_history(user_id, package, results)
         outcome = SyncOutcome(result.success, result.message)
     except ValueError as exc:

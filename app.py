@@ -71,6 +71,13 @@ pages = [
 ]
 
 navigation = st.navigation([*pages, account_page])
+# Page widgets are cleaned up during navigation; rehydrate a course's saved
+# scope once when entering its study page, not on every form interaction.
+if st.session_state.get("_learning_page_path") != navigation.url_path:
+    selected_course = st.session_state.get("current_course")
+    if selected_course is not None:
+        st.session_state.pop(f"scope_initialised_{selected_course.course_id}", None)
+    st.session_state["_learning_page_path"] = navigation.url_path
 render_account_sidebar(account_page)
 with st.sidebar:
     render_sidebar_status()

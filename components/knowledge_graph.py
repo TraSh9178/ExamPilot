@@ -210,6 +210,7 @@ def render_topic_details(
         with st.container(key="knowledge_topic_stats"):
             stats_columns = st.columns(2)
             stats_columns[0].metric("Answers", topic_stats.attempted)
+            st.caption(f"Different questions: {topic_stats.unique_attempted if topic_stats.unique_attempted is not None else topic_stats.attempted}")
             stats_columns[1].metric(
                 "Accuracy",
                 "—" if topic_stats.accuracy is None else f"{topic_stats.accuracy:.2f}%",

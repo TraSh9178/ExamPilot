@@ -215,7 +215,7 @@ def test_real_backup_restores_into_a_separate_database(db, course, tmp_path, mon
             return psycopg.connect(recovery_dsn, options=f"-c search_path={schema}", prepare_threshold=None)
         monkeypatch.setattr(store, "_connect", connect_recovered)
         restored = store.load_course_history("alice", course.course_id)
-        assert restored.success and restored.package == course
+        assert restored.success and restored.package.model_dump(exclude={"learning_state"}) == course.model_dump(exclude={"learning_state"})
         assert restored.sessions == [original[0]] and restored.attempts == original[1]
         assert store.list_saved_courses("bob").courses == []
     finally:
@@ -235,5 +235,60 @@ def test_real_migrations_preserve_preexisting_learning_records(db, course):
     with db() as connection:
         assert len(apply_migrations(connection)) == 2
     restored = store.load_course_history("alice", course.course_id)
-    assert restored.success and restored.package == course
+    assert restored.success and restored.package.model_dump(exclude={"learning_state"}) == course.model_dump(exclude={"learning_state"})
     assert restored.sessions == [original[0]] and restored.attempts == original[1]
+
+
+def test_real_material_scope_review_state_restore_and_delete(db, course):
+    from services.learning_state import capture_learning_state, restored_learning_state
+    from services.question_editor import review_question, status_for
+    document = {"filename": "lecture.pdf", "text": "Original material.", "pages": [{"page": 1, "text": "Original material."}]}
+    snapshot = capture_learning_state(course, {f"course_document_{course.course_id}": document, f"confirmed_scope_{course.course_id}": [course.topics[0].id]})
+    snapshot = review_question(snapshot, course.questions[0].id, "flagged")
+    assert store.save_course_history("alice", snapshot, []).success
+    restored = store.load_course_history("alice", course.course_id)
+    assert restored.success
+    updates = restored_learning_state(restored.package)
+    assert updates[f"course_document_{course.course_id}"] == document
+    assert updates[f"confirmed_scope_{course.course_id}"] == [course.topics[0].id]
+    assert status_for(restored.package, course.questions[0].id) == "flagged"
+    assert store.load_course_history("bob", course.course_id).package is None
+    metadata = dict(restored.package.learning_state); metadata["document"] = None
+    cleared = restored.package.model_copy(update={"learning_state": metadata})
+    assert store.save_course("alice", cleared).success
+    assert store.load_course("alice", course.course_id).package.learning_state["document"] is None
+
+
+def test_real_material_update_rolls_back_when_answer_save_fails(db, course):
+    first = course.model_copy(update={"learning_state": {"document": {"filename": "a.txt", "text": "original"}}})
+    assert store.save_course("alice", first).success
+    reject_answer_writes(db)
+    second = course.model_copy(update={"learning_state": {"document": {"filename": "b.txt", "text": "changed"}}})
+    assert not store.save_course_history("alice", second, [exam(course)]).success
+    assert store.load_course("alice", course.course_id).package.learning_state["document"]["text"] == "original"
+
+
+def test_real_latest_evidence_chronology_survives_batch_restore(db, course):
+    from services.mastery_engine import get_mastery_status
+    old = exam(course, "z-old")
+    new = exam(course, "a-new", selected=(course.questions[0].correct_index+1)%4)
+    assert store.save_course_history("alice", course, [old, new]).success
+    restored = store.load_course_history("alice", course.course_id)
+    assert restored.success
+    assert [s.session_id for s in restored.sessions] == ["z-old", "a-new"]
+    stat = next(s for s in restored.topic_stats if s.topic_id == course.questions[0].topic_id and s.mode == "mock")
+    assert stat.attempted == 2 and stat.unique_attempted == 1 and stat.evidence_accuracy == 0
+    assert get_mastery_status(stat) == "insufficient_evidence"
+
+
+def test_real_edited_question_preserves_old_grade_and_family(db, course):
+    from services.question_editor import review_question, available_questions
+    original = exam(course, "original")
+    assert store.save_course_history("alice", course, [original]).success
+    revised = review_question(course, course.questions[0].id, "approved", {"explanation": "Manually checked explanation."})
+    assert store.save_course("alice", revised).success
+    restored = store.load_course_history("alice", course.course_id)
+    assert restored.success and restored.attempts == original[1]
+    assert restored.package.questions[0] == course.questions[0]
+    assert restored.package.questions[-1].version_of == course.questions[0].id
+    assert course.questions[0].id not in {q.id for q in available_questions(restored.package)}
