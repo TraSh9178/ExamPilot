@@ -602,7 +602,9 @@ def test_reused_historical_question_id_cannot_overwrite_saved_answers(store):
         q.model_copy(update={"correct_index": 1}) for q in old.questions]})
     outcome = account_sync.save_course_to_account(state, changed)
     assert not outcome.success
-    assert store.courses[TEST_USER.user_id][old.course_id] == old
+    stored = store.courses[TEST_USER.user_id][old.course_id]
+    assert stored.model_dump(exclude={"learning_state"}) == old.model_dump(exclude={"learning_state"})
+    assert stored.learning_state["session_order"] == ["old-exam"]
 
 
 def test_has_unresolved_conflicts_tracks_quarantined_records():

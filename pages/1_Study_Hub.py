@@ -5,6 +5,7 @@ from services.account_sync import (
     render_save_restore_controls,
     save_course_to_account,
 )
+from services.question_editor import available_questions, review_question, status_for
 from services.course_state import save_course
 from services.gemini_service import generate_questions
 from services.ui_style import apply_app_styles
@@ -28,6 +29,15 @@ with st.container(key="study_plan_overview"):
 # Keep scope confirmation separate for each course.
 scope_key = f"scope_selection_{course.course_id}"
 confirmed_key = f"confirmed_scope_{course.course_id}"
+# Hydrate widgets on first entry, before their frontend defaults can clear
+# the separately saved confirmation. Subsequent edits still require confirmation.
+initialised_key = f"scope_initialised_{course.course_id}"
+if not st.session_state.get(initialised_key, False):
+    saved_scope = st.session_state.get(confirmed_key, course.learning_state.get("confirmed_scope"))
+    if saved_scope:
+        st.session_state[confirmed_key] = list(saved_scope)
+        st.session_state[scope_key] = list(saved_scope)
+    st.session_state[initialised_key] = True
 # Restore the selection when returning from another page.
 if scope_key not in st.session_state:
     st.session_state[scope_key] = list(
@@ -97,6 +107,7 @@ with st.container(border=True, key="study_scope_panel"):
             st.error("The selection contains an invalid topic.")
         else:
             st.session_state[confirmed_key] = selected_topic_ids.copy()
+            save_course_to_account(st.session_state, course)
             st.rerun()
 
 # A changed selection requires confirmation again.
@@ -167,6 +178,9 @@ if confirmed_topic_ids:
                             f"Could not load generated questions: {error}"
                         )
                     else:
+                        st.session_state[
+                            f"course_stage_{course.course_id}"
+                        ] = "questions_generated"
                         save_course(st.session_state, updated_course)
                         sync_outcome = save_course_to_account(
                             st.session_state, updated_course
@@ -177,9 +191,6 @@ if confirmed_topic_ids:
                                 f"to your account: {sync_outcome.message} "
                                 "Use Save below to retry."
                             )
-                        st.session_state[
-                            f"course_stage_{course.course_id}"
-                        ] = "questions_generated"
 
                         # Previous practice used the old question set.
                         st.session_state.pop(
@@ -190,7 +201,7 @@ if confirmed_topic_ids:
 
     available_count = sum(
         question.topic_id in confirmed_topic_ids
-        for question in course.questions
+        for question in available_questions(course)
     )
 
     st.caption(
@@ -200,6 +211,8 @@ if confirmed_topic_ids:
     if available_count:
         if st.button("Start practice", type="primary"):
             st.switch_page("pages/2_Practice_Center.py")
+    elif any(status_for(course, q.id) == "pending" for q in course.questions):
+        st.info("Review and approve your generated questions below before starting practice.")
     elif document is not None:
         st.info(
             "Generate questions for the confirmed scope "
@@ -210,5 +223,74 @@ if confirmed_topic_ids:
 else:
     st.info("Confirm your topic selection before starting practice.")
 
+with st.expander("Review and edit questions", expanded=any(status_for(course, q.id) == "pending" for q in course.questions)):
+    editable = sorted([q for q in course.questions if status_for(course, q.id) != "superseded"], key=lambda q: status_for(course, q.id) != "pending")
+    if editable:
+        by_id = {q.id: q for q in editable}
+        question_id = st.selectbox(
+            "Question to review", list(by_id),
+            format_func=lambda qid: f"[{status_for(course, qid)}] {by_id[qid].question[:100]}",
+            key=f"editor_question_{course.course_id}",
+        )
+        original = by_id[question_id]
+        st.caption("Approve only after checking the answer and explanation. Editing creates a new version; past results stay unchanged. Legacy means no review decision was recorded.")
+        with st.form(f"question_review_{course.course_id}_{question_id}"):
+            prompt = st.text_area("Question text", value=original.question)
+            options = [st.text_input(f"Option {chr(65 + index)}", value=value) for index, value in enumerate(original.options)]
+            correct = st.selectbox("Correct answer", list(range(4)), index=original.correct_index, format_func=lambda i: chr(65+i))
+            explanation = st.text_area("Explanation", value=original.explanation)
+            decision = st.radio("Review decision", ["Approve", "Flag as problematic"], horizontal=True)
+            apply_review = st.form_submit_button("Save review", type="primary")
+        if apply_review:
+            try:
+                revised = review_question(course, question_id, "approved" if decision == "Approve" else "flagged",
+                                          {"question": prompt, "options": options, "correct_index": correct, "explanation": explanation})
+            except ValueError as error:
+                st.error(str(error))
+            else:
+                save_course(st.session_state, revised)
+                outcome = save_course_to_account(st.session_state, revised)
+                if outcome is not None and not outcome.success:
+                    st.warning("Review kept locally but not saved to your account. Use Save to retry. " + outcome.message)
+                else:
+                    st.session_state[f"question_review_notice_{course.course_id}"] = "Question review saved."
+                    st.rerun()
+    else:
+        st.caption("No questions available for review.")
+notice = st.session_state.pop(f"question_review_notice_{course.course_id}", None)
+if notice:
+    st.success(notice)
+
 with st.expander("Save / Restore"):
     render_save_restore_controls(course)
+
+
+with st.expander("Saved course material"):
+    material = st.session_state.get(f"course_document_{course.course_id}")
+    if material:
+        st.caption(f"{material.get('filename', 'Course material')} · {len(material.get('text', '')):,} extracted characters")
+        st.caption("Extracted text is saved with your course, up to 50,000 characters. The original uploaded file is not stored.")
+        with st.form(f"material_delete_form_{course.course_id}"):
+            confirm_delete = st.checkbox("Delete this course's saved material", key=f"confirm_material_delete_{course.course_id}")
+            submitted_delete = st.form_submit_button("Delete saved material", key=f"delete_material_{course.course_id}")
+        if submitted_delete and not confirm_delete:
+            st.warning("Select the confirmation checkbox before deleting material.")
+        if submitted_delete and confirm_delete:
+            metadata = dict(course.learning_state)
+            metadata["document"] = None
+            updated = course.model_copy(update={"learning_state": metadata})
+            staged = dict(st.session_state)
+            staged.pop(f"course_document_{course.course_id}", None)
+            outcome = save_course_to_account(staged, updated)
+            if outcome is not None and not outcome.success:
+                st.error("Material was not deleted from your account. " + outcome.message)
+            else:
+                save_course(st.session_state, updated)
+                st.session_state.pop(f"course_document_{course.course_id}", None)
+                st.session_state[f"material_delete_notice_{course.course_id}"] = True
+                st.rerun()
+    else:
+        st.caption("No saved material for this course.")
+
+if st.session_state.pop(f"material_delete_notice_{course.course_id}", False):
+    st.success("Saved material deleted.")

@@ -657,7 +657,9 @@ def test_generate_questions_creates_reviewable_package_and_preserves_input(
     assert result["package"]["course_name"] == package.course_name
     assert result["package"]["topics"] == original_package["topics"]
     assert result["package"]["relationships"] == original_package["relationships"]
-    assert len(result["package"]["questions"]) == 8
+    assert len(result["package"]["questions"]) == 9
+    assert result["package"]["questions"][0] == original_package["questions"][0]
+    assert set(result["package"]["learning_state"]["question_reviews"].values()) == {"pending"}
     assert all(not question["source_pages"] for question in result["package"]["questions"])
     assert package.model_dump() == original_package
 
@@ -690,7 +692,7 @@ def test_generate_questions_pdf_accepts_only_real_text_page_citations(monkeypatc
     assert result["ok"] is True
     assert all(
         question["source_pages"] == [2, 4]
-        for question in result["package"]["questions"]
+        for question in result["package"]["questions"] if question["id"] != "existing-question"
     )
     request = clients[0].models.calls[0]["contents"]
     assert '"page": 2' in request
@@ -717,7 +719,7 @@ def test_generate_questions_pptx_uses_parsed_slides_and_real_slide_citations(
     assert result["ok"] is True
     assert all(
         question["source_pages"] == [3]
-        for question in result["package"]["questions"]
+        for question in result["package"]["questions"] if question["id"] != "existing-question"
     )
     request = clients[0].models.calls[0]["contents"]
     assert "Document type: PPTX" in request
@@ -747,7 +749,7 @@ def test_generate_questions_uses_extracted_image_text_and_page_one_citation(
     assert result["ok"] is True
     assert all(
         question["source_pages"] == [1]
-        for question in result["package"]["questions"]
+        for question in result["package"]["questions"] if question["id"] != "existing-question"
     )
     request = clients[0].models.calls[0]["contents"]
     assert "Document type: IMAGE" in request

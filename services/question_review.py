@@ -19,6 +19,8 @@ def validate_question_content(questions: Sequence[Question], existing: Sequence[
     for question in questions:
         stem = normalized_text(question.question)
         saved = saved_by_id.get(question.id)
+        if question.version_of is not None and saved != question:
+            raise ValueError("Generated candidates cannot declare historical version links.")
         if saved is not None and saved != question:
             raise ValueError("An existing question ID cannot be reused with changed content.")
         if stem in saved_stems and saved_stems[stem] != question:
@@ -46,12 +48,12 @@ def mistake_questions(session: ExamSession, questions: Sequence[Question], attem
 
 
 def create_mistake_review(session: ExamSession, questions: Sequence[Question], attempts,
-                          confirmed_topic_ids: Sequence[str], topic_id: str | None = None) -> dict:
+                          confirmed_topic_ids: Sequence[str], topic_id: str | None = None, approved_ids: set[str] | None = None) -> dict:
     missed = mistake_questions(session, questions, attempts)
     confirmed = set(confirmed_topic_ids)
     if topic_id is not None and topic_id not in confirmed:
         raise ValueError("Review topic is outside the confirmed scope.")
-    eligible = [question for question in missed if question.topic_id in confirmed
+    eligible = [question for question in missed if (approved_ids is None or question.id in approved_ids) and question.topic_id in confirmed
                 and (topic_id is None or question.topic_id == topic_id)]
     if not eligible:
         raise ValueError("No missed questions in this confirmed topic scope.")

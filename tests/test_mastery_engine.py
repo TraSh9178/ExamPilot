@@ -70,6 +70,8 @@ def test_calculate_topic_stats_separates_modes_and_counts_multiple_attempts(
         correct=1,
         attempted=2,
         accuracy=50,
+        unique_attempted=1,
+        evidence_accuracy=0,
     )
     assert stats_by_key[("topic-a", "topic")] == TopicStats(
         topic_id="topic-a",
@@ -77,6 +79,8 @@ def test_calculate_topic_stats_separates_modes_and_counts_multiple_attempts(
         correct=0,
         attempted=1,
         accuracy=0,
+        unique_attempted=1,
+        evidence_accuracy=0,
     )
 
 

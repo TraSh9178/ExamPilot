@@ -89,6 +89,7 @@ def remove_course(
             for key in (
                 f"confirmed_scope_{course_id}",
                 f"scope_selection_{course_id}",
+                f"scope_initialised_{course_id}",
                 f"course_document_{course_id}",
                 f"course_stage_{course_id}",
                 f"practice_mode_{course_id}",

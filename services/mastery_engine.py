@@ -7,13 +7,16 @@ def get_mastery_status(stats: TopicStats) -> str:
     """Classify mastery using the confirmed evidence-count and accuracy thresholds."""
     if stats.attempted == 0:
         return "unattempted"
-    if stats.attempted < 3:
+    if (stats.unique_attempted if stats.unique_attempted is not None else stats.attempted) < 3:
         return "insufficient_evidence"
     if stats.accuracy is None:
         raise ValueError("accuracy is required when attempted is at least 3")
-    if stats.accuracy < 60:
+    accuracy = stats.evidence_accuracy if stats.unique_attempted is not None else stats.accuracy
+    if accuracy is None:
+        raise ValueError("Evidence accuracy is required for mastery classification")
+    if accuracy < 60:
         return "weak"
-    if stats.accuracy < 80:
+    if accuracy < 80:
         return "developing"
     return "mastered"
 
@@ -35,6 +38,8 @@ def calculate_topic_stats(
                 {"correct": 0, "attempted": 0},
             )
 
+    session_rank = {session.session_id: index for index, session in enumerate(sessions)}
+    latest = {}
     processed_attempts: set[tuple[str, str]] = set()
     for attempt in attempts:
         session = sessions_by_id.get(attempt.session_id)
@@ -63,6 +68,17 @@ def calculate_topic_stats(
             )
         processed_attempts.add(attempt_key)
 
+        root = question
+        seen_versions = {root.id}
+        while root.version_of is not None:
+            if root.version_of not in questions_by_id or root.version_of in seen_versions:
+                raise ValueError("Invalid question version chain")
+            seen_versions.add(root.version_of)
+            root = questions_by_id[root.version_of]
+        evidence_key = (question.topic_id, session.mode, root.id)
+        previous = latest.get(evidence_key)
+        if previous is None or session_rank[attempt.session_id] >= previous[0]:
+            latest[evidence_key] = (session_rank[attempt.session_id], attempt.is_correct)
         topic_stats = stats[(question.topic_id, session.mode)]
         topic_stats["attempted"] += 1
         if attempt.is_correct:
@@ -73,6 +89,12 @@ def calculate_topic_stats(
             topic_id=topic_id,
             mode=mode,
             correct=values["correct"],
+            unique_attempted=sum(1 for key in latest if key[:2] == (topic_id, mode)),
+            evidence_accuracy=(
+                100 * sum(value[1] for key, value in latest.items() if key[:2] == (topic_id, mode))
+                / sum(1 for key in latest if key[:2] == (topic_id, mode))
+                if any(key[:2] == (topic_id, mode) for key in latest) else None
+            ),
             attempted=values["attempted"],
             accuracy=(
                 values["correct"] / values["attempted"] * 100

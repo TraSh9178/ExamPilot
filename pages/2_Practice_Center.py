@@ -3,6 +3,7 @@ from html import escape
 import streamlit as st
 
 from services.account_sync import render_last_save_status, save_exam_to_account
+from services.question_editor import available_questions
 from services.exam_engine import create_exam, grade_exam
 from services.question_review import create_mistake_review, mistake_questions, question_sources
 from services.ui_style import apply_app_styles
@@ -38,6 +39,11 @@ if (
     st.error("The confirmed scope is invalid. Confirm it again in Study Plan.")
     st.page_link("pages/1_Study_Hub.py", label="Go to Study Plan")
     st.stop()
+
+unavailable_count = len(course.questions) - len(available_questions(course))
+if unavailable_count:
+    st.caption(f"{unavailable_count} pending, flagged or older-version questions are excluded from new practice.")
+    st.page_link("pages/1_Study_Hub.py", label="Review questions in Study Plan")
 
 practice_key = f"active_practice_{course.course_id}"
 active_practice = st.session_state.get(practice_key)
@@ -243,6 +249,7 @@ if active_practice is not None:
                     try:
                         st.session_state[practice_key] = create_mistake_review(
                             session, questions, result["attempts"], confirmed_topic_ids, review_topic,
+                            approved_ids={q.id for q in available_questions(course)},
                         )
                     except ValueError as error:
                         st.error(str(error))

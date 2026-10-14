@@ -126,6 +126,7 @@ if st.session_state.show_course_setup:
         )
 
         st.caption("2 · Upload materials and extract text")
+        st.caption("When you save the course, extracted text and source pages are stored with your account. Original files are not stored.")
         uploaded_file = st.file_uploader(
             "Upload course materials",
             type=["pdf", "pptx", "txt", "png", "jpg", "jpeg"],

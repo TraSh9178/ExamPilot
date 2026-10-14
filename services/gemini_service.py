@@ -657,7 +657,16 @@ def generate_questions(
         }
 
     package_data = validated_package.model_dump()
-    package_data["questions"] = [question.model_dump() for question in questions]
+    # Retain old versions and their review records; only new candidates are pending.
+    existing_ids = {question.id for question in validated_package.questions}
+    combined = [*validated_package.questions, *(q for q in questions if q.id not in existing_ids)]
+    package_data["questions"] = [question.model_dump() for question in combined]
+    metadata = dict(package_data.get("learning_state", {}))
+    reviews = dict(metadata.get("question_reviews", {}))
+    for question in questions:
+        reviews.setdefault(question.id, "pending")
+    metadata["question_reviews"] = reviews
+    package_data["learning_state"] = metadata
     try:
         updated_package = StudyPackage.model_validate(package_data, strict=True)
     except ValidationError:

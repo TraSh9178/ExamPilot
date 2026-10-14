@@ -11,6 +11,7 @@ apply_app_styles()
 
 st.title("Progress")
 st.caption("Review practice results and see which topics need more evidence.")
+st.caption("Mastery uses each distinct question’s latest answer. Total accuracy still includes every graded attempt.")
 
 course = st.session_state.get("current_course")
 
@@ -142,6 +143,10 @@ for topic in course.topics:
         with topic_columns[2]:
             st.caption("Mastery")
             st.badge(status_labels[status], color=status_colors[status])
+        if topic_stats is not None:
+            evidence = topic_stats.unique_attempted if topic_stats.unique_attempted is not None else attempted
+            recent = topic_stats.evidence_accuracy
+            st.caption(f"Different questions: {evidence} · Latest-answer accuracy: " + ("—" if recent is None else f"{recent:.2f}%"))
         st.caption(
             (
                 f"{correct} correct out of {attempted} answers."
@@ -151,7 +156,7 @@ for topic in course.topics:
         )
 
 st.caption(
-    "Insufficient evidence means fewer than 3 answers for that topic "
+    "Insufficient evidence means fewer than 3 different questions for that topic "
     "in the selected mode. "
     "Below 60%: Weak · 60–79.99%: Developing · 80% or above: Mastered."
 )
