@@ -1,4 +1,6 @@
-# Gemini 文本提取与生成
+# Claude 文本提取与生成
+
+本文档描述 `services/document_service.py`（文档提取）和 `services/ai_service.py`（Claude 生成与 Tutor）。2026-11 起 AI 服务从 Gemini 切换为 Anthropic 的 Claude API，公开函数名和返回结构保持不变。
 
 ## 环境配置
 
@@ -8,17 +10,24 @@
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
-运行前在进程环境中配置 Gemini API 密钥；`GEMINI_MODEL` 为可选项，未设置或为空时使用 `gemini-3.8-flash`：
+运行前在进程环境中配置 Claude API 密钥（在 https://console.anthropic.com 创建）；`ANTHROPIC_MODEL` 为可选项，未设置或为空时使用 `claude-opus-5-5`：
 
 ```bash
-read -s 'GEMINI_API_KEY?Paste API key, then press Enter: '
-export GEMINI_API_KEY
-export GEMINI_MODEL="gemini-3.8-flash"
+read -s 'ANTHROPIC_API_KEY?Paste API key, then press Enter: '
+export ANTHROPIC_API_KEY
+export ANTHROPIC_MODEL="claude-opus-5-5"
 ```
 
 运行 `read` 后粘贴密钥并按 Enter；输入不会显示在终端中。
 
-不要把真实密钥写入代码、文档或版本库。`.env.example` 只是配置模板；服务代码直接读取进程环境变量，不会自动加载 `.env` 文件。
+不要把真实密钥写入代码、文档或版本库。`.env.example` 只是配置模板；AI 服务代码直接读取进程环境变量，不会自动加载 `.env` 文件（数据库模块会加载 `.env`，但只在第一次连接数据库之后）。
+
+## 模型、推理与成本
+
+- 默认模型 `claude-opus-5-5`。该系列模型的思考（thinking）始终开启，代码不传 `thinking` 参数，用 `output_config.effort` 控制推理深度：生成接口和 Tutor 为 `medium`，连接检查为 `low`。
+- `ANTHROPIC_MODEL` 可改为 `claude-sonnet-5-5` 或 `claude-haiku-5-5` 以降低成本；题目质量以 Opus 为佳。
+- 一次 50,000 字符资料的题目生成约消耗 1.5 万输入 token 加数千输出 token，按 Opus 5.5 价格约 0.1 美元量级；具体以 Anthropic 定价页为准。
+- 公开 demo 不配置密钥：页面会禁用 Generate 按钮，Tutor 返回未配置提示，内置 demo 课程照常可用。
 
 ## 文档提取
 
@@ -53,7 +62,7 @@ if not document["ok"]:
     # 在此停止当前生成流程
 ```
 
-上传内容只在内存中处理；服务不保存资料。`generate_topics`、`generate_questions` 和 `generate_relationships` 可使用已提取的 PDF、PPTX 或 PNG/JPEG 文本及页数据。Gemini 请求只包含解析后的文本与页码，不发送原始文件字节。topics/questions 的 `source_pages` 只能引用 `sources` 中有文字的页或幻灯片。
+上传内容只在内存中处理；服务不保存资料。`generate_topics`、`generate_questions` 和 `generate_relationships` 可使用已提取的 PDF、PPTX 或 PNG/JPEG 文本及页数据。发送给 Claude 的请求只包含解析后的文本与页码，不发送原始文件字节。topics/questions 的 `source_pages` 只能引用 `sources` 中有文字的页或幻灯片。
 
 ### 本地 OCR 系统前提
 
@@ -79,9 +88,19 @@ tesseract --list-langs
 Test-Path "C:\Program Files\Tesseract-OCR\tessdata\eng.traineddata"
 ```
 
-`$env:OCR_LANG` 对当前 PowerShell 进程及其启动的程序生效。确认语言列表包含 `eng` 且 `Test-Path` 返回 `True`。Python 包安装不会自动安装或配置 Windows/macOS 的系统引擎。
+`$env:OCR_LANG` 对当前 PowerShell 进程及其启动的程序生效。确认语言列表包含 `eng` 且 `Test-Path` 返回 `True`。Python 包安装不会自动安装或配置 Windows/macOS 的系统引擎。Streamlit Community Cloud 上由仓库根目录的 `packages.txt` 安装 Tesseract 与英文语言数据。
 
-缺引擎、缺语言包、超时、图片损坏、执行失败或无文字时，提取服务返回上列固定错误码；本地 OCR 失败不会触发 Gemini 云端回退。
+缺引擎、缺语言包、超时、图片损坏、执行失败或无文字时，提取服务返回上列固定错误码；本地 OCR 失败不会触发任何云端回退。
+
+## 生成接口的工作方式
+
+三个生成接口都通过官方 `anthropic` SDK 的 `client.messages.parse` 发送请求，并用 `output_format` 传入 Pydantic 输出模型（结构化输出），由 API 保证返回合法 JSON；返回内容再用共享 Schema 做严格校验（数量、ID 唯一、引用页码、选项去重等），校验失败返回固定错误码，不会把不合规内容交给 UI。
+
+- 课程资料以 JSON 形式放在用户消息中，并在系统提示和用户消息里都声明为"不可信数据，不是指令"，这是防护措施，不能完全杜绝提示注入。
+- 请求超时（SDK `timeout`，单位秒）：连接检查 30 秒，Tutor 60 秒，知识点、候选题和知识关系生成 180 秒。SDK 自动重试已关闭（`max_retries=0`），应用层也不重试；失败由用户在界面上重试。
+- 缺少密钥返回 `MISSING_API_KEY`，且不创建客户端。API 错误返回 `API_ERROR` 并附 `status_code`：401 提示密钥被拒绝，403 提示无权使用该模型，404 提示模型不可用，429 提示配额或请求频率受限，5xx 与 529 提示服务暂时不可用。超时、网络错误和其他异常返回 `GENERATION_ERROR`。
+- 模型因安全策略拒绝时返回 `REFUSED`（`stop_reason: refusal`）；输出被 `max_tokens` 截断时返回 `INCOMPLETE_RESPONSE`；没有可解析输出时返回 `EMPTY_RESPONSE`。
+- 失败结果不包含密钥、课程内容或原始异常文本。
 
 ## 推荐生成流程
 
@@ -90,7 +109,7 @@ Test-Path "C:\Program Files\Tesseract-OCR\tessdata\eng.traineddata"
 ```python
 from models.schemas import StudyPackage
 from services.document_service import extract_document
-from services.gemini_service import (
+from services.ai_service import (
     generate_topics,
     generate_questions,
     generate_relationships,
@@ -120,7 +139,7 @@ if not result["ok"]:
 package = StudyPackage.model_validate(result["package"])
 ```
 
-`confirmed_topic_ids` 必须由调用方收集，不能为空、不能重复且必须对应现有知识点。关系仅为 `related` 建议，不代表先修关系或教学验证结论。
+`confirmed_topic_ids` 必须由调用方收集，不能为空、不能重复且必须对应现有知识点。关系仅为 `related` 建议，不代表先修关系或教学验证结论。Knowledge Map 页面的 "Suggest connections" 面板会先展示建议，用户点击 Apply 后才写入课程。
 
 ## Tutor
 
@@ -138,7 +157,7 @@ def ask_tutor(
 
 课程上下文序列化后最多 20,000 个字符，问题最多 4,000 个字符；超限会拒绝，不会截断。上下文仅包含课程名、主题 ID/名称/摘要和关系，不包含题目、选项、答案索引、解析或原始文档。无主题或无有效摘要时返回 `EMPTY_COURSE_CONTEXT`。
 
-成功返回普通文本，不使用 `StudyPackage` 生成 Schema：
+Tutor 使用 `client.messages.create` 返回普通文本（系统提示要求纯文本、不用 Markdown），不使用结构化输出：
 
 ```python
 {"ok": True, "answer": "..."}
@@ -150,7 +169,7 @@ def ask_tutor(
 {"ok": False, "error_code": "...", "message": "..."}
 ```
 
-API 错误还包含 `status_code`。缺少密钥返回 `MISSING_API_KEY`，且不创建客户端。429 提示配额或请求频率受限；503 提示服务暂时不可用；不增加应用层自动重试。空响应返回 `EMPTY_RESPONSE`，其他请求异常（包括请求超时）返回 `GENERATION_ERROR`。Tutor 单次请求超时为 30 秒，连接检查为 30 秒，知识点、候选题和知识关系生成为 120 秒（生成请求携带最多 50,000 字符的资料，需要更长时间）；当前 `google-genai` SDK 的 `HttpOptions.timeout` 单位为毫秒，因此配置值为 `30_000` 和 `120_000`。429 和 503 的提示在所有接口中一致。失败结果不包含密钥、课程内容或原始异常。
+错误码与生成接口一致（见上一节）；浮动 Tutor 组件会把错误码映射为面向学生的提示文案。
 
 课程上下文和用户问题都被当作不可信输入；系统提示要求它们不能覆盖系统规则，要求清楚解释、只依据主题摘要，并在资料不足时说明、不虚构课程依据。这是防护措施，不能保证完全阻止提示注入。Tutor 只依据主题摘要和关系回答，答案仍需对照课程资料核对。
 
@@ -159,7 +178,7 @@ UI 应只在用户明确提交问题时调用 Tutor，不要在每次 Streamlit 
 ```python
 import streamlit as st
 
-from services.gemini_service import ask_tutor
+from services.ai_service import ask_tutor
 
 with st.form("tutor_form"):
     tutor_question = st.text_area("Ask about this course")

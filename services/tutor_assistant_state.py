@@ -10,7 +10,7 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from models.schemas import StudyPackage
-from services.gemini_service import MAX_TUTOR_QUESTION_CHARS, ask_tutor
+from services.ai_service import MAX_TUTOR_QUESTION_CHARS, ask_tutor
 
 
 ASSISTANT_STATE_KEY = "_floating_tutor_assistant"
@@ -30,6 +30,8 @@ _ERROR_MESSAGES = {
     "COURSE_CONTEXT_TOO_LONG": "This course is too large for the tutor. Please ask from a smaller course.",
     "GENERATION_ERROR": UNAVAILABLE_MESSAGE,
     "EMPTY_RESPONSE": "The AI tutor returned no answer. Please try again.",
+    "REFUSED": "The AI tutor declined to answer this question. Try rephrasing it.",
+    "INCOMPLETE_RESPONSE": "The AI tutor's answer was cut off. Ask a more specific question.",
 }
 
 
@@ -140,9 +142,10 @@ def _accept_event(
 def _error_message(response: dict) -> str:
     error_code = response.get("error_code")
     if error_code == "API_ERROR":
-        if response.get("status_code") == 429:
+        status_code = response.get("status_code")
+        if status_code == 429:
             return "The AI tutor is receiving too many requests. Please wait a moment and try again."
-        if response.get("status_code") == 503:
+        if isinstance(status_code, int) and status_code >= 500:
             return UNAVAILABLE_MESSAGE
     return (
         _ERROR_MESSAGES.get(error_code, UNAVAILABLE_MESSAGE)

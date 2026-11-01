@@ -6,7 +6,7 @@ from PIL import Image
 from pptx import Presentation
 from pptx.oxml.xmlchemy import OxmlElement
 
-from services import document_service, gemini_service
+from services import ai_service, document_service
 from services.document_service import (
     MAX_FILE_BYTES,
     MAX_TEXT_CHARS,
@@ -594,10 +594,10 @@ def test_extract_image_enforces_text_length_limit(monkeypatch):
 def test_extract_image_returns_engine_unavailable_without_cloud_fallback(
     monkeypatch,
 ):
-    def fail_if_gemini_called(**kwargs):
-        pytest.fail("Local OCR failure must not call Gemini")
+    def fail_if_ai_called(**kwargs):
+        pytest.fail("Local OCR failure must not call the AI service")
 
-    monkeypatch.setattr(gemini_service.genai, "Client", fail_if_gemini_called)
+    monkeypatch.setattr(ai_service.anthropic, "Anthropic", fail_if_ai_called)
     install_fake_ocr(
         monkeypatch,
         languages_error=FakeTesseractNotFoundError("/private/tesseract path"),

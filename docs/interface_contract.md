@@ -2,7 +2,7 @@
 
 **Status:** Agreed for MVP implementation; integration testing pending
 **Owner:** D — Architecture & Integration
-**Applies to:** A (UI), B (Gemini), C (Exam & Mastery), D (Graph)
+**Applies to:** A (UI), B (AI service), C (Exam & Mastery), D (Graph)
 
 ## 1. Shared Data Contract
 
@@ -37,7 +37,7 @@ Rules:
 - Missing confirmation, empty lists, duplicate IDs, and unknown IDs must be rejected.
 - Never assume all topics are confirmed unless the user explicitly selects all.
 
-## 3. Gemini Service — B
+## 3. AI Service (`services/ai_service.py`, Claude) — B
 
 Question generation interface:
 

@@ -4,7 +4,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from models.schemas import StudyPackage
-from services import gemini_service
+from services import ai_service
 from services.relationship_suggestions import (
     apply_suggested_relationships,
     describe_suggestions,
@@ -62,7 +62,7 @@ def install_generate(monkeypatch, result: dict) -> list[tuple]:
         return result
 
     monkeypatch.setattr(
-        gemini_service, "generate_relationships", fake_generate_relationships
+        ai_service, "generate_relationships", fake_generate_relationships
     )
     return calls
 
@@ -163,7 +163,7 @@ def test_page_shows_service_error_without_storing_suggestions(monkeypatch):
         {
             "ok": False,
             "error_code": "MISSING_API_KEY",
-            "message": "GEMINI_API_KEY is not configured.",
+            "message": "ANTHROPIC_API_KEY is not configured.",
         },
     )
     app = run_page(make_course(), make_document())
@@ -172,7 +172,7 @@ def test_page_shows_service_error_without_storing_suggestions(monkeypatch):
 
     assert not app.exception
     assert any(
-        "GEMINI_API_KEY is not configured." in item.value for item in app.error
+        "ANTHROPIC_API_KEY is not configured." in item.value for item in app.error
     )
     assert suggestions_key("course-1") not in app.session_state
 
