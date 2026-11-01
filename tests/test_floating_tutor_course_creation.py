@@ -13,6 +13,7 @@ def test_generated_course_is_immediately_available_to_global_tutor(monkeypatch):
         name="notes.txt", getvalue=lambda: b"A course about opportunity cost."
     )
     monkeypatch.setattr(st, "file_uploader", lambda *_args, **_kwargs: uploaded)
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     generated_ids = []
 
     def generate_topics(document, course_id, course_name):
