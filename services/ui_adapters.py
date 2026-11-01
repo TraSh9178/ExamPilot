@@ -1,7 +1,7 @@
 PENDING_INTEGRATION_MESSAGES: dict[str, str] = {
     "tutor": "Answers use this course's topics and relationships.",
     "anki": "Export a UTF-8 TSV for Anki import; AnkiWeb sync is not supported.",
-    "database": "仅保存在当前会话；数据库待接入。",
+    "database": "Saved in the current session only; the database is not connected yet.",
 }
 
 
