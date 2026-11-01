@@ -160,7 +160,7 @@ def test_dashboard_failure_message_clears_old_document_and_disables_generation(
     assert not app.exception
     assert "setup_document" not in app.session_state
     assert any(
-        "文件必须使用有效的 UTF-8 编码。" in item.value
+        "The file must be valid UTF-8 text." in item.value
         for item in app.error
     )
     assert not any(button.label == "Generate topics" for button in app.button)

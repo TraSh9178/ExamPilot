@@ -1431,7 +1431,7 @@ def test_ask_tutor_rejects_missing_api_key_without_creating_client(monkeypatch):
     assert result == {
         "ok": False,
         "error_code": "MISSING_API_KEY",
-        "message": "请配置 GEMINI_API_KEY",
+        "message": "GEMINI_API_KEY is not configured.",
     }
 
 
@@ -1558,8 +1558,8 @@ def test_ask_tutor_accepts_context_at_limit_and_rejects_one_character_over(
 @pytest.mark.parametrize(
     ("status_code", "expected_message"),
     [
-        (429, "配额或请求频率受限"),
-        (503, "服务暂时不可用"),
+        (429, "quota or rate limit"),
+        (503, "temporarily unavailable"),
     ],
 )
 def test_ask_tutor_handles_api_errors_without_exposing_details(

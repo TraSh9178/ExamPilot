@@ -31,7 +31,7 @@ def check_gemini_connection() -> dict:
         return {
             "ok": False,
             "error_code": "MISSING_API_KEY",
-            "message": "请配置 GEMINI_API_KEY",
+            "message": "GEMINI_API_KEY is not configured.",
         }
 
     model = os.getenv("GEMINI_MODEL", "").strip() or "gemini-3.8-flash"
@@ -48,7 +48,7 @@ def check_gemini_connection() -> dict:
             return {
                 "ok": False,
                 "error_code": "EMPTY_RESPONSE",
-                "message": "Gemini 返回了空响应。",
+                "message": "Gemini returned an empty response.",
             }
 
         return {"ok": True, "model": model, "text": text}
@@ -57,13 +57,13 @@ def check_gemini_connection() -> dict:
             "ok": False,
             "error_code": "API_ERROR",
             "status_code": exc.code,
-            "message": "Gemini API 请求失败，请检查配置或稍后重试。",
+            "message": "The Gemini API request failed. Check the configuration or try again later.",
         }
     except Exception:
         return {
             "ok": False,
             "error_code": "CONNECTION_ERROR",
-            "message": "连接 Gemini 时发生错误，请检查配置或网络后重试。",
+            "message": "Could not connect to Gemini. Check the configuration or network and try again.",
         }
 
 
@@ -72,7 +72,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_DOCUMENT",
-            "message": "课程资料无效，请重新上传并提取。",
+            "message": "The course material is invalid. Upload and extract it again.",
         }
 
     text = document.get("text")
@@ -80,26 +80,26 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
         return {
             "ok": False,
             "error_code": "EMPTY_DOCUMENT",
-            "message": "课程资料为空，无法生成知识点。",
+            "message": "The course material is empty, so topics cannot be generated.",
         }
     if len(text) > MAX_DOCUMENT_TEXT_CHARS:
         return {
             "ok": False,
             "error_code": "TEXT_TOO_LONG",
-            "message": "课程资料超过 50,000 个字符，无法分析。",
+            "message": "The course material exceeds 50,000 characters and cannot be analysed.",
         }
 
     if not isinstance(course_id, str) or not course_id.strip():
         return {
             "ok": False,
             "error_code": "INVALID_COURSE_METADATA",
-            "message": "课程 ID 和名称不能为空。",
+            "message": "The course ID and name must not be empty.",
         }
     if not isinstance(course_name, str) or not course_name.strip():
         return {
             "ok": False,
             "error_code": "INVALID_COURSE_METADATA",
-            "message": "课程 ID 和名称不能为空。",
+            "message": "The course ID and name must not be empty.",
         }
 
     filename = document.get("filename")
@@ -107,7 +107,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_DOCUMENT",
-            "message": "课程资料无效，请重新上传并提取。",
+            "message": "The course material is invalid. Upload and extract it again.",
         }
 
     allowed_source_pages = set()
@@ -121,7 +121,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
             return {
                 "ok": False,
                 "error_code": "INVALID_DOCUMENT",
-                "message": "课程资料无效，请重新上传并提取。",
+                "message": "The course material is invalid. Upload and extract it again.",
             }
 
         page_texts = {}
@@ -130,7 +130,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
                 return {
                     "ok": False,
                     "error_code": "INVALID_DOCUMENT",
-                    "message": "课程资料无效，请重新上传并提取。",
+                    "message": "The course material is invalid. Upload and extract it again.",
                 }
             page_number = page.get("page")
             page_text = page.get("text")
@@ -144,7 +144,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
                 return {
                     "ok": False,
                     "error_code": "INVALID_DOCUMENT",
-                    "message": "课程资料无效，请重新上传并提取。",
+                    "message": "The course material is invalid. Upload and extract it again.",
                 }
             page_texts[page_number] = page_text
 
@@ -152,7 +152,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
             return {
                 "ok": False,
                 "error_code": "INVALID_DOCUMENT",
-                "message": "课程资料无效，请重新上传并提取。",
+                "message": "The course material is invalid. Upload and extract it again.",
             }
 
         for source in sources:
@@ -160,7 +160,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
                 return {
                     "ok": False,
                     "error_code": "INVALID_DOCUMENT",
-                    "message": "课程资料无效，请重新上传并提取。",
+                    "message": "The course material is invalid. Upload and extract it again.",
                 }
             page_number = source.get("page")
             if (
@@ -173,7 +173,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
                 return {
                     "ok": False,
                     "error_code": "INVALID_DOCUMENT",
-                    "message": "课程资料无效，请重新上传并提取。",
+                    "message": "The course material is invalid. Upload and extract it again.",
                 }
             allowed_source_pages.add(page_number)
 
@@ -187,7 +187,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_DOCUMENT",
-            "message": "课程资料无效，请重新上传并提取。",
+            "message": "The course material is invalid. Upload and extract it again.",
         }
 
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
@@ -195,7 +195,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
         return {
             "ok": False,
             "error_code": "MISSING_API_KEY",
-            "message": "请配置 GEMINI_API_KEY",
+            "message": "GEMINI_API_KEY is not configured.",
         }
 
     model = os.getenv("GEMINI_MODEL", "").strip() or "gemini-3.8-flash"
@@ -235,20 +235,20 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
             "ok": False,
             "error_code": "API_ERROR",
             "status_code": exc.code,
-            "message": "Gemini API 请求失败，请检查配置或稍后重试。",
+            "message": "The Gemini API request failed. Check the configuration or try again later.",
         }
     except Exception:
         return {
             "ok": False,
             "error_code": "GENERATION_ERROR",
-            "message": "生成知识点时发生错误，请检查配置或稍后重试。",
+            "message": "An error occurred while generating topics. Check the configuration or try again later.",
         }
 
     if not isinstance(response_text, str) or not response_text.strip():
         return {
             "ok": False,
             "error_code": "EMPTY_RESPONSE",
-            "message": "Gemini 返回了空响应，无法生成知识点。",
+            "message": "Gemini returned an empty response, so topics cannot be generated.",
         }
 
     try:
@@ -257,7 +257,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_JSON",
-            "message": "Gemini 返回的数据不是有效 JSON。",
+            "message": "Gemini returned data that is not valid JSON.",
         }
 
     try:
@@ -269,20 +269,20 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_TOPICS",
-            "message": "Gemini 返回的知识点结构不符合要求。",
+            "message": "Gemini returned topics in an unexpected structure.",
         }
 
     if len(topics) < 3:
         return {
             "ok": False,
             "error_code": "INSUFFICIENT_CONTENT",
-            "message": "资料不足以支持至少 3 个主要知识点。",
+            "message": "The material does not support at least 3 main topics.",
         }
     if len(topics) > 5:
         return {
             "ok": False,
             "error_code": "INVALID_TOPICS",
-            "message": "Gemini 返回的知识点数量不符合 3 至 5 个的要求。",
+            "message": "Gemini returned a number of topics outside the required range of 3 to 5.",
         }
 
     topic_ids = set()
@@ -296,7 +296,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
             return {
                 "ok": False,
                 "error_code": "INVALID_TOPICS",
-                "message": "Gemini 返回的知识点字段无效或 ID 重复。",
+                "message": "Gemini returned topics with invalid fields or duplicate IDs.",
             }
         topic_ids.add(topic.id)
 
@@ -304,7 +304,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
             return {
                 "ok": False,
                 "error_code": "INVALID_CITATION",
-                "message": "知识点引用了课程资料中不存在的页码。",
+                "message": "A topic cites a page that does not exist in the course material.",
             }
 
     try:
@@ -321,7 +321,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_TOPICS",
-            "message": "知识点无法通过课程结构校验。",
+            "message": "The topics failed course structure validation.",
         }
 
     return {
@@ -341,7 +341,7 @@ def generate_questions(
         return {
             "ok": False,
             "error_code": "INVALID_DOCUMENT",
-            "message": "课程资料无效，请重新上传并提取。",
+            "message": "The course material is invalid. Upload and extract it again.",
         }
 
     text = document.get("text")
@@ -349,20 +349,20 @@ def generate_questions(
         return {
             "ok": False,
             "error_code": "EMPTY_DOCUMENT",
-            "message": "课程资料为空，无法生成候选题。",
+            "message": "The course material is empty, so candidate questions cannot be generated.",
         }
     if len(text) > MAX_DOCUMENT_TEXT_CHARS:
         return {
             "ok": False,
             "error_code": "TEXT_TOO_LONG",
-            "message": "课程资料超过 50,000 个字符，无法分析。",
+            "message": "The course material exceeds 50,000 characters and cannot be analysed.",
         }
 
     if not isinstance(package, StudyPackage):
         return {
             "ok": False,
             "error_code": "INVALID_PACKAGE",
-            "message": "课程结构无效，无法生成候选题。",
+            "message": "The course structure is invalid, so candidate questions cannot be generated.",
         }
     try:
         validated_package = StudyPackage.model_validate(
@@ -373,7 +373,7 @@ def generate_questions(
         return {
             "ok": False,
             "error_code": "INVALID_PACKAGE",
-            "message": "课程结构无效，无法生成候选题。",
+            "message": "The course structure is invalid, so candidate questions cannot be generated.",
         }
 
     if (
@@ -387,13 +387,13 @@ def generate_questions(
         return {
             "ok": False,
             "error_code": "INVALID_CONFIRMED_TOPICS",
-            "message": "请选择一个或多个有效知识点。",
+            "message": "Select one or more valid topics.",
         }
     if len(confirmed_topic_ids) != len(set(confirmed_topic_ids)):
         return {
             "ok": False,
             "error_code": "INVALID_CONFIRMED_TOPICS",
-            "message": "确认的知识点不能重复。",
+            "message": "Confirmed topics must not be repeated.",
         }
 
     topics_by_id = {topic.id: topic for topic in validated_package.topics}
@@ -401,7 +401,7 @@ def generate_questions(
         return {
             "ok": False,
             "error_code": "INVALID_CONFIRMED_TOPICS",
-            "message": "确认的知识点不属于当前课程。",
+            "message": "A confirmed topic does not belong to this course.",
         }
 
     filename = document.get("filename")
@@ -409,7 +409,7 @@ def generate_questions(
         return {
             "ok": False,
             "error_code": "INVALID_DOCUMENT",
-            "message": "课程资料无效，请重新上传并提取。",
+            "message": "The course material is invalid. Upload and extract it again.",
         }
 
     allowed_source_pages = set()
@@ -424,7 +424,7 @@ def generate_questions(
             return {
                 "ok": False,
                 "error_code": "INVALID_DOCUMENT",
-                "message": "课程资料无效，请重新上传并提取。",
+                "message": "The course material is invalid. Upload and extract it again.",
             }
         material = {"filename": filename, "text": text}
         document_type = "TXT"
@@ -438,7 +438,7 @@ def generate_questions(
             return {
                 "ok": False,
                 "error_code": "INVALID_DOCUMENT",
-                "message": "课程资料无效，请重新上传并提取。",
+                "message": "The course material is invalid. Upload and extract it again.",
             }
 
         page_texts = {}
@@ -447,7 +447,7 @@ def generate_questions(
                 return {
                     "ok": False,
                     "error_code": "INVALID_DOCUMENT",
-                    "message": "课程资料无效，请重新上传并提取。",
+                    "message": "The course material is invalid. Upload and extract it again.",
                 }
             page_number = page.get("page")
             page_text = page.get("text")
@@ -461,7 +461,7 @@ def generate_questions(
                 return {
                     "ok": False,
                     "error_code": "INVALID_DOCUMENT",
-                    "message": "课程资料无效，请重新上传并提取。",
+                    "message": "The course material is invalid. Upload and extract it again.",
                 }
             page_texts[page_number] = page_text
 
@@ -469,7 +469,7 @@ def generate_questions(
             return {
                 "ok": False,
                 "error_code": "INVALID_DOCUMENT",
-                "message": "课程资料无效，请重新上传并提取。",
+                "message": "The course material is invalid. Upload and extract it again.",
             }
 
         for source in sources:
@@ -477,7 +477,7 @@ def generate_questions(
                 return {
                     "ok": False,
                     "error_code": "INVALID_DOCUMENT",
-                    "message": "课程资料无效，请重新上传并提取。",
+                    "message": "The course material is invalid. Upload and extract it again.",
                 }
             page_number = source.get("page")
             if (
@@ -491,7 +491,7 @@ def generate_questions(
                 return {
                     "ok": False,
                     "error_code": "INVALID_DOCUMENT",
-                    "message": "课程资料无效，请重新上传并提取。",
+                    "message": "The course material is invalid. Upload and extract it again.",
                 }
             allowed_source_pages.add(page_number)
 
@@ -505,7 +505,7 @@ def generate_questions(
         return {
             "ok": False,
             "error_code": "INVALID_DOCUMENT",
-            "message": "课程资料无效，请重新上传并提取。",
+            "message": "The course material is invalid. Upload and extract it again.",
         }
 
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
@@ -513,7 +513,7 @@ def generate_questions(
         return {
             "ok": False,
             "error_code": "MISSING_API_KEY",
-            "message": "请配置 GEMINI_API_KEY",
+            "message": "GEMINI_API_KEY is not configured.",
         }
 
     confirmed_topics = [
@@ -566,20 +566,20 @@ def generate_questions(
             "ok": False,
             "error_code": "API_ERROR",
             "status_code": exc.code,
-            "message": "Gemini API 请求失败，请检查配置或稍后重试。",
+            "message": "The Gemini API request failed. Check the configuration or try again later.",
         }
     except Exception:
         return {
             "ok": False,
             "error_code": "GENERATION_ERROR",
-            "message": "生成候选题时发生错误，请检查配置或稍后重试。",
+            "message": "An error occurred while generating candidate questions. Check the configuration or try again later.",
         }
 
     if not isinstance(response_text, str) or not response_text.strip():
         return {
             "ok": False,
             "error_code": "EMPTY_RESPONSE",
-            "message": "Gemini 返回了空响应，无法生成候选题。",
+            "message": "Gemini returned an empty response, so candidate questions cannot be generated.",
         }
 
     try:
@@ -588,7 +588,7 @@ def generate_questions(
         return {
             "ok": False,
             "error_code": "INVALID_JSON",
-            "message": "Gemini 返回的数据不是有效 JSON。",
+            "message": "Gemini returned data that is not valid JSON.",
         }
 
     try:
@@ -600,20 +600,20 @@ def generate_questions(
         return {
             "ok": False,
             "error_code": "INVALID_QUESTIONS",
-            "message": "Gemini 返回的候选题结构不符合要求。",
+            "message": "Gemini returned candidate questions in an unexpected structure.",
         }
 
     if len(questions) < 8:
         return {
             "ok": False,
             "error_code": "INSUFFICIENT_CONTENT",
-            "message": "资料不足以支持至少 8 道有效候选题。",
+            "message": "The material does not support at least 8 sound candidate questions.",
         }
     if len(questions) > 12:
         return {
             "ok": False,
             "error_code": "INVALID_QUESTIONS",
-            "message": "候选题数量不符合 8 至 12 道的要求。",
+            "message": "The number of candidate questions is outside the required range of 8 to 12.",
         }
 
     question_ids = set()
@@ -630,7 +630,7 @@ def generate_questions(
             return {
                 "ok": False,
                 "error_code": "INVALID_QUESTIONS",
-                "message": "候选题字段无效、选项重复或题目 ID 重复。",
+                "message": "A candidate question has invalid fields, duplicate options, or a duplicate question ID.",
             }
         question_ids.add(question.id)
 
@@ -638,13 +638,13 @@ def generate_questions(
             return {
                 "ok": False,
                 "error_code": "INVALID_QUESTIONS",
-                "message": "候选题引用了未确认的知识点。",
+                "message": "A candidate question refers to a topic that was not confirmed.",
             }
         if any(page not in allowed_source_pages for page in question.source_pages):
             return {
                 "ok": False,
                 "error_code": "INVALID_CITATION",
-                "message": "候选题引用了课程资料中不存在的页码。",
+                "message": "A candidate question cites a page that does not exist in the course material.",
             }
 
     try:
@@ -653,7 +653,7 @@ def generate_questions(
         return {
             "ok": False,
             "error_code": "INVALID_QUESTIONS",
-            "message": "候选题内容／选项重复，或复用了已有题目 ID；请重新生成并人工复核。",
+            "message": "Candidate questions repeat existing content or options, or reuse an existing question ID. Generate again and review them manually.",
         }
 
     package_data = validated_package.model_dump()
@@ -673,7 +673,7 @@ def generate_questions(
         return {
             "ok": False,
             "error_code": "INVALID_QUESTIONS",
-            "message": "候选题无法通过课程结构校验。",
+            "message": "The candidate questions failed course structure validation.",
         }
 
     return {
@@ -690,7 +690,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_DOCUMENT",
-            "message": "课程资料无效，请重新上传并提取。",
+            "message": "The course material is invalid. Upload and extract it again.",
         }
 
     text = document.get("text")
@@ -698,20 +698,20 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
         return {
             "ok": False,
             "error_code": "EMPTY_DOCUMENT",
-            "message": "课程资料为空，无法建议知识关系。",
+            "message": "The course material is empty, so topic connections cannot be suggested.",
         }
     if len(text) > MAX_DOCUMENT_TEXT_CHARS:
         return {
             "ok": False,
             "error_code": "TEXT_TOO_LONG",
-            "message": "课程资料超过 50,000 个字符，无法分析。",
+            "message": "The course material exceeds 50,000 characters and cannot be analysed.",
         }
 
     if not isinstance(package, StudyPackage):
         return {
             "ok": False,
             "error_code": "INVALID_PACKAGE",
-            "message": "课程结构无效，无法建议知识关系。",
+            "message": "The course structure is invalid, so topic connections cannot be suggested.",
         }
     try:
         validated_package = StudyPackage.model_validate(
@@ -722,14 +722,14 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_PACKAGE",
-            "message": "课程结构无效，无法建议知识关系。",
+            "message": "The course structure is invalid, so topic connections cannot be suggested.",
         }
 
     if len(validated_package.topics) < 2:
         return {
             "ok": False,
             "error_code": "INSUFFICIENT_TOPICS",
-            "message": "至少需要两个知识点才能建议知识关系。",
+            "message": "At least two topics are needed to suggest connections.",
         }
 
     filename = document.get("filename")
@@ -737,7 +737,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_DOCUMENT",
-            "message": "课程资料无效，请重新上传并提取。",
+            "message": "The course material is invalid. Upload and extract it again.",
         }
 
     if filename.lower().endswith(".txt"):
@@ -751,7 +751,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
             return {
                 "ok": False,
                 "error_code": "INVALID_DOCUMENT",
-                "message": "课程资料无效，请重新上传并提取。",
+                "message": "The course material is invalid. Upload and extract it again.",
             }
         material = {"filename": filename, "text": text}
         document_type = "TXT"
@@ -766,7 +766,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
             return {
                 "ok": False,
                 "error_code": "INVALID_DOCUMENT",
-                "message": "课程资料无效，请重新上传并提取。",
+                "message": "The course material is invalid. Upload and extract it again.",
             }
 
         page_texts = {}
@@ -775,7 +775,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
                 return {
                     "ok": False,
                     "error_code": "INVALID_DOCUMENT",
-                    "message": "课程资料无效，请重新上传并提取。",
+                    "message": "The course material is invalid. Upload and extract it again.",
                 }
             page_number = page.get("page")
             page_text = page.get("text")
@@ -789,7 +789,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
                 return {
                     "ok": False,
                     "error_code": "INVALID_DOCUMENT",
-                    "message": "课程资料无效，请重新上传并提取。",
+                    "message": "The course material is invalid. Upload and extract it again.",
                 }
             page_texts[page_number] = page_text
 
@@ -797,7 +797,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
             return {
                 "ok": False,
                 "error_code": "INVALID_DOCUMENT",
-                "message": "课程资料无效，请重新上传并提取。",
+                "message": "The course material is invalid. Upload and extract it again.",
             }
 
         source_pages = set()
@@ -806,7 +806,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
                 return {
                     "ok": False,
                     "error_code": "INVALID_DOCUMENT",
-                    "message": "课程资料无效，请重新上传并提取。",
+                    "message": "The course material is invalid. Upload and extract it again.",
                 }
             page_number = source.get("page")
             if (
@@ -820,7 +820,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
                 return {
                     "ok": False,
                     "error_code": "INVALID_DOCUMENT",
-                    "message": "课程资料无效，请重新上传并提取。",
+                    "message": "The course material is invalid. Upload and extract it again.",
                 }
             source_pages.add(page_number)
 
@@ -830,7 +830,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_DOCUMENT",
-            "message": "课程资料无效，请重新上传并提取。",
+            "message": "The course material is invalid. Upload and extract it again.",
         }
 
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
@@ -838,7 +838,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
         return {
             "ok": False,
             "error_code": "MISSING_API_KEY",
-            "message": "请配置 GEMINI_API_KEY",
+            "message": "GEMINI_API_KEY is not configured.",
         }
 
     topics = [
@@ -885,20 +885,20 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
             "ok": False,
             "error_code": "API_ERROR",
             "status_code": exc.code,
-            "message": "Gemini API 请求失败，请检查配置或稍后重试。",
+            "message": "The Gemini API request failed. Check the configuration or try again later.",
         }
     except Exception:
         return {
             "ok": False,
             "error_code": "GENERATION_ERROR",
-            "message": "生成知识关系建议时发生错误，请检查配置或稍后重试。",
+            "message": "An error occurred while suggesting topic connections. Check the configuration or try again later.",
         }
 
     if not isinstance(response_text, str) or not response_text.strip():
         return {
             "ok": False,
             "error_code": "EMPTY_RESPONSE",
-            "message": "Gemini 返回了空响应，无法生成知识关系建议。",
+            "message": "Gemini returned an empty response, so topic connections cannot be suggested.",
         }
 
     try:
@@ -907,7 +907,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_JSON",
-            "message": "Gemini 返回的数据不是有效 JSON。",
+            "message": "Gemini returned data that is not valid JSON.",
         }
 
     try:
@@ -919,7 +919,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_RELATIONSHIPS",
-            "message": "Gemini 返回的知识关系结构不符合要求。",
+            "message": "Gemini returned connections in an unexpected structure.",
         }
 
     topic_ids = {topic.id for topic in validated_package.topics}
@@ -934,7 +934,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
             return {
                 "ok": False,
                 "error_code": "INVALID_RELATIONSHIPS",
-                "message": "知识关系包含无效端点、自环或不支持的关系类型。",
+                "message": "A connection has an invalid endpoint, links a topic to itself, or uses an unsupported type.",
             }
 
         edge = frozenset((relationship.from_topic, relationship.to_topic))
@@ -942,7 +942,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
             return {
                 "ok": False,
                 "error_code": "INVALID_RELATIONSHIPS",
-                "message": "知识关系包含重复连接。",
+                "message": "The connections contain a duplicate link.",
             }
         seen_edges.add(edge)
 
@@ -956,7 +956,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_RELATIONSHIPS",
-            "message": "知识关系无法通过课程结构校验。",
+            "message": "The connections failed course structure validation.",
         }
 
     return {
@@ -976,7 +976,7 @@ def ask_tutor(
         return {
             "ok": False,
             "error_code": "INVALID_PACKAGE",
-            "message": "课程结构无效，无法回答问题。",
+            "message": "The course structure is invalid, so the question cannot be answered.",
         }
 
     try:
@@ -985,26 +985,26 @@ def ask_tutor(
         return {
             "ok": False,
             "error_code": "INVALID_PACKAGE",
-            "message": "课程结构无效，无法回答问题。",
+            "message": "The course structure is invalid, so the question cannot be answered.",
         }
 
     if not isinstance(question, str):
         return {
             "ok": False,
             "error_code": "INVALID_QUESTION",
-            "message": "问题必须是文本。",
+            "message": "The question must be text.",
         }
     if not question.strip():
         return {
             "ok": False,
             "error_code": "EMPTY_QUESTION",
-            "message": "请输入问题后再试。",
+            "message": "Enter a question and try again.",
         }
     if len(question) > MAX_TUTOR_QUESTION_CHARS:
         return {
             "ok": False,
             "error_code": "QUESTION_TOO_LONG",
-            "message": "问题长度不能超过 4,000 个字符。",
+            "message": "The question must be 4,000 characters or fewer.",
         }
 
     all_topic_ids = {topic.id for topic in course.topics}
@@ -1013,7 +1013,7 @@ def ask_tutor(
             return {
                 "ok": False,
                 "error_code": "INVALID_TOPIC",
-                "message": "所选知识点无效。",
+                "message": "The selected topic is invalid.",
             }
         selected_topic = next(
             (topic for topic in course.topics if topic.id == topic_id),
@@ -1023,7 +1023,7 @@ def ask_tutor(
             return {
                 "ok": False,
                 "error_code": "INVALID_TOPIC",
-                "message": "所选知识点无效。",
+                "message": "The selected topic is invalid.",
             }
         context_topics = [selected_topic] if selected_topic.summary.strip() else []
     else:
@@ -1035,7 +1035,7 @@ def ask_tutor(
         return {
             "ok": False,
             "error_code": "EMPTY_COURSE_CONTEXT",
-            "message": "课程中没有可用于回答的主题摘要。",
+            "message": "The course has no topic summaries to answer from.",
         }
 
     context_topic_ids = {topic.id for topic in context_topics}
@@ -1075,7 +1075,7 @@ def ask_tutor(
         return {
             "ok": False,
             "error_code": "COURSE_CONTEXT_TOO_LONG",
-            "message": "课程上下文长度不能超过 20,000 个字符。",
+            "message": "The course context must be 20,000 characters or fewer.",
         }
 
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
@@ -1083,7 +1083,7 @@ def ask_tutor(
         return {
             "ok": False,
             "error_code": "MISSING_API_KEY",
-            "message": "请配置 GEMINI_API_KEY",
+            "message": "GEMINI_API_KEY is not configured.",
         }
 
     model = os.getenv("GEMINI_MODEL", "").strip() or "gemini-3.8-flash"
@@ -1118,11 +1118,11 @@ def ask_tutor(
             answer = response.text
     except APIError as exc:
         if exc.code == 429:
-            message = "Gemini 配额或请求频率受限，请稍后重试。"
+            message = "Gemini quota or rate limit reached. Try again later."
         elif exc.code == 503:
-            message = "Gemini 服务暂时不可用，请稍后重试。"
+            message = "Gemini is temporarily unavailable. Try again later."
         else:
-            message = "Gemini API 请求失败，请检查配置或稍后重试。"
+            message = "The Gemini API request failed. Check the configuration or try again later."
         return {
             "ok": False,
             "error_code": "API_ERROR",
@@ -1133,14 +1133,14 @@ def ask_tutor(
         return {
             "ok": False,
             "error_code": "GENERATION_ERROR",
-            "message": "Tutor 暂时无法生成回答，请稍后重试。",
+            "message": "The tutor cannot answer right now. Try again later.",
         }
 
     if not isinstance(answer, str) or not answer.strip():
         return {
             "ok": False,
             "error_code": "EMPTY_RESPONSE",
-            "message": "Gemini 返回了空响应，无法生成回答。",
+            "message": "Gemini returned an empty response, so no answer is available.",
         }
 
     return {"ok": True, "answer": answer.strip()}

@@ -762,5 +762,5 @@ def test_extract_document_rejects_unsupported_type_without_calling_extractors(
     assert result == {
         "ok": False,
         "error_code": "UNSUPPORTED_FILE_TYPE",
-        "message": "仅支持 TXT、文字型 PDF、文字型 PPTX 或 PNG/JPEG 图片。",
+        "message": "Only TXT, text-based PDF, text-based PPTX, or PNG/JPEG images are supported.",
     }

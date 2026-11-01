@@ -20,10 +20,10 @@ IMAGE_FORMATS = {
     ".jpeg": "JPEG",
 }
 OCR_ERROR_MESSAGES = {
-    "OCR_ENGINE_UNAVAILABLE": "本机 OCR 引擎不可用，请检查 Tesseract 安装。",
-    "OCR_LANGUAGE_UNAVAILABLE": "本机 OCR 语言包不可用，请检查 OCR_LANG 配置。",
-    "OCR_TIMEOUT": "图片文字识别超时，请尝试较小或更清晰的图片。",
-    "OCR_FAILED": "图片文字识别失败，请检查图片后重试。",
+    "OCR_ENGINE_UNAVAILABLE": "The OCR engine is not available on this server. Check the Tesseract installation.",
+    "OCR_LANGUAGE_UNAVAILABLE": "The OCR language data is not available on this server. Check the OCR_LANG setting.",
+    "OCR_TIMEOUT": "Text recognition timed out. Try a smaller or clearer image.",
+    "OCR_FAILED": "Text recognition failed. Check the image and try again.",
 }
 
 
@@ -94,14 +94,14 @@ def extract_txt(file_bytes: bytes, filename: str) -> dict:
         return {
             "ok": False,
             "error_code": "UNSUPPORTED_FILE_TYPE",
-            "message": "仅支持 .txt 文件。",
+            "message": "Only .txt files are supported.",
         }
 
     if len(file_bytes) > MAX_FILE_BYTES:
         return {
             "ok": False,
             "error_code": "FILE_TOO_LARGE",
-            "message": "文件大小不能超过 5 MiB。",
+            "message": "The file must be 5 MiB or smaller.",
         }
 
     try:
@@ -110,21 +110,21 @@ def extract_txt(file_bytes: bytes, filename: str) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_ENCODING",
-            "message": "文件必须使用有效的 UTF-8 编码。",
+            "message": "The file must be valid UTF-8 text.",
         }
 
     if not text.strip():
         return {
             "ok": False,
             "error_code": "EMPTY_DOCUMENT",
-            "message": "文件内容为空。",
+            "message": "The file is empty.",
         }
 
     if len(text) > MAX_TEXT_CHARS:
         return {
             "ok": False,
             "error_code": "TEXT_TOO_LONG",
-            "message": "文本长度不能超过 50,000 个字符。",
+            "message": "The text must be 50,000 characters or fewer.",
         }
 
     return {
@@ -140,21 +140,21 @@ def extract_pdf(file_bytes: bytes, filename: str) -> dict:
         return {
             "ok": False,
             "error_code": "UNSUPPORTED_FILE_TYPE",
-            "message": "仅支持 .pdf 文件。",
+            "message": "Only .pdf files are supported.",
         }
 
     if not file_bytes:
         return {
             "ok": False,
             "error_code": "EMPTY_DOCUMENT",
-            "message": "PDF 文件内容为空。",
+            "message": "The PDF file is empty.",
         }
 
     if len(file_bytes) > MAX_FILE_BYTES:
         return {
             "ok": False,
             "error_code": "FILE_TOO_LARGE",
-            "message": "文件大小不能超过 5 MiB。",
+            "message": "The file must be 5 MiB or smaller.",
         }
 
     try:
@@ -163,7 +163,7 @@ def extract_pdf(file_bytes: bytes, filename: str) -> dict:
                 return {
                     "ok": False,
                     "error_code": "ENCRYPTED_PDF",
-                    "message": "PDF 需要密码才能读取，暂不支持加密 PDF。",
+                    "message": "The PDF is password-protected. Encrypted PDFs are not supported.",
                 }
 
             pages = []
@@ -181,7 +181,7 @@ def extract_pdf(file_bytes: bytes, filename: str) -> dict:
                     return {
                         "ok": False,
                         "error_code": "TEXT_TOO_LONG",
-                        "message": "PDF 提取文本长度超过 50,000 个字符。",
+                        "message": "The text extracted from the PDF exceeds 50,000 characters.",
                     }
 
                 if page_text.strip():
@@ -191,7 +191,7 @@ def extract_pdf(file_bytes: bytes, filename: str) -> dict:
                 return {
                     "ok": False,
                     "error_code": "NO_EXTRACTABLE_TEXT",
-                    "message": "PDF 中没有可提取的文字，可能是扫描件或空白 PDF；本功能不支持 OCR。",
+                    "message": "No extractable text was found in the PDF. It may be scanned or blank; OCR is not supported for PDFs.",
                 }
 
             text = "\n".join(page["text"] for page in pages)
@@ -199,7 +199,7 @@ def extract_pdf(file_bytes: bytes, filename: str) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_PDF",
-            "message": "无法读取 PDF，文件可能已损坏或内容不是有效的 PDF。",
+            "message": "The PDF could not be read. The file may be damaged or not a valid PDF.",
         }
 
     return {
@@ -216,21 +216,21 @@ def extract_pptx(file_bytes: bytes, filename: str) -> dict:
         return {
             "ok": False,
             "error_code": "UNSUPPORTED_FILE_TYPE",
-            "message": "仅支持 .pptx 文件。",
+            "message": "Only .pptx files are supported.",
         }
 
     if not file_bytes:
         return {
             "ok": False,
             "error_code": "EMPTY_DOCUMENT",
-            "message": "PPTX 文件内容为空。",
+            "message": "The PPTX file is empty.",
         }
 
     if len(file_bytes) > MAX_FILE_BYTES:
         return {
             "ok": False,
             "error_code": "FILE_TOO_LARGE",
-            "message": "文件大小不能超过 5 MiB。",
+            "message": "The file must be 5 MiB or smaller.",
         }
 
     try:
@@ -252,7 +252,7 @@ def extract_pptx(file_bytes: bytes, filename: str) -> dict:
                 return {
                     "ok": False,
                     "error_code": "TEXT_TOO_LONG",
-                    "message": "PPTX 提取文本长度超过 50,000 个字符。",
+                    "message": "The text extracted from the PPTX exceeds 50,000 characters.",
                 }
 
             if slide_text.strip():
@@ -262,7 +262,7 @@ def extract_pptx(file_bytes: bytes, filename: str) -> dict:
             return {
                 "ok": False,
                 "error_code": "NO_EXTRACTABLE_TEXT",
-                "message": "PPTX 中没有可提取的文字，可能是空白幻灯片或图片内容；本功能不支持 OCR。",
+                "message": "No extractable text was found in the PPTX. The slides may be blank or image-only; OCR is not supported for PPTX.",
             }
 
         text = "\n".join(slide["text"] for slide in pages)
@@ -270,7 +270,7 @@ def extract_pptx(file_bytes: bytes, filename: str) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_PPTX",
-            "message": "无法读取 PPTX，文件可能已损坏或内容不是有效的 PPTX。",
+            "message": "The PPTX could not be read. The file may be damaged or not a valid PPTX.",
         }
 
     return {
@@ -291,21 +291,21 @@ def extract_image(file_bytes: bytes, filename: str) -> dict:
         return {
             "ok": False,
             "error_code": "UNSUPPORTED_FILE_TYPE",
-            "message": "仅支持 .png、.jpg 或 .jpeg 图片。",
+            "message": "Only .png, .jpg, or .jpeg images are supported.",
         }
 
     if not file_bytes:
         return {
             "ok": False,
             "error_code": "EMPTY_DOCUMENT",
-            "message": "图片文件内容为空。",
+            "message": "The image file is empty.",
         }
 
     if len(file_bytes) > MAX_FILE_BYTES:
         return {
             "ok": False,
             "error_code": "FILE_TOO_LARGE",
-            "message": "文件大小不能超过 5 MiB。",
+            "message": "The file must be 5 MiB or smaller.",
         }
 
     try:
@@ -314,7 +314,7 @@ def extract_image(file_bytes: bytes, filename: str) -> dict:
                 return {
                     "ok": False,
                     "error_code": "INVALID_IMAGE",
-                    "message": "图片内容无效或格式与扩展名不符，仅支持 PNG/JPEG。",
+                    "message": "The image is invalid or its format does not match the file extension. Only PNG and JPEG are supported.",
                 }
 
             width, height = image.size
@@ -322,7 +322,7 @@ def extract_image(file_bytes: bytes, filename: str) -> dict:
                 return {
                     "ok": False,
                     "error_code": "IMAGE_TOO_LARGE",
-                    "message": "图片像素数不能超过 20,000,000。",
+                    "message": "The image must have 20,000,000 pixels or fewer.",
                 }
 
             image.load()
@@ -331,7 +331,7 @@ def extract_image(file_bytes: bytes, filename: str) -> dict:
         return {
             "ok": False,
             "error_code": "INVALID_IMAGE",
-            "message": "图片内容无效或格式与扩展名不符，仅支持 PNG/JPEG。",
+            "message": "The image is invalid or its format does not match the file extension. Only PNG and JPEG are supported.",
         }
 
     try:
@@ -363,14 +363,14 @@ def extract_image(file_bytes: bytes, filename: str) -> dict:
         return {
             "ok": False,
             "error_code": "NO_EXTRACTABLE_TEXT",
-            "message": "图片中没有可提取的文字。",
+            "message": "No text was recognised in the image.",
         }
 
     if len(text) > MAX_TEXT_CHARS:
         return {
             "ok": False,
             "error_code": "TEXT_TOO_LONG",
-            "message": "图片提取文本长度超过 50,000 个字符。",
+            "message": "The text recognised in the image exceeds 50,000 characters.",
         }
 
     return {
@@ -398,5 +398,5 @@ def extract_document(file_bytes: bytes, filename: str) -> dict:
     return {
         "ok": False,
         "error_code": "UNSUPPORTED_FILE_TYPE",
-        "message": "仅支持 TXT、文字型 PDF、文字型 PPTX 或 PNG/JPEG 图片。",
+        "message": "Only TXT, text-based PDF, text-based PPTX, or PNG/JPEG images are supported.",
     }
