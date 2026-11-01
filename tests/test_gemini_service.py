@@ -621,6 +621,48 @@ def test_generate_topics_api_error_does_not_expose_secrets(monkeypatch):
     assert private_message not in str(result)
 
 
+@pytest.mark.parametrize(
+    ("status_code", "expected_message"),
+    [
+        (429, "quota or rate limit"),
+        (503, "temporarily unavailable"),
+    ],
+)
+def test_generate_topics_explains_quota_and_availability_errors(
+    monkeypatch,
+    status_code,
+    expected_message,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    private_message = f"{FAKE_API_KEY} private course content"
+    install_fake_client(
+        monkeypatch,
+        error=APIError(status_code, {"message": private_message}),
+    )
+
+    result = gemini_service.generate_topics(make_txt_document(), "course-1", "Course")
+
+    assert result["ok"] is False
+    assert result["error_code"] == "API_ERROR"
+    assert result["status_code"] == status_code
+    assert expected_message in result["message"]
+    assert private_message not in str(result)
+
+
+def test_connection_check_and_generation_set_sdk_timeouts_in_milliseconds(
+    monkeypatch,
+):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    clients = install_fake_client(monkeypatch, text="ExamPilot API OK")
+
+    assert gemini_service.check_gemini_connection()["ok"] is True
+    assert clients[0].http_options.timeout == 30_000
+
+    gemini_service.generate_topics(make_txt_document(), "course-1", "Course")
+
+    assert clients[1].http_options.timeout == 120_000
+
+
 def test_generate_topics_generic_error_does_not_expose_secrets(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
     private_message = f"{FAKE_API_KEY} private course content"
