@@ -97,6 +97,8 @@ def remove_course(
                 f"practice_count_{course_id}",
                 f"performance_mode_{course_id}",
                 f"graph_mode_{course_id}",
+                f"relationship_suggestions_{course_id}",
+                f"relationship_notice_{course_id}",
             ):
                 session_state.pop(key, None)
 
