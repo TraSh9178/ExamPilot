@@ -10,7 +10,7 @@ The floating Tutor is mounted by `app.py` after the authentication guard and bef
 
 - Drag the robot button with a mouse or touch. Clicking it opens the question panel. Dragging does not send a request.
 - Use the focused robot button's arrow keys to move it; Shift moves it farther. Enter or Space opens it. Escape closes the panel even when focus is on the underlying page.
-- Type a question and send it. Each question uses the current course's summaries and relationships through the existing `services.gemini_service.ask_tutor()` function.
+- Type a question and send it. Each question uses the current course's summaries and relationships through the `services.ai_service.ask_tutor()` function (Claude).
 - Recent question/answer records are separate for each authenticated account and course. They are kept in the Streamlit session only. Each question is an independent Tutor request; earlier chat messages are not sent as conversation context.
 - Clearing removes this course's local conversation. Closing the panel preserves its conversation.
 - Position and draft survive page reruns in browser memory. Logout or session expiry clears the browser draft and server-side chat. Questions and answers are not stored in browser localStorage or sessionStorage.
@@ -20,13 +20,13 @@ The floating Tutor is mounted by `app.py` after the authentication guard and bef
 
 Install the existing pinned `requirements.txt` dependencies; no new frontend build or dependency is required. This component uses Streamlit 1.55's components v2 API.
 
-The existing Gemini service reads `GEMINI_API_KEY` from the server process environment. `GEMINI_MODEL` is optional; its existing default is `gemini-3.8-flash`. Configure credentials locally before starting Streamlit. This branch does not add a `.env` loader. Do not send credentials to collaborators or enter them in the Tutor chat.
+The AI service reads `ANTHROPIC_API_KEY` from the server process environment. `ANTHROPIC_MODEL` is optional; the default is `claude-opus-5-5`. Configure credentials locally before starting Streamlit. The AI service itself does not load `.env`. Do not send credentials to collaborators or enter them in the Tutor chat.
 
 Example for zsh, entering the key privately in your own terminal:
 
 ```sh
-read -s 'GEMINI_API_KEY?Gemini API key: '
-export GEMINI_API_KEY
+read -s 'ANTHROPIC_API_KEY?Claude API key: '
+export ANTHROPIC_API_KEY
 streamlit run app.py --server.port 8505
 ```
 
@@ -44,7 +44,7 @@ Restart the server after changing its environment. Missing configuration, servic
 
 Dashboard topic generation now reruns after saving the new course, keeping its success notice for that rerun. This refreshes the sidebar and Tutor's selected course together.
 
-Only a submitted question calls Gemini. Opening, closing, dragging, resizing, page navigation and clearing history do not call it. Client events never supply a course package, account identity or credentials. The callback obtains the account from `current_user()` and the selected course from the server session. Both submit and clear events must match the server's assistant session UUID, so an old account's queued event cannot alter the next account's chat. Text is rendered without interpreting HTML.
+Only a submitted question calls the AI service. Opening, closing, dragging, resizing, page navigation and clearing history do not call it. Client events never supply a course package, account identity or credentials. The callback obtains the account from `current_user()` and the selected course from the server session. Both submit and clear events must match the server's assistant session UUID, so an old account's queued event cannot alter the next account's chat. Text is rendered without interpreting HTML.
 
 The Auth core, PostgreSQL layer, SQL and existing `ask_tutor()` interface are unchanged. This branch adds no course-list API, Save/Restore UI wiring or AI conversation persistence. Replacing a course object with the same course ID for the same signed-in account preserves that session's existing chat; it does not restore AI history from a database or another device.
 

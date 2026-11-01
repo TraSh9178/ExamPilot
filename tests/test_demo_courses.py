@@ -21,7 +21,7 @@ def load_demo(filename: str) -> StudyPackage:
 def test_both_demo_packages_validate_and_have_distinct_ids(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     economics = load_demo("sample_course.json")
     calculus = load_demo("calculus_i_demo.json")
 
@@ -319,7 +319,7 @@ def test_one_course_attempt_does_not_change_other_course_mastery() -> None:
 def test_homepage_loads_both_demos_reuses_ids_and_opens_each(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     app_path = ROOT / "app.py"
     app = signed_in_app(app_path).run()
     assert not app.exception
@@ -373,7 +373,7 @@ def test_homepage_loads_both_demos_reuses_ids_and_opens_each(
 def test_python_basics_demo_is_seeded_once_and_preserves_progress(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     app = signed_in_app(ROOT / "app.py").run()
     assert not app.exception
     assert [
@@ -401,7 +401,7 @@ def test_python_basics_demo_is_seeded_once_and_preserves_progress(
 def test_existing_demo_session_migrates_python_without_restoring_deleted_demos(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     app = signed_in_app(ROOT / "app.py").run()
     assert not app.exception
 

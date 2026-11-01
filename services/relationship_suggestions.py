@@ -1,4 +1,4 @@
-"""Hold Gemini's suggested topic connections until the user applies them.
+"""Hold Claude's suggested topic connections until the user applies them.
 
 Suggestions live only in the browser session. Applying them validates the
 result as a full StudyPackage, so stale suggestions that name topics no longer

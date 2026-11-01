@@ -30,12 +30,12 @@ def test_mathematical_operators_and_exponents_remain_distinct():
 
 
 def test_generated_duplicate_batch_is_rejected_without_mutating_course(monkeypatch):
-    from tests.test_gemini_service import make_questions, make_txt_document, make_study_package, install_fake_client, FAKE_API_KEY
-    from services.gemini_service import generate_questions
-    monkeypatch.setenv("GEMINI_API_KEY", FAKE_API_KEY)
+    from tests.test_ai_service import make_questions, make_txt_document, make_study_package, install_fake_client, FAKE_API_KEY
+    from services.ai_service import generate_questions
+    monkeypatch.setenv("ANTHROPIC_API_KEY", FAKE_API_KEY)
     candidates = make_questions()
     candidates[1]["question"] = candidates[0]["question"]
-    install_fake_client(monkeypatch, text=json.dumps(candidates))
+    install_fake_client(monkeypatch, parsed={"questions": candidates})
     course = make_study_package()
     before = course.model_dump()
     result = generate_questions(make_txt_document(), course, ["topic-1"])

@@ -9,10 +9,10 @@ Built for HackRU Fall 2026.
 ## Features
 
 - **Course materials:** Extract text from UTF-8 TXT, text-based PDF and PPTX, and PNG/JPG/JPEG images.
-- **AI-assisted preparation:** Generate candidate topics and multiple-choice questions with Gemini, then confirm the topics to practise.
+- **AI-assisted preparation:** Generate candidate topics and multiple-choice questions with Claude, then confirm the topics to practise.
 - **Practice:** Take Mock Exams or Topic Practice sessions with scoring, answer review, and explanations.
 - **Progress:** Track results and topic mastery separately for each course and practice mode.
-- **Knowledge Map:** Explore topic relationships, inspect topic details, view mastery colours, and ask Gemini to suggest connections from your saved material (applied only after you review them).
+- **Knowledge Map:** Explore topic relationships, inspect topic details, view mastery colours, and ask Claude to suggest connections from your saved material (applied only after you review them).
 - **Anki export:** Preview cards and download all questions or questions from weak/developing topics as UTF-8 TSV.
 - **Accounts and persistence:** Register, log in, and save or restore courses and graded practice records through PostgreSQL.
 - **Pilot assistant:** Ask course-related questions through a draggable floating assistant.
@@ -21,7 +21,7 @@ AI-generated topics, questions, answers, explanations, and relationships require
 
 ## Demo Courses
 
-Three built-in courses provide practice content without requiring Gemini generation:
+Three built-in courses provide practice content without requiring AI generation:
 
 | Course | Topics | Questions | Relationships |
 |---|---:|---:|---:|
@@ -29,7 +29,7 @@ Three built-in courses provide practice content without requiring Gemini generat
 | Calculus I | 3 | 3 | 2 |
 | Python Basics | 3 | 9 | 0 |
 
-Demo content does not require a Gemini API key. The normal application still requires a working account database to register or log in.
+Demo content does not require a Claude API key. The normal application still requires a working account database to register or log in.
 
 ## Quick Start
 
@@ -138,7 +138,7 @@ The application runs unchanged on [Streamlit Community Cloud](https://streamlit.
 1. Create a PostgreSQL database (for example a free Neon or Supabase project). Prepare it once from your own machine with the migration command and the Auth initialiser from step 4, using a local `.env` that points at that database.
 2. In Streamlit Community Cloud, deploy this repository with `app.py` as the entry point and Python 3.12.
 3. Add the secrets `DATABASE_URL` and `DATABASE_SSLMODE = "require"`. Streamlit exposes secrets as environment variables, which is how this application reads them.
-4. Leave `GEMINI_API_KEY` unset on a public demo. The Generate buttons are then disabled with an explanatory message and Pilot replies that it is not configured, while the built-in demo courses keep working and nobody can run up your Gemini bill. Set the key only for a private deployment.
+4. Leave `ANTHROPIC_API_KEY` unset on a public demo. The Generate buttons are then disabled with an explanatory message and Pilot replies that it is not configured, while the built-in demo courses keep working and nobody can run up your Claude bill. Set the key only for a private deployment.
 
 `packages.txt` installs Tesseract with English language data on the Cloud image, so image uploads can be extracted there.
 
@@ -150,13 +150,13 @@ Anyone can register on a public deployment, so point it at a database that holds
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string for accounts and learning records |
 | `DATABASE_SSLMODE` | TLS mode: `require`, `verify-ca`, or `verify-full` |
-| `GEMINI_API_KEY` | Required for AI generation and Pilot answers |
-| `GEMINI_MODEL` | Optional model override; current code default is `gemini-3.8-flash` |
+| `ANTHROPIC_API_KEY` | Claude API key; required for AI generation and Pilot answers |
+| `ANTHROPIC_MODEL` | Optional model override; the code default is `claude-opus-5-5` |
 | `OCR_LANG` | Tesseract language selection; defaults to `eng` |
 
-Gemini reads configuration from the server process environment. Set its variables before starting Streamlit; do not assume that adding a key to `.env` alone configures every service.
+The AI service reads configuration from the server process environment. Set its variables before starting Streamlit; do not assume that adding a key to `.env` alone configures every service.
 
-Choose a Gemini model available to your account. The code default is not a guarantee of model availability or quota.
+AI calls use the official `anthropic` SDK with structured JSON output for topics, questions and connections, a 180-second timeout for generation, 60 seconds for Pilot answers, and no automatic retries. Choose a Claude model available to your account: the default Claude Opus 5.5 gives the best question quality; `claude-sonnet-5-5` or `claude-haiku-5-5` cost less.
 
 ### Image OCR
 
@@ -172,7 +172,7 @@ tesseract --list-langs
 
 Confirm that `eng` is available for English OCR. Other platforms require their own Tesseract installation and PATH configuration.
 
-See [document processing and Gemini usage](docs/gemini_usage.md) for supported formats, source structures, and error handling.
+See [document processing and Claude usage](docs/claude_usage.md) for supported formats, source structures, and error handling.
 
 ## Typical Workflow
 
@@ -224,7 +224,7 @@ Unresolved local conflicts require attention before logout. Do not treat session
 - Passwords are stored as salted scrypt hashes.
 - Repeated failed logins temporarily lock the account.
 - Account and learning-data queries are performed server-side.
-- Database credentials and Gemini keys must remain outside the repository.
+- Database credentials and API keys must remain outside the repository.
 
 ## Practice and Mastery
 
@@ -252,7 +252,7 @@ These labels summarise recorded practice performance; they are not a formal asse
 - Pilot requests are independent; previous chat messages are not sent as multi-turn conversation context.
 - Anki export supports text import through TSV, not AnkiWeb synchronisation. Anki Desktop import has not been verified.
 - The knowledge map loads its browser rendering library from an external CDN.
-- A built-in Demo avoids Gemini generation, but the complete authenticated application is not a fully offline application.
+- A built-in Demo avoids AI generation, but the complete authenticated application is not a fully offline application.
 - Password reset and email verification are not implemented.
 
 ## Project Structure
@@ -300,21 +300,21 @@ python -m pytest -q
 
 Tests cover document extraction, AI service behaviour, authentication, persistence, exams, mastery, course state, UI flows, knowledge graphs, and Anki export.
 
-Many automated tests use mock services or database connections. Passing them does not by itself prove real database, Gemini, OCR, or browser behaviour.
+Many automated tests use mock services or database connections. Passing them does not by itself prove real database, Claude, OCR, or browser behaviour.
 
 Record the exact commit and environment when reporting real integration results.
 
 ## Contributors
 
 - [Yingxuan Huang (@Zerune0)](https://github.com/Zerune0) — Streamlit frontend, multi-course workflows, practice and progress UI, Anki/OCR interface integration, and account Save/Restore UI.
-- [Charles Chen (@k086-cloud)](https://github.com/k086-cloud) — Gemini integration, document parsing and OCR, account authentication, floating AI tutor, and UI refinements.
+- [Charles Chen (@k086-cloud)](https://github.com/k086-cloud) — AI integration (Gemini, later Claude), document parsing and OCR, account authentication, floating AI tutor, and UI refinements.
 - [Zhengchang Quan (@mormal1016)](https://github.com/mormal1016) — Exam and mastery engines, PostgreSQL persistence, saved-course discovery, and database validation.
 - [Jiale Li (@TraSh9178)](https://github.com/TraSh9178) — Shared data schema, knowledge graph, Anki export service, integration review, and release coordination.
 
 ## Documentation
 
 - [Account and database setup](docs/account_setup.md)
-- [Document processing and Gemini usage](docs/gemini_usage.md)
+- [Document processing and Claude usage](docs/claude_usage.md)
 - [Interface contract](docs/interface_contract.md)
 - [Testing on another computer](docs/other_computer_testing.md)
 - [Floating Pilot assistant](docs/floating_tutor.md)

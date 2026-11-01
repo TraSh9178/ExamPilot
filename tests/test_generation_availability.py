@@ -9,7 +9,7 @@ from models.schemas import StudyPackage
 ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD_PATH = ROOT / "pages" / "0_Dashboard.py"
 STUDY_PLAN_PATH = ROOT / "pages" / "1_Study_Hub.py"
-UNAVAILABLE_TEXT = "GEMINI_API_KEY is not configured"
+UNAVAILABLE_TEXT = "ANTHROPIC_API_KEY is not configured"
 
 
 def dashboard_with_extracted_text(monkeypatch) -> AppTest:
@@ -45,7 +45,7 @@ def study_plan_with_scope() -> AppTest:
 
 
 def test_dashboard_disables_topic_generation_without_api_key(monkeypatch):
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
     app = dashboard_with_extracted_text(monkeypatch)
 
@@ -54,7 +54,7 @@ def test_dashboard_disables_topic_generation_without_api_key(monkeypatch):
 
 
 def test_dashboard_enables_topic_generation_with_api_key(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
 
     app = dashboard_with_extracted_text(monkeypatch)
 
@@ -63,7 +63,7 @@ def test_dashboard_enables_topic_generation_with_api_key(monkeypatch):
 
 
 def test_study_plan_disables_question_generation_without_api_key(monkeypatch):
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
     app = study_plan_with_scope()
 
@@ -73,7 +73,7 @@ def test_study_plan_disables_question_generation_without_api_key(monkeypatch):
 
 
 def test_study_plan_enables_question_generation_with_api_key(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
 
     app = study_plan_with_scope()
 

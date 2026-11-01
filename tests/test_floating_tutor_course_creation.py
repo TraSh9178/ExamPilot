@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import streamlit as st
 
-from services import gemini_service
+from services import ai_service
 from tests.auth_helpers import signed_in_app
 
 
@@ -13,7 +13,7 @@ def test_generated_course_is_immediately_available_to_global_tutor(monkeypatch):
         name="notes.txt", getvalue=lambda: b"A course about opportunity cost."
     )
     monkeypatch.setattr(st, "file_uploader", lambda *_args, **_kwargs: uploaded)
-    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     generated_ids = []
 
     def generate_topics(document, course_id, course_name):
@@ -35,7 +35,7 @@ def test_generated_course_is_immediately_available_to_global_tutor(monkeypatch):
             },
         }
 
-    monkeypatch.setattr(gemini_service, "generate_topics", generate_topics)
+    monkeypatch.setattr(ai_service, "generate_topics", generate_topics)
     app = signed_in_app(Path(__file__).resolve().parents[1] / "app.py").run()
     assert not app.exception
     assert json.loads(app.get("bidi_component")[0].proto.json)["course_id"] is None

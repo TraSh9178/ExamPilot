@@ -7,7 +7,7 @@ from components.knowledge_graph import (
     render_topic_details,
 )
 from services.account_sync import save_course_to_account
-from services.gemini_service import generate_relationships
+from services.ai_service import generate_relationships
 from services.graph_exploration import local_graph, related_topics
 from services.graph_service import build_mastery_graph
 from services.mastery_engine import calculate_topic_stats
@@ -176,7 +176,7 @@ with graph_column:
         with st.container(border=True, key="graph_suggestions_panel"):
             st.markdown("**Suggest connections from your material**")
             st.caption(
-                "Gemini reads the saved course material and proposes "
+                "Claude reads the saved course material and proposes "
                 "related-topic connections. Nothing changes until you apply "
                 "them, and applying replaces the current connections. "
                 "AI suggestions may be wrong."
@@ -197,7 +197,7 @@ with graph_column:
                     key=f"suggest_relationships_{course.course_id}",
                     icon=":material/auto_awesome:",
                 ):
-                    with st.spinner("Asking Gemini for connections..."):
+                    with st.spinner("Asking Claude for connections..."):
                         generated = generate_relationships(material, course)
                     if not generated["ok"]:
                         st.error(generated["message"])
@@ -216,7 +216,7 @@ with graph_column:
                     )
                 else:
                     st.info(
-                        "Gemini found no evidence-supported connections "
+                        "Claude found no evidence-supported connections "
                         "in the material."
                     )
                 apply_column, discard_column = st.columns(2)
