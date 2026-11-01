@@ -6,6 +6,16 @@ ExamPilot is a Streamlit learning platform that combines document extraction, AI
 
 Built for HackRU Fall 2026.
 
+## Screenshots
+
+| Dashboard | Study Plan |
+|---|---|
+| ![Dashboard with the three demo courses](docs/screenshots/dashboard.png) | ![Study Plan with the exam scope confirmed](docs/screenshots/study_plan.png) |
+
+| Practice result | Knowledge Map |
+|---|---|
+| ![Graded mock exam with explanations](docs/screenshots/practice_result.png) | ![Knowledge map with mastery colours](docs/screenshots/knowledge_map.png) |
+
 ## Features
 
 - **Course materials:** Extract text from UTF-8 TXT, text-based PDF and PPTX, and PNG/JPG/JPEG images.
