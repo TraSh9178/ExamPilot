@@ -6,6 +6,8 @@ ExamPilot is a Streamlit learning platform that combines document extraction, AI
 
 Built for HackRU Fall 2026.
 
+**Live demo:** https://exampilot-jl9eqsvbgoyedczbroxrzu.streamlit.app/ — register any account and try the built-in demo courses. AI generation is turned off on the public demo.
+
 ## Screenshots
 
 | Dashboard | Study Plan |
