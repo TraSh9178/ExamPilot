@@ -14,7 +14,7 @@ from services.course_state import (
     select_course,
 )
 from services.document_service import extract_document
-from services.gemini_service import generate_topics
+from services.gemini_service import generate_topics, generation_available
 from services.course_icons import course_icon_svg
 from services.ui_style import apply_app_styles
 
@@ -251,9 +251,10 @@ if st.session_state.show_course_setup:
                 "You can review the topics before choosing your exam scope."
             )
 
+            ai_available = generation_available()
             if st.button(
                 "Generate topics",
-                disabled=not course_name,
+                disabled=not course_name or not ai_available,
                 type="primary",
             ):
                 course_id = str(uuid4())
@@ -303,7 +304,13 @@ if st.session_state.show_course_setup:
                         st.rerun()
 
 
-            if not course_name:
+            if not ai_available:
+                st.info(
+                    "AI topic generation is not available on this server "
+                    "because GEMINI_API_KEY is not configured. The built-in "
+                    "demo courses still work."
+                )
+            elif not course_name:
                 st.info("Enter a course name to enable topic generation.")
         else:
             st.caption(

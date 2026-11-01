@@ -1144,3 +1144,8 @@ def ask_tutor(
         }
 
     return {"ok": True, "answer": answer.strip()}
+
+
+def generation_available() -> bool:
+    """True when GEMINI_API_KEY is set, so pages can disable AI actions up front."""
+    return bool(os.getenv("GEMINI_API_KEY", "").strip())

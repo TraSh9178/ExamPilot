@@ -7,7 +7,7 @@ from services.account_sync import (
 )
 from services.question_editor import available_questions, review_question, status_for
 from services.course_state import save_course
-from services.gemini_service import generate_questions
+from services.gemini_service import generate_questions, generation_available
 from services.ui_style import apply_app_styles
 
 apply_app_styles()
@@ -146,10 +146,17 @@ if confirmed_topic_ids:
                     "those results impossible to restore."
                 )
 
+            ai_available = generation_available()
+            if not ai_available:
+                st.info(
+                    "AI question generation is not available on this server "
+                    "because GEMINI_API_KEY is not configured."
+                )
+
             if st.button(
                 "Generate questions",
                 type="primary",
-                disabled=has_practice_history,
+                disabled=has_practice_history or not ai_available,
                 key=f"generate_questions_{course.course_id}",
             ):
                 if has_practice_history:

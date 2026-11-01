@@ -125,6 +125,19 @@ http://localhost:8501
 
 A localhost address is accessible only on the machine running the application. Sharing the application publicly requires a separate deployment.
 
+## Deploying a public demo
+
+The application runs unchanged on [Streamlit Community Cloud](https://streamlit.io/cloud):
+
+1. Create a PostgreSQL database (for example a free Neon or Supabase project). Prepare it once from your own machine with the migration command and the Auth initialiser from step 4, using a local `.env` that points at that database.
+2. In Streamlit Community Cloud, deploy this repository with `app.py` as the entry point and Python 3.12.
+3. Add the secrets `DATABASE_URL` and `DATABASE_SSLMODE = "require"`. Streamlit exposes secrets as environment variables, which is how this application reads them.
+4. Leave `GEMINI_API_KEY` unset on a public demo. The Generate buttons are then disabled with an explanatory message and Pilot replies that it is not configured, while the built-in demo courses keep working and nobody can run up your Gemini bill. Set the key only for a private deployment.
+
+`packages.txt` installs Tesseract with English language data on the Cloud image, so image uploads can be extracted there.
+
+Anyone can register on a public deployment, so point it at a database that holds no real data.
+
 ## Configuration
 
 | Variable | Purpose |
