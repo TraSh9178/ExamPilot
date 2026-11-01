@@ -46,7 +46,9 @@ def db(monkeypatch):
 
 @pytest.fixture
 def course():
-    return StudyPackage.model_validate_json((ROOT / "data/calculus_i_demo.json").read_text())
+    return StudyPackage.model_validate_json(
+        (ROOT / "data/calculus_i_demo.json").read_text(encoding="utf-8")
+    )
 
 
 def exam(course, sid="practice", selected=None):
