@@ -12,7 +12,7 @@ Built for HackRU Fall 2026.
 - **AI-assisted preparation:** Generate candidate topics and multiple-choice questions with Gemini, then confirm the topics to practise.
 - **Practice:** Take Mock Exams or Topic Practice sessions with scoring, answer review, and explanations.
 - **Progress:** Track results and topic mastery separately for each course and practice mode.
-- **Knowledge Map:** Explore topic relationships, inspect topic details, and view mastery colours.
+- **Knowledge Map:** Explore topic relationships, inspect topic details, view mastery colours, and ask Gemini to suggest connections from your saved material (applied only after you review them).
 - **Anki export:** Preview cards and download all questions or questions from weak/developing topics as UTF-8 TSV.
 - **Accounts and persistence:** Register, log in, and save or restore courses and graded practice records through PostgreSQL.
 - **Pilot assistant:** Ask course-related questions through a draggable floating assistant.

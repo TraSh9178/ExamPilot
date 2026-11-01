@@ -6,10 +6,18 @@ from components.knowledge_graph import (
     get_selected_topic_details,
     render_topic_details,
 )
+from services.account_sync import save_course_to_account
+from services.gemini_service import generate_relationships
 from services.graph_exploration import local_graph, related_topics
 from services.graph_service import build_mastery_graph
 from services.mastery_engine import calculate_topic_stats
 from services.course_state import save_course
+from services.relationship_suggestions import (
+    apply_suggested_relationships,
+    describe_suggestions,
+    notice_key,
+    suggestions_key,
+)
 from services.ui_style import apply_app_styles
 
 apply_app_styles()
@@ -159,6 +167,101 @@ with graph_column:
 
     if not course.relationships:
         st.info("This course has no topic relationships yet.")
+
+    # Suggestions need the saved course material; demo courses have none.
+    material = st.session_state.get(f"course_document_{course.course_id}")
+    if material is not None:
+        suggestions_state_key = suggestions_key(course.course_id)
+        notice_state_key = notice_key(course.course_id)
+        with st.container(border=True, key="graph_suggestions_panel"):
+            st.markdown("**Suggest connections from your material**")
+            st.caption(
+                "Gemini reads the saved course material and proposes "
+                "related-topic connections. Nothing changes until you apply "
+                "them, and applying replaces the current connections. "
+                "AI suggestions may be wrong."
+            )
+
+            notice = st.session_state.pop(notice_state_key, None)
+            if notice is not None:
+                level, text = notice
+                if level == "success":
+                    st.success(text)
+                else:
+                    st.warning(text)
+
+            suggestions = st.session_state.get(suggestions_state_key)
+            if suggestions is None:
+                if st.button(
+                    "Suggest connections",
+                    key=f"suggest_relationships_{course.course_id}",
+                    icon=":material/auto_awesome:",
+                ):
+                    with st.spinner("Asking Gemini for connections..."):
+                        generated = generate_relationships(material, course)
+                    if not generated["ok"]:
+                        st.error(generated["message"])
+                    else:
+                        st.session_state[suggestions_state_key] = list(
+                            generated["package"]["relationships"]
+                        )
+                        st.rerun()
+            else:
+                if suggestions:
+                    st.markdown(
+                        "\n".join(
+                            f"- {label}"
+                            for label in describe_suggestions(course, suggestions)
+                        )
+                    )
+                else:
+                    st.info(
+                        "Gemini found no evidence-supported connections "
+                        "in the material."
+                    )
+                apply_column, discard_column = st.columns(2)
+                if apply_column.button(
+                    "Apply suggestions",
+                    type="primary",
+                    key=f"apply_relationships_{course.course_id}",
+                    disabled=not suggestions,
+                ):
+                    try:
+                        updated_course = apply_suggested_relationships(
+                            course, suggestions
+                        )
+                    except ValueError:
+                        st.error(
+                            "These suggestions no longer match the course "
+                            "topics. Discard them and ask for new suggestions."
+                        )
+                    else:
+                        save_course(st.session_state, updated_course)
+                        sync_outcome = save_course_to_account(
+                            st.session_state, updated_course
+                        )
+                        st.session_state.pop(suggestions_state_key, None)
+                        count = len(suggestions)
+                        noun = "connection" if count == 1 else "connections"
+                        if sync_outcome is not None and not sync_outcome.success:
+                            st.session_state[notice_state_key] = (
+                                "warning",
+                                "Connections kept in this session but not saved "
+                                f"to your account: {sync_outcome.message} Use "
+                                "Save on the Study Plan page to retry.",
+                            )
+                        else:
+                            st.session_state[notice_state_key] = (
+                                "success",
+                                f"Applied {count} suggested {noun}.",
+                            )
+                        st.rerun()
+                if discard_column.button(
+                    "Discard",
+                    key=f"discard_relationships_{course.course_id}",
+                ):
+                    st.session_state.pop(suggestions_state_key, None)
+                    st.rerun()
 
 # Synchronize canvas clicks with the keyboard-accessible topic picker.
 last_click_key = f"graph_last_click_{course.course_id}_{mode}"
