@@ -16,6 +16,42 @@ MAX_TUTOR_CONTEXT_CHARS = 20_000
 IMAGE_DOCUMENT_EXTENSIONS = (".png", ".jpg", ".jpeg")
 PAGED_DOCUMENT_EXTENSIONS = (".pdf", ".pptx", *IMAGE_DOCUMENT_EXTENSIONS)
 
+DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
+# HttpOptions.timeout is in milliseconds. Generation prompts carry up to
+# 50,000 characters of course material, so they get more time than the short
+# connection check and tutor answers. Without a timeout a stalled request
+# blocks the Streamlit run indefinitely.
+CONNECTION_CHECK_TIMEOUT_MS = 30_000
+GENERATION_TIMEOUT_MS = 120_000
+TUTOR_TIMEOUT_MS = 30_000
+
+
+def _configured_model() -> str:
+    return os.getenv("GEMINI_MODEL", "").strip() or DEFAULT_GEMINI_MODEL
+
+
+def _client(api_key: str, timeout_ms: int) -> genai.Client:
+    return genai.Client(
+        api_key=api_key,
+        http_options=HttpOptions(timeout=timeout_ms),
+    )
+
+
+def _api_error_result(exc: APIError) -> dict:
+    """Describe an APIError to the user without exposing the raw exception."""
+    if exc.code == 429:
+        message = "Gemini quota or rate limit reached. Try again later."
+    elif exc.code == 503:
+        message = "Gemini is temporarily unavailable. Try again later."
+    else:
+        message = "The Gemini API request failed. Check the configuration or try again later."
+    return {
+        "ok": False,
+        "error_code": "API_ERROR",
+        "status_code": exc.code,
+        "message": message,
+    }
+
 
 def _document_type(filename: str) -> str:
     if filename.lower().endswith(IMAGE_DOCUMENT_EXTENSIONS):
@@ -34,10 +70,10 @@ def check_gemini_connection() -> dict:
             "message": "GEMINI_API_KEY is not configured.",
         }
 
-    model = os.getenv("GEMINI_MODEL", "").strip() or "gemini-3.8-flash"
+    model = _configured_model()
 
     try:
-        with genai.Client(api_key=api_key) as client:
+        with _client(api_key, CONNECTION_CHECK_TIMEOUT_MS) as client:
             response = client.models.generate_content(
                 model=model,
                 contents="Reply with only: ExamPilot API OK",
@@ -53,12 +89,7 @@ def check_gemini_connection() -> dict:
 
         return {"ok": True, "model": model, "text": text}
     except APIError as exc:
-        return {
-            "ok": False,
-            "error_code": "API_ERROR",
-            "status_code": exc.code,
-            "message": "The Gemini API request failed. Check the configuration or try again later.",
-        }
+        return _api_error_result(exc)
     except Exception:
         return {
             "ok": False,
@@ -198,7 +229,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
             "message": "GEMINI_API_KEY is not configured.",
         }
 
-    model = os.getenv("GEMINI_MODEL", "").strip() or "gemini-3.8-flash"
+    model = _configured_model()
     contents = (
         "Identify 3 to 5 major knowledge topics supported by the provided course "
         "material. If there is not enough evidence for at least 3 meaningful "
@@ -223,7 +254,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
     )
 
     try:
-        with genai.Client(api_key=api_key) as client:
+        with _client(api_key, GENERATION_TIMEOUT_MS) as client:
             response = client.models.generate_content(
                 model=model,
                 contents=contents,
@@ -231,12 +262,7 @@ def generate_topics(document: dict, course_id: str, course_name: str) -> dict:
             )
             response_text = response.text
     except APIError as exc:
-        return {
-            "ok": False,
-            "error_code": "API_ERROR",
-            "status_code": exc.code,
-            "message": "The Gemini API request failed. Check the configuration or try again later.",
-        }
+        return _api_error_result(exc)
     except Exception:
         return {
             "ok": False,
@@ -524,7 +550,7 @@ def generate_questions(
         }
         for topic_id in confirmed_topic_ids
     ]
-    model = os.getenv("GEMINI_MODEL", "").strip() or "gemini-3.8-flash"
+    model = _configured_model()
     contents = (
         "Create 8 to 12 candidate single-choice questions based only on the "
         "provided course material and the confirmed topics. If the supplied "
@@ -554,7 +580,7 @@ def generate_questions(
     )
 
     try:
-        with genai.Client(api_key=api_key) as client:
+        with _client(api_key, GENERATION_TIMEOUT_MS) as client:
             response = client.models.generate_content(
                 model=model,
                 contents=contents,
@@ -562,12 +588,7 @@ def generate_questions(
             )
             response_text = response.text
     except APIError as exc:
-        return {
-            "ok": False,
-            "error_code": "API_ERROR",
-            "status_code": exc.code,
-            "message": "The Gemini API request failed. Check the configuration or try again later.",
-        }
+        return _api_error_result(exc)
     except Exception:
         return {
             "ok": False,
@@ -849,7 +870,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
         }
         for topic in validated_package.topics
     ]
-    model = os.getenv("GEMINI_MODEL", "").strip() or "gemini-3.8-flash"
+    model = _configured_model()
     contents = (
         "Suggest only evidence-supported related connections among the listed "
         "topics, using type=related. Do not create prerequisite edges or make "
@@ -873,7 +894,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
     )
 
     try:
-        with genai.Client(api_key=api_key) as client:
+        with _client(api_key, GENERATION_TIMEOUT_MS) as client:
             response = client.models.generate_content(
                 model=model,
                 contents=contents,
@@ -881,12 +902,7 @@ def generate_relationships(document: dict, package: StudyPackage) -> dict:
             )
             response_text = response.text
     except APIError as exc:
-        return {
-            "ok": False,
-            "error_code": "API_ERROR",
-            "status_code": exc.code,
-            "message": "The Gemini API request failed. Check the configuration or try again later.",
-        }
+        return _api_error_result(exc)
     except Exception:
         return {
             "ok": False,
@@ -1086,7 +1102,7 @@ def ask_tutor(
             "message": "GEMINI_API_KEY is not configured.",
         }
 
-    model = os.getenv("GEMINI_MODEL", "").strip() or "gemini-3.8-flash"
+    model = _configured_model()
     config = GenerateContentConfig(
         system_instruction=(
             "You are ExamPilot Tutor. Explain concepts clearly and helpfully. "
@@ -1106,10 +1122,7 @@ def ask_tutor(
     )
 
     try:
-        with genai.Client(
-            api_key=api_key,
-            http_options=HttpOptions(timeout=30_000),
-        ) as client:
+        with _client(api_key, TUTOR_TIMEOUT_MS) as client:
             response = client.models.generate_content(
                 model=model,
                 contents=contents,
@@ -1117,18 +1130,7 @@ def ask_tutor(
             )
             answer = response.text
     except APIError as exc:
-        if exc.code == 429:
-            message = "Gemini quota or rate limit reached. Try again later."
-        elif exc.code == 503:
-            message = "Gemini is temporarily unavailable. Try again later."
-        else:
-            message = "The Gemini API request failed. Check the configuration or try again later."
-        return {
-            "ok": False,
-            "error_code": "API_ERROR",
-            "status_code": exc.code,
-            "message": message,
-        }
+        return _api_error_result(exc)
     except Exception:
         return {
             "ok": False,
