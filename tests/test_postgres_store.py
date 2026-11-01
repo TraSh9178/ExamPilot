@@ -7,6 +7,7 @@ import pytest
 
 from models.schemas import AttemptResult, ExamSession, Question, StudyPackage, Topic
 from services import postgres_store
+from services.database_migrations import MigrationError
 
 
 @pytest.fixture
@@ -912,42 +913,63 @@ def test_course_history_rejects_invalid_restored_models(
     assert result.success is False
     assert result.sessions == []
     assert result.attempts == []
-def test_initialize_schema_skips_empty_sql_fragments(
+
+
+class _SchemaConnection:
+    def __enter__(self) -> _SchemaConnection:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        return None
+
+
+def test_initialize_schema_applies_migrations_on_the_store_connection(
     monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-    class RecordingConnection:
-        def __init__(self) -> None:
-            self.execute_calls: list[bytes] = []
+) -> None:
+    connection = _SchemaConnection()
+    received: list[object] = []
 
-        def __enter__(self) -> RecordingConnection:
-            return self
+    def fake_apply_migrations(target: object) -> list[str]:
+        received.append(target)
+        return ["001_initial_learning_schema.sql", "002_history_integrity.sql"]
 
-        def __exit__(self, *_: object) -> None:
-            return None
-
-        def execute(self, query: bytes) -> None:
-            self.execute_calls.append(query)
-
-    connection = RecordingConnection()
-    schema_bytes = b";  \n; CREATE TABLE test_schema (id INTEGER); ;"
-
-    monkeypatch.setattr(
-        postgres_store.Path,
-        "read_bytes",
-        lambda _path: schema_bytes,
-    )
-    monkeypatch.setattr(
-        postgres_store,
-        "_connect",
-        lambda: connection,
-    )
+    monkeypatch.setattr(postgres_store, "_connect", lambda: connection)
+    monkeypatch.setattr(postgres_store, "apply_migrations", fake_apply_migrations)
 
     result = postgres_store.initialize_schema()
 
     assert result.success is True
-    assert connection.execute_calls == [
-        b" CREATE TABLE test_schema (id INTEGER)"
-    ]
+    assert received == [connection]
+    assert "002_history_integrity.sql" in result.message
+
+
+def test_initialize_schema_reports_current_schema_without_reapplying(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(postgres_store, "_connect", lambda: _SchemaConnection())
+    monkeypatch.setattr(postgres_store, "apply_migrations", lambda _connection: [])
+
+    result = postgres_store.initialize_schema()
+
+    assert result.success is True
+    assert "already current" in result.message
+
+
+def test_initialize_schema_reports_migration_errors_without_connection_details(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def failing_apply_migrations(_connection: object) -> list[str]:
+        raise MigrationError(
+            "Applied migration files were changed or removed; restore their original contents."
+        )
+
+    monkeypatch.setattr(postgres_store, "_connect", lambda: _SchemaConnection())
+    monkeypatch.setattr(postgres_store, "apply_migrations", failing_apply_migrations)
+
+    result = postgres_store.initialize_schema()
+
+    assert result.success is False
+    assert "restore their original contents" in result.message
 
 def test_atomic_course_history_failure_rolls_back_new_course(monkeypatch, package):
     connection = FakeConnection()

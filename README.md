@@ -79,13 +79,19 @@ Never commit database credentials or API keys. Local `.env` files and backups ar
 
 For a new database, an authorised maintainer must prepare the learning-data tables before initialising Auth.
 
-Learning-data schema:
+The learning-data schema lives in numbered migration files:
 
 ```text
-db/schema.sql
+db/migrations/
 ```
 
-Its service entry point is:
+Apply them in order. Each file is recorded in `exampilot_schema_migrations` with a checksum, so the command is safe to run again later to pick up new migrations:
+
+```bash
+python -m services.database_migrations
+```
+
+The same migrations can be applied from Python:
 
 ```python
 from services.postgres_store import initialize_schema

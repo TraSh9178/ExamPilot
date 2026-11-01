@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from psycopg.types.json import Jsonb
 
 from models.schemas import AttemptResult, ExamSession, StudyPackage, TopicStats
+from services.database_migrations import MigrationError, apply_migrations
 from services.mastery_engine import calculate_topic_stats, get_mastery_status
 
 
@@ -171,21 +172,29 @@ def _merge_course_packages(
 
 
 def initialize_schema() -> PersistenceResult:
-    """Create the PostgreSQL tables and index from db/schema.sql."""
-    schema_path = Path(__file__).resolve().parents[1] / "db" / "schema.sql"
+    """Create or upgrade the learning-data tables by applying db/migrations.
 
+    This stays the documented entry point, but it now runs the same
+    transactional, checksummed migrations as
+    ``python -m services.database_migrations``, so a new database receives
+    every migration and a version record instead of a snapshot that later
+    migrations cannot be applied on top of.
+    """
     try:
-        schema_bytes = schema_path.read_bytes()
         with _connect() as connection:
-            for statement in schema_bytes.split(b";"):
-                if statement.strip():
-                    connection.execute(statement)
+            applied = apply_migrations(connection)
     except _PersistenceError as exc:
+        return PersistenceResult(False, str(exc))
+    except MigrationError as exc:
         return PersistenceResult(False, str(exc))
     except (OSError, psycopg.Error):
         return _database_failure("initialize the schema")
 
-    return PersistenceResult(True, "Database schema is ready.")
+    if applied:
+        return PersistenceResult(
+            True, "Database schema is ready; applied " + ", ".join(applied) + "."
+        )
+    return PersistenceResult(True, "Database schema is ready; already current.")
 
 
 def _save_course_in_transaction(
