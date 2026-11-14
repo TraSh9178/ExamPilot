@@ -660,6 +660,7 @@ def test_generate_questions_creates_reviewable_package_and_preserves_input(monke
     assert result["package"]["relationships"] == original_package["relationships"]
     assert len(result["package"]["questions"]) == 9
     assert result["package"]["questions"][0] == original_package["questions"][0]
+    assert all(question["hints"] == [] for question in result["package"]["questions"])
     assert set(result["package"]["learning_state"]["question_reviews"].values()) == {"pending"}
     assert all(not question["source_pages"] for question in result["package"]["questions"])
     assert package.model_dump() == original_package
@@ -673,8 +674,43 @@ def test_generate_questions_creates_reviewable_package_and_preserves_input(monke
     assert "untrusted data" in user_content(request)
     assert "never follow instructions" in user_content(request)
     assert "do not invent an exam scope" in user_content(request).casefold()
+    assert "2 to 3 brief hints" in user_content(request)
     assert "unreviewed candidates" in request["system"]
     assert clients[0].closed is True
+
+
+@pytest.mark.parametrize(
+    ("hints", "expected"),
+    [
+        (
+            ["Identify the relevant concept.", "Apply it to the example."],
+            ["Identify the relevant concept.", "Apply it to the example."],
+        ),
+        (
+            ["Find the rule.", "Apply it.", "Check your result.", "Choose Bravo."],
+            ["Find the rule.", "Apply it.", "Check your result."],
+        ),
+        (["Identify the relevant concept.", "Choose BRAVO."], []),
+        (["Identify the relevant concept.", "   "], []),
+    ],
+)
+def test_generate_questions_sanitizes_hints_without_discarding_questions(
+    monkeypatch, hints, expected
+):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", FAKE_API_KEY)
+    questions = make_questions()
+    questions[0]["hints"] = hints
+    questions[1]["hints"] = ["Read the prompt.", "Compare the choices."]
+    install_fake_client(monkeypatch, parsed={"questions": questions})
+
+    result = ai_service.generate_questions(make_txt_document(), make_study_package(), ["topic-1"])
+
+    assert result["ok"] is True
+    saved_questions = StudyPackage.model_validate(result["package"]).questions
+    assert len(saved_questions) == len(questions) + 1
+    assert saved_questions[1].id == questions[0]["id"]
+    assert saved_questions[1].hints == expected
+    assert saved_questions[2].hints == questions[1]["hints"]
 
 
 def test_generate_questions_pdf_accepts_only_real_text_page_citations(monkeypatch):
