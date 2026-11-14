@@ -9,6 +9,7 @@ from streamlit.testing.v1 import AppTest
 
 from models.schemas import Question, StudyPackage, ExamSession
 from services.exam_engine import grade_exam
+from services.question_editor import available_questions
 from services.accessibility import (
     BILINGUAL_KEY,
     SIMPLIFY_KEY,
@@ -100,8 +101,10 @@ def test_demo_variants_cover_original_questions_without_changing_numbers(
         (ROOT / "data" / "accessibility" / f"simplified_{course_id}.json")
         .read_text(encoding="utf-8")
     )["questions"]
-    assert set(variants) == {question.id for question in package.questions}
-    for question in package.questions:
+    # Reviewed original questions have simplified variants; new drafts use
+    # the documented original-wording fallback until variants are authored.
+    assert set(variants) == {question.id for question in available_questions(package)}
+    for question in available_questions(package):
         variant = variants[question.id]
         assert set(variant) == {"question", "options", "explanation"}
         assert len(variant["options"]) == len(question.options) == 4
@@ -132,14 +135,17 @@ def test_simplified_display_keeps_answer_index_and_grade() -> None:
     for question in questions:
         display = display_question(package.course_id, question, {SIMPLIFY_KEY: True})
         combined = " ".join([display.question, *display.options, display.explanation])
-        for formula in required_formulas[question.id]:
+        for formula in required_formulas.get(question.id, []):
             assert formula in combined
     session = ExamSession(session_id="accessibility-test", mode="mock", question_ids=[q.id for q in questions])
     answers = {q.id: q.correct_index for q in questions}
     assert grade_exam(session, questions, answers)["correct_count"] == len(questions)
 
 
-def test_practice_page_shows_simplified_wording_and_original() -> None:
+def test_practice_page_shows_simplified_wording_and_original(monkeypatch) -> None:
+    import streamlit as st
+    # Standalone pages do not register navigation for the review-drafts link.
+    monkeypatch.setattr(st, "page_link", lambda *args, **kwargs: None)
     package = StudyPackage.model_validate(json.loads(
         (ROOT / "data" / "sample_course.json").read_text(encoding="utf-8")
     ))

@@ -46,7 +46,8 @@
       ],
       "correct_index": 1,
       "explanation": "A rightward demand shift increases both equilibrium price and equilibrium quantity, assuming an upward-sloping supply curve.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q002",
@@ -60,7 +61,8 @@
       ],
       "correct_index": 2,
       "explanation": "Demand is elastic when the absolute value of price elasticity of demand exceeds 1.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q003",
@@ -74,7 +76,8 @@
       ],
       "correct_index": 0,
       "explanation": "A binding price ceiling is below equilibrium, causing quantity demanded to exceed quantity supplied.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q004",
@@ -88,7 +91,8 @@
       ],
       "correct_index": 3,
       "explanation": "A change in the good’s own price causes movement along its demand curve rather than a shift of the curve.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q005",
@@ -102,7 +106,8 @@
       ],
       "correct_index": 0,
       "explanation": "A normal good is one whose demand increases as income rises.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q006",
@@ -116,7 +121,8 @@
       ],
       "correct_index": 1,
       "explanation": "Lower production costs let producers supply more at each price, shifting supply right.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q007",
@@ -130,7 +136,8 @@
       ],
       "correct_index": 2,
       "explanation": "A rightward supply shift lowers the intersection price and raises the intersection quantity.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q008",
@@ -144,7 +151,8 @@
       ],
       "correct_index": 3,
       "explanation": "At equilibrium, planned purchases and sales match, so there is no shortage or surplus at that price.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q009",
@@ -158,7 +166,8 @@
       ],
       "correct_index": 0,
       "explanation": "A shortage is excess demand: buyers want more than sellers offer at the current price.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q010",
@@ -172,7 +181,8 @@
       ],
       "correct_index": 1,
       "explanation": "Some buyers switch from coffee to tea, increasing tea demand.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q011",
@@ -186,7 +196,8 @@
       ],
       "correct_index": 2,
       "explanation": "A higher cost of using cars reduces demand for cars when the goods are complements.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q012",
@@ -200,7 +211,8 @@
       ],
       "correct_index": 3,
       "explanation": "Set 20 − 2P = 2P, giving 4P = 20 and P = 5; equilibrium quantity is 10.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "computation"
     },
     {
       "id": "q013",
@@ -214,7 +226,8 @@
       ],
       "correct_index": 0,
       "explanation": "The midpoint quantity change is −20/90 and the midpoint price change is 2/11. The absolute ratio is 11/9 ≈ 1.22.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "computation"
     },
     {
       "id": "q014",
@@ -228,7 +241,8 @@
       ],
       "correct_index": 1,
       "explanation": "An absolute elasticity below 1 means quantity demanded changes by a smaller percentage than price.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q015",
@@ -242,7 +256,8 @@
       ],
       "correct_index": 2,
       "explanation": "With elastic demand, the percentage quantity decline exceeds the percentage price increase, so price times quantity falls.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q016",
@@ -256,7 +271,8 @@
       ],
       "correct_index": 3,
       "explanation": "The percentage quantity decline is smaller than the percentage price increase, so total revenue rises.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q017",
@@ -270,7 +286,8 @@
       ],
       "correct_index": 0,
       "explanation": "With perfectly inelastic demand, quantity demanded does not respond to price changes.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q018",
@@ -284,7 +301,8 @@
       ],
       "correct_index": 1,
       "explanation": "Close substitutes make it easier for buyers to switch when a price changes, increasing price responsiveness.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q019",
@@ -298,7 +316,8 @@
       ],
       "correct_index": 2,
       "explanation": "When the price of one substitute rises, demand for the other rises, producing positive cross-price elasticity.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q020",
@@ -312,7 +331,8 @@
       ],
       "correct_index": 3,
       "explanation": "For an inferior good, demand falls as income rises, so income elasticity is negative.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q021",
@@ -326,7 +346,8 @@
       ],
       "correct_index": 0,
       "explanation": "Unit elasticity means equal-magnitude percentage changes in price and quantity demanded.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q022",
@@ -340,7 +361,8 @@
       ],
       "correct_index": 1,
       "explanation": "A ceiling constrains the market only when it prevents the price from reaching the higher equilibrium level.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q023",
@@ -354,7 +376,8 @@
       ],
       "correct_index": 2,
       "explanation": "A binding floor is above equilibrium, making quantity supplied greater than quantity demanded.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q024",
@@ -368,7 +391,8 @@
       ],
       "correct_index": 3,
       "explanation": "A maximum price above the equilibrium does not restrict the equilibrium trade.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q025",
@@ -382,7 +406,8 @@
       ],
       "correct_index": 0,
       "explanation": "A minimum price below the equilibrium does not prevent trade at the equilibrium price.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q026",
@@ -396,7 +421,8 @@
       ],
       "correct_index": 1,
       "explanation": "The shortage is quantity demanded minus quantity supplied: 120 − 70 = 50.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "computation"
     },
     {
       "id": "q027",
@@ -410,7 +436,8 @@
       ],
       "correct_index": 2,
       "explanation": "The surplus is quantity supplied minus quantity demanded: 100 − 60 = 40.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "computation"
     },
     {
       "id": "q028",
@@ -424,7 +451,8 @@
       ],
       "correct_index": 3,
       "explanation": "Only 70 units are supplied, so trade cannot exceed 70 even though buyers want 120.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "computation"
     },
     {
       "id": "q029",
@@ -438,7 +466,8 @@
       ],
       "correct_index": 0,
       "explanation": "A binding wage floor creates excess labor supply in this model; this is a model prediction, not a claim about every real labor market.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     },
     {
       "id": "q030",
@@ -452,7 +481,8 @@
       ],
       "correct_index": 1,
       "explanation": "When a control reduces trade below the efficient equilibrium quantity, some trades with benefits exceeding costs are lost.",
-      "source_pages": []
+      "source_pages": [],
+      "cognitive_dimension": "conceptual"
     }
   ],
   "learning_state": {

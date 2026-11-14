@@ -22,7 +22,7 @@ def review_question(course: StudyPackage, question_id: str, status: str, changes
         raise ValueError("Review the current question version instead.")
     data = old.model_dump()
     if changes:
-        permitted = {"question", "options", "correct_index", "explanation"}
+        permitted = {"question", "options", "correct_index", "explanation", "cognitive_dimension"}
         if not set(changes).issubset(permitted):
             raise ValueError("Cannot change question identity, topic or citations.")
         data.update(changes)
