@@ -10,6 +10,9 @@ from streamlit.testing.v1 import AppTest
 import components.knowledge_graph as knowledge_graph
 from components.knowledge_graph import MIN_NODE_SIZE, convert_graph_data
 from models.schemas import StudyPackage, TopicStats
+from services import learning_radar
+from services.postgres_store import PersistenceResult
+from tests.auth_helpers import TEST_USER, signed_in_app
 
 
 def test_convert_graph_data_preserves_node_ids_labels_and_mastery_colors():
@@ -693,3 +696,532 @@ def test_render_topic_details_prompts_when_no_topic_is_selected(monkeypatch):
     metric.assert_not_called()
     badge.assert_not_called()
     container.assert_not_called()
+
+
+# --- Learning Radar -------------------------------------------------------
+
+PAGE_PATH = Path(__file__).resolve().parents[1] / "pages" / "4_Knowledge_Graph.py"
+CALCULUS_DEMO_PATH = (
+    Path(__file__).resolve().parents[1] / "data" / "calculus_i_demo.json"
+)
+CALCULUS_ID = "calculus-i-demo"
+CACHE_KEY = f"learning_radar_cache_{CALCULUS_ID}"
+RADAR_FUNCTIONS = (
+    "radar_enabled",
+    "get_course_radar",
+    "get_user_flags",
+    "top_hard_topics",
+    "set_flag",
+    "clear_flag",
+)
+
+
+def _badge_graph():
+    return {
+        "nodes": [
+            {"id": "t1", "label": "Topic 1", "status": "weak", "color": "#EF4444"},
+            {"id": "t2", "label": "Topic 2", "status": "mastered", "color": "#22C55E"},
+        ],
+        "edges": [{"source": "t1", "target": "t2", "type": "prerequisite"}],
+    }
+
+
+def _as_dicts(converted):
+    nodes, edges = converted
+    return [node.to_dict() for node in nodes], [edge.to_dict() for edge in edges]
+
+
+def test_convert_graph_data_appends_badge_to_matching_node_label_only():
+    plain_nodes, plain_edges = _as_dicts(convert_graph_data(_badge_graph()))
+
+    badged_nodes, badged_edges = _as_dicts(
+        convert_graph_data(
+            _badge_graph(),
+            node_badges={"t2": "🔥 4 stuck", "not-a-node": "🔥 9 stuck"},
+        )
+    )
+
+    assert badged_nodes[1]["label"] == "Topic 2\n🔥 4 stuck"
+    assert badged_nodes[0] == plain_nodes[0]
+    assert {key: value for key, value in badged_nodes[1].items() if key != "label"} == {
+        key: value for key, value in plain_nodes[1].items() if key != "label"
+    }
+    assert len(badged_nodes) == len(plain_nodes) == 2
+    assert badged_edges == plain_edges
+
+
+@pytest.mark.parametrize("badges", [None, {}])
+def test_convert_graph_data_without_badges_is_unchanged(badges):
+    assert _as_dicts(
+        convert_graph_data(_badge_graph(), node_badges=badges)
+    ) == _as_dicts(convert_graph_data(_badge_graph()))
+    assert [
+        node.label
+        for node in convert_graph_data(_badge_graph(), node_badges=badges)[0]
+    ] == ["Topic 1", "Topic 2"]
+
+
+def _install_graph_fakes(monkeypatch, convert):
+    graph = {"nodes": [], "edges": []}
+    monkeypatch.setattr(
+        knowledge_graph, "build_mastery_graph", lambda *args: graph
+    )
+    monkeypatch.setattr(knowledge_graph, "convert_graph_data", convert)
+    monkeypatch.setattr(
+        knowledge_graph,
+        "agraph",
+        lambda nodes, edges, config, node_scale: None,
+    )
+    return graph
+
+
+def test_render_knowledge_graph_passes_badges_to_converter(monkeypatch):
+    conversions = []
+
+    def convert(graph_arg, node_badges=None):
+        conversions.append((graph_arg, node_badges))
+        return [], []
+
+    graph = _install_graph_fakes(monkeypatch, convert)
+
+    knowledge_graph.render_knowledge_graph(
+        object(), [], "mock", node_badges={"t1": "🔥 3 stuck"}
+    )
+
+    assert conversions == [(graph, {"t1": "🔥 3 stuck"})]
+
+
+@pytest.mark.parametrize("badges", [None, {}])
+def test_render_knowledge_graph_calls_converter_with_one_argument_without_badges(
+    monkeypatch, badges,
+):
+    conversions = []
+
+    def convert(*args, **kwargs):
+        conversions.append((args, kwargs))
+        return [], []
+
+    graph = _install_graph_fakes(monkeypatch, convert)
+
+    knowledge_graph.render_knowledge_graph(
+        object(), [], "mock", node_badges=badges
+    )
+
+    assert conversions == [((graph,), {})]
+
+
+def _topic(topic_id, real=0, sample=0, display="total"):
+    return learning_radar.TopicRadar(
+        topic_id=topic_id,
+        real_count=real,
+        sample_count=sample,
+        reasons={},
+        display_count=real + sample if display == "total" else display,
+    )
+
+
+@pytest.mark.parametrize(
+    ("topic_radar", "count_text", "badge"),
+    [
+        (None, "No one has flagged this topic yet.", None),
+        (_topic("t", real=1, sample=0, display=None), "Some students flagged this", "🔥 flagged"),
+        (_topic("t", real=0, sample=1), "1 student is stuck here", "🔥 1 stuck"),
+        (_topic("t", real=3, sample=5), "8 students are stuck here", "🔥 8 stuck"),
+    ],
+)
+def test_radar_text_helpers(topic_radar, count_text, badge):
+    assert knowledge_graph.radar_count_text(topic_radar) == count_text
+    if badge is not None:
+        assert knowledge_graph.radar_badge(topic_radar) == badge
+
+
+def _calculus_course():
+    return StudyPackage.model_validate_json(
+        CALCULUS_DEMO_PATH.read_text(encoding="utf-8")
+    )
+
+
+def _other_course():
+    return StudyPackage(
+        course_id="course-1",
+        course_name="Course One",
+        topics=[
+            {"id": "topic-1", "name": "Limits", "summary": "Limits summary."},
+            {"id": "topic-2", "name": "Series", "summary": "Series summary."},
+        ],
+        relationships=[],
+        questions=[],
+    )
+
+
+class RadarFake:
+    """Scripted replacement for the learning_radar functions.
+
+    Every call is recorded. Successful writes update the scripted state, so a
+    refetch after a flag or clear returns the new counts.
+    """
+
+    def __init__(
+        self,
+        monkeypatch,
+        topics=(),
+        *,
+        enabled=True,
+        live=True,
+        has_sample=False,
+        user_flags=None,
+        write_result=None,
+        ranked=None,
+    ):
+        self.topics = {topic.topic_id: topic for topic in topics}
+        self.enabled = enabled
+        self.live = live
+        self.has_sample = has_sample
+        self.user_flags = dict(user_flags or {})
+        self.write_result = write_result
+        self.ranked = ranked
+        self.calls = {name: [] for name in RADAR_FUNCTIONS}
+        for name in RADAR_FUNCTIONS:
+            monkeypatch.setattr(learning_radar, name, getattr(self, name))
+
+    def radar_enabled(self, course_id):
+        self.calls["radar_enabled"].append(course_id)
+        return self.enabled
+
+    def get_course_radar(self, course_id):
+        self.calls["get_course_radar"].append(course_id)
+        return learning_radar.CourseRadar(
+            topics=dict(self.topics), live=self.live, has_sample=self.has_sample
+        )
+
+    def get_user_flags(self, user_id, course_id):
+        self.calls["get_user_flags"].append((user_id, course_id))
+        return dict(self.user_flags)
+
+    def top_hard_topics(self, radar, limit=3):
+        self.calls["top_hard_topics"].append((radar, limit))
+        if self.ranked is not None:
+            return [radar.topics[topic_id] for topic_id in self.ranked][:limit]
+        return sorted(
+            radar.topics.values(),
+            key=lambda topic: -(topic.real_count + topic.sample_count),
+        )[:limit]
+
+    def _change(self, topic_id, delta):
+        current = self.topics.get(topic_id, _topic(topic_id))
+        self.topics[topic_id] = _topic(
+            topic_id, real=current.real_count + delta, sample=current.sample_count
+        )
+
+    def set_flag(self, user_id, course_id, topic_id, reason=None):
+        self.calls["set_flag"].append((user_id, course_id, topic_id))
+        if self.write_result is not None:
+            return self.write_result
+        self._change(topic_id, 1)
+        self.user_flags[topic_id] = reason
+        return PersistenceResult(success=True, message="Flag saved.")
+
+    def clear_flag(self, user_id, course_id, topic_id):
+        self.calls["clear_flag"].append((user_id, course_id, topic_id))
+        if self.write_result is not None:
+            return self.write_result
+        self._change(topic_id, -1)
+        self.user_flags.pop(topic_id, None)
+        return PersistenceResult(success=True, message="Flag removed.")
+
+
+def _graph_page(course, *, signed_in=False, focus=None):
+    app = signed_in_app(PAGE_PATH) if signed_in else AppTest.from_file(str(PAGE_PATH))
+    app.session_state["current_course"] = course
+    if focus is not None:
+        app.session_state[f"graph_pending_focus_{course.course_id}"] = focus
+    return app.run()
+
+
+def _markdown(app):
+    return [item.value for item in app.markdown]
+
+
+def _captions(app):
+    return [item.value for item in app.caption]
+
+
+def _radar_buttons(app):
+    return [
+        button for button in app.button
+        if button.key and button.key.startswith("radar_flag_")
+    ]
+
+
+def test_radar_panel_lists_flagged_topics_most_flagged_first(monkeypatch):
+    radar = RadarFake(
+        monkeypatch,
+        [
+            _topic("calc_limits", real=2, display=None),
+            _topic("calc_derivative_applications", real=5),
+            _topic("calc_derivatives", real=8),
+        ],
+        ranked=["calc_derivatives", "calc_derivative_applications", "calc_limits"],
+    )
+
+    app = _graph_page(_calculus_course())
+
+    assert not app.exception
+    assert "**Learning Radar**" in _markdown(app)
+    assert (
+        "1. **Derivatives** — 8 students are stuck here\n"
+        "2. **Applications of Derivatives** — 5 students are stuck here\n"
+        "3. **Limits** — Some students flagged this"
+    ) in _markdown(app)
+    assert "No topics have been flagged yet." not in _captions(app)
+    assert [limit for _, limit in radar.calls["top_hard_topics"]] == [3]
+    assert radar.calls["radar_enabled"][0] == CALCULUS_ID
+
+
+def test_radar_panel_says_when_nothing_is_flagged(monkeypatch):
+    RadarFake(monkeypatch, [])
+
+    app = _graph_page(_calculus_course())
+
+    assert not app.exception
+    assert "No topics have been flagged yet." in _captions(app)
+    assert not any(value.startswith("1. ") for value in _markdown(app))
+
+
+def test_knowledge_map_badges_flagged_topics(monkeypatch):
+    RadarFake(
+        monkeypatch,
+        [
+            _topic("calc_derivatives", real=3, sample=5),
+            _topic("calc_limits", real=1, display=None),
+        ],
+    )
+    rendered = []
+    monkeypatch.setattr(
+        knowledge_graph,
+        "agraph",
+        lambda nodes, edges, config, node_scale: rendered.append(nodes) or None,
+    )
+
+    app = _graph_page(_calculus_course())
+
+    assert not app.exception
+    assert {node.id: node.label for node in rendered[-1]} == {
+        "calc_limits": "Limits\n🔥 flagged",
+        "calc_derivatives": "Derivatives\n🔥 8 stuck",
+        "calc_derivative_applications": "Applications of Derivatives",
+    }
+
+
+def test_non_demo_course_shows_no_radar_ui_and_fetches_nothing(monkeypatch):
+    radar = RadarFake(monkeypatch, [_topic("topic-1", real=9)], enabled=False)
+    rendered = []
+    monkeypatch.setattr(
+        knowledge_graph,
+        "agraph",
+        lambda nodes, edges, config, node_scale: rendered.append(nodes) or None,
+    )
+
+    app = _graph_page(_other_course(), signed_in=True, focus="topic-1")
+
+    assert not app.exception
+    assert "Limits summary." in _markdown(app)
+    assert radar.calls["radar_enabled"] == ["course-1"]
+    assert all(
+        calls == [] for name, calls in radar.calls.items() if name != "radar_enabled"
+    )
+    assert not any("Learning Radar" in value for value in _markdown(app))
+    assert not any(
+        "stuck" in value or "flagged" in value for value in _markdown(app)
+    )
+    assert not any(
+        value in {
+            "Includes sample data",
+            "Live flags are unavailable right now.",
+            "No topics have been flagged yet.",
+        }
+        for value in _captions(app)
+    )
+    assert _radar_buttons(app) == []
+    assert "learning_radar_cache_course-1" not in app.session_state
+    assert [node.label for node in rendered[-1]] == ["Limits", "Series"]
+
+
+@pytest.mark.parametrize("live", [True, False])
+def test_radar_panel_reports_when_live_flags_are_unavailable(monkeypatch, live):
+    RadarFake(monkeypatch, [_topic("calc_derivatives", sample=8)], live=live)
+
+    app = _graph_page(_calculus_course())
+
+    assert not app.exception
+    assert ("Live flags are unavailable right now." in _captions(app)) is (not live)
+
+
+@pytest.mark.parametrize("has_sample", [True, False])
+def test_radar_panel_marks_sample_data(monkeypatch, has_sample):
+    RadarFake(
+        monkeypatch, [_topic("calc_derivatives", real=4)], has_sample=has_sample
+    )
+
+    app = _graph_page(_calculus_course())
+
+    assert not app.exception
+    assert _captions(app).count("Includes sample data") == (1 if has_sample else 0)
+
+
+@pytest.mark.parametrize(
+    ("focus", "sample_captions"),
+    [("calc_derivatives", 2), ("calc_limits", 1)],
+)
+def test_topic_details_mark_sample_data_per_topic(monkeypatch, focus, sample_captions):
+    RadarFake(
+        monkeypatch,
+        [
+            _topic("calc_derivatives", real=3, sample=5),
+            _topic("calc_limits", real=4, sample=0),
+        ],
+        has_sample=True,
+    )
+
+    app = _graph_page(_calculus_course(), focus=focus)
+
+    assert not app.exception
+    # One caption from the panel, plus one when the selected topic has samples.
+    assert _captions(app).count("Includes sample data") == sample_captions
+
+
+@pytest.mark.parametrize(
+    ("topics", "count_line"),
+    [
+        ([_topic("calc_derivatives", real=8)], "8 students are stuck here"),
+        ([_topic("calc_derivatives", sample=1)], "1 student is stuck here"),
+        ([_topic("calc_limits", real=6)], "No one has flagged this topic yet."),
+    ],
+)
+def test_topic_details_show_radar_count(monkeypatch, topics, count_line):
+    RadarFake(monkeypatch, topics)
+
+    app = _graph_page(_calculus_course(), focus="calc_derivatives")
+
+    assert not app.exception
+    assert count_line in _markdown(app)
+
+
+def test_hidden_count_shows_some_students_flagged_this(monkeypatch):
+    RadarFake(monkeypatch, [_topic("calc_limits", real=2, display=None)])
+
+    app = _graph_page(_calculus_course(), focus="calc_limits")
+
+    assert not app.exception
+    assert "Some students flagged this" in _markdown(app)
+    assert "1. **Limits** — Some students flagged this" in _markdown(app)
+    assert not any("2 student" in value for value in _markdown(app))
+
+
+def test_signed_in_user_can_flag_topic_and_sees_new_count(monkeypatch):
+    radar = RadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
+
+    app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
+
+    assert not app.exception
+    button = app.button(key=f"radar_flag_{CALCULUS_ID}_calc_derivatives")
+    assert button.label == "I'm stuck here"
+    assert "4 students are stuck here" in _markdown(app)
+    assert radar.calls["get_user_flags"] == [(TEST_USER.user_id, CALCULUS_ID)]
+
+    button.click().run()
+
+    assert not app.exception
+    assert radar.calls["set_flag"] == [
+        (TEST_USER.user_id, CALCULUS_ID, "calc_derivatives")
+    ]
+    assert radar.calls["clear_flag"] == []
+    assert len(radar.calls["get_course_radar"]) == 2
+    assert len(radar.calls["get_user_flags"]) == 2
+    assert "5 students are stuck here" in _markdown(app)
+    assert app.button(
+        key=f"radar_flag_{CALCULUS_ID}_calc_derivatives"
+    ).label == "Not stuck anymore"
+    assert app.warning == []
+
+
+def test_flagged_topic_offers_not_stuck_anymore(monkeypatch):
+    radar = RadarFake(
+        monkeypatch,
+        [_topic("calc_derivatives", real=4)],
+        user_flags={"calc_derivatives": None},
+    )
+
+    app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
+
+    assert not app.exception
+    button = app.button(key=f"radar_flag_{CALCULUS_ID}_calc_derivatives")
+    assert button.label == "Not stuck anymore"
+
+    button.click().run()
+
+    assert not app.exception
+    assert radar.calls["clear_flag"] == [
+        (TEST_USER.user_id, CALCULUS_ID, "calc_derivatives")
+    ]
+    assert radar.calls["set_flag"] == []
+    assert len(radar.calls["get_course_radar"]) == 2
+    assert "3 students are stuck here" in _markdown(app)
+    assert app.button(
+        key=f"radar_flag_{CALCULUS_ID}_calc_derivatives"
+    ).label == "I'm stuck here"
+
+
+def test_failed_flag_shows_message_and_does_not_raise(monkeypatch):
+    message = "Live flags are unavailable right now. Please try again later."
+    radar = RadarFake(
+        monkeypatch,
+        [_topic("calc_derivatives", real=4)],
+        write_result=PersistenceResult(success=False, message=message),
+    )
+
+    app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
+    app.button(key=f"radar_flag_{CALCULUS_ID}_calc_derivatives").click().run()
+
+    assert not app.exception
+    assert radar.calls["set_flag"] == [
+        (TEST_USER.user_id, CALCULUS_ID, "calc_derivatives")
+    ]
+    assert [item.value for item in app.warning] == [message]
+    assert len(radar.calls["get_course_radar"]) == 1
+    assert "4 students are stuck here" in _markdown(app)
+    assert app.button(
+        key=f"radar_flag_{CALCULUS_ID}_calc_derivatives"
+    ).label == "I'm stuck here"
+
+
+def test_no_flag_button_without_signed_in_user(monkeypatch):
+    radar = RadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
+
+    app = _graph_page(_calculus_course(), focus="calc_derivatives")
+
+    assert not app.exception
+    assert "4 students are stuck here" in _markdown(app)
+    assert _radar_buttons(app) == []
+    assert radar.calls["get_user_flags"] == []
+
+
+def test_radar_is_reused_for_fifteen_seconds(monkeypatch):
+    radar = RadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
+
+    app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
+    app.run()
+    app.button(key=f"graph_zoom_in_{CALCULUS_ID}_mock").click().run()
+
+    assert not app.exception
+    assert len(radar.calls["get_course_radar"]) == 1
+    assert len(radar.calls["get_user_flags"]) == 1
+
+    snapshot = dict(app.session_state[CACHE_KEY])
+    snapshot["fetched_at"] -= 16
+    app.session_state[CACHE_KEY] = snapshot
+    app.run()
+
+    assert not app.exception
+    assert len(radar.calls["get_course_radar"]) == 2
+    assert len(radar.calls["get_user_flags"]) == 2

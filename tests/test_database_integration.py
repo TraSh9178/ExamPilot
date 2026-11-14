@@ -175,12 +175,13 @@ def test_real_migration_failure_rolls_back_ddl_and_ledger(db, tmp_path):
     from services.database_migrations import MIGRATION_DIRECTORY
     for source in MIGRATION_DIRECTORY.glob("*.sql"):
         (tmp_path / source.name).write_bytes(source.read_bytes())
-    (tmp_path / "003_deliberate_failure.sql").write_text("CREATE TABLE should_rollback (id INT); SELECT no_such_function();")
+    # Numbered after every real migration so it never shares a version with one.
+    (tmp_path / "999_deliberate_failure.sql").write_text("CREATE TABLE should_rollback (id INT); SELECT no_such_function();")
     with db() as connection, pytest.raises(psycopg.Error):
         apply_migrations(connection, tmp_path)
     with db() as connection:
         assert connection.execute("SELECT to_regclass('should_rollback')").fetchone()[0] is None
-        assert connection.execute("SELECT count(*) FROM exampilot_schema_migrations").fetchone()[0] == 2
+        assert connection.execute("SELECT count(*) FROM exampilot_schema_migrations").fetchone()[0] == len(list(MIGRATION_DIRECTORY.glob("*.sql")))
 
 
 def test_real_schema_rejects_bad_new_course_identity(db, course):
@@ -226,6 +227,7 @@ def test_real_backup_restores_into_a_separate_database(db, course, tmp_path, mon
 
 
 def test_real_migrations_preserve_preexisting_learning_records(db, course):
+    from services.database_migrations import MIGRATION_DIRECTORY
     original = exam(course)
     assert store.save_course_history("alice", course, [original]).success
     with db() as connection:
@@ -235,7 +237,7 @@ def test_real_migrations_preserve_preexisting_learning_records(db, course):
             ALTER TABLE exam_sessions DROP CONSTRAINT session_questions_not_empty;
         """, prepare=False)
     with db() as connection:
-        assert len(apply_migrations(connection)) == 2
+        assert len(apply_migrations(connection)) == len(list(MIGRATION_DIRECTORY.glob("*.sql")))
     restored = store.load_course_history("alice", course.course_id)
     assert restored.success and restored.package.model_dump(exclude={"learning_state"}) == course.model_dump(exclude={"learning_state"})
     assert restored.sessions == [original[0]] and restored.attempts == original[1]
@@ -294,3 +296,66 @@ def test_real_edited_question_preserves_old_grade_and_family(db, course):
     assert restored.package.questions[0] == course.questions[0]
     assert restored.package.questions[-1].version_of == course.questions[0].id
     assert course.questions[0].id not in {q.id for q in available_questions(restored.package)}
+
+
+# Learning Radar (migration 003_learning_radar.sql)
+
+RADAR_COURSE = "calculus-i-demo"
+RADAR_TOPIC = "calc_derivatives"
+
+
+@pytest.fixture
+def radar(db, monkeypatch, tmp_path):
+    from services import learning_radar
+    # Hide the shipped sample data so the radar shows real flags only.
+    monkeypatch.setattr(learning_radar, "SAMPLE_PATH", tmp_path / "no_sample.json")
+    with db() as connection:
+        for user_id in ("alice", "bob"):
+            connection.execute("INSERT INTO demo_users (demo_user_id) VALUES (%s)", (user_id,))
+    return learning_radar
+
+
+def radar_rows(connect):
+    with connect() as connection:
+        return connection.execute(
+            "SELECT demo_user_id, course_id, topic_id, reason FROM radar_flags ORDER BY demo_user_id"
+        ).fetchall()
+
+
+def test_real_radar_counts_two_users_and_clearing_one_leaves_one(db, radar):
+    assert radar.set_flag("alice", RADAR_COURSE, RADAR_TOPIC, "concept").success
+    assert radar.set_flag("bob", RADAR_COURSE, RADAR_TOPIC).success
+    course = radar.get_course_radar(RADAR_COURSE)
+    assert course.live is True and course.has_sample is False
+    assert course.topics[RADAR_TOPIC].real_count == 2
+    assert course.topics[RADAR_TOPIC].reasons == {"concept": 1}
+    assert radar_rows(db) == [
+        ("alice", RADAR_COURSE, RADAR_TOPIC, "concept"),
+        ("bob", RADAR_COURSE, RADAR_TOPIC, None),
+    ]
+
+    assert radar.clear_flag("bob", RADAR_COURSE, RADAR_TOPIC).success
+    assert radar.get_course_radar(RADAR_COURSE).topics[RADAR_TOPIC].real_count == 1
+    assert radar.get_user_flags("bob", RADAR_COURSE) == {}
+    assert radar.get_user_flags("alice", RADAR_COURSE) == {RADAR_TOPIC: "concept"}
+    assert radar_rows(db) == [("alice", RADAR_COURSE, RADAR_TOPIC, "concept")]
+
+
+def test_real_radar_repeated_flag_counts_once_with_updated_reason(db, radar):
+    assert radar.set_flag("alice", RADAR_COURSE, RADAR_TOPIC, "concept").success
+    assert radar.set_flag("alice", RADAR_COURSE, RADAR_TOPIC, "wording").success
+    topic = radar.get_course_radar(RADAR_COURSE).topics[RADAR_TOPIC]
+    assert topic.real_count == 1 and topic.reasons == {"wording": 1}
+    assert radar.get_user_flags("alice", RADAR_COURSE) == {RADAR_TOPIC: "wording"}
+    assert radar_rows(db) == [("alice", RADAR_COURSE, RADAR_TOPIC, "wording")]
+
+
+def test_real_radar_schema_rejects_invalid_reason_and_unknown_user(db, radar):
+    with db() as connection, pytest.raises(psycopg.errors.CheckViolation):
+        connection.execute(
+            "INSERT INTO radar_flags (demo_user_id, course_id, topic_id, reason) VALUES (%s, %s, %s, %s)",
+            ("alice", RADAR_COURSE, RADAR_TOPIC, "boredom"),
+        )
+    # No demo_users row: the foreign key rejects it and set_flag reports failure.
+    assert not radar.set_flag("mallory", RADAR_COURSE, RADAR_TOPIC).success
+    assert radar_rows(db) == []

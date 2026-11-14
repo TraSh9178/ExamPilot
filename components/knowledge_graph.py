@@ -6,6 +6,7 @@ import streamlit.components.v1 as components
 from streamlit_agraph import Config, Edge, Node
 
 from models.schemas import StudyPackage, TopicStats
+from services import learning_radar
 from services.graph_service import build_mastery_graph
 
 
@@ -65,15 +66,25 @@ def agraph(nodes, edges, config, node_scale: float = 1.0):
     )
 
 
-def convert_graph_data(graph: dict) -> tuple[list[Node], list[Edge]]:
+def _badged_label(label: str, badge: str | None) -> str:
+    # vis-network renders "\n" in a label as a line break.
+    return f"{label}\n{badge}" if badge else label
+
+
+def convert_graph_data(
+    graph: dict,
+    node_badges: dict[str, str] | None = None,
+) -> tuple[list[Node], list[Edge]]:
     """Convert build_mastery_graph output for streamlit-agraph.
 
     A prerequisite edge from A to B means A must be learned before B.
+    ``node_badges`` maps a topic ID to a short badge shown under its label.
     """
+    badges = node_badges or {}
     nodes = [
         Node(
             id=node["id"],
-            label=node["label"],
+            label=_badged_label(node["label"], badges.get(node["id"])),
             color=node["color"],
             size=MIN_NODE_SIZE,
             font={
@@ -114,9 +125,13 @@ def render_knowledge_graph(
     view_reset: int = 0,
     node_scale: float = 1.0,
     focus_topic_id: str | None = None,
+    node_badges: dict[str, str] | None = None,
 ) -> str | None:
     graph = build_mastery_graph(package, stats, mode)
-    nodes, edges = convert_graph_data(graph)
+    if node_badges:
+        nodes, edges = convert_graph_data(graph, node_badges=node_badges)
+    else:
+        nodes, edges = convert_graph_data(graph)
     config = Config(
         height=540,
         width=900,
@@ -217,3 +232,72 @@ def render_topic_details(
             )
     status = details["status"]
     st.badge(_MASTERY_LABELS[status], color=_MASTERY_BADGE_COLORS[status])
+
+
+def _has_flags(topic_radar: learning_radar.TopicRadar | None) -> bool:
+    return (
+        topic_radar is not None
+        and topic_radar.real_count + topic_radar.sample_count > 0
+    )
+
+
+def radar_badge(topic_radar: learning_radar.TopicRadar) -> str:
+    """Short map badge; a hidden count (privacy threshold) shows no number."""
+    if topic_radar.display_count is None:
+        return "🔥 flagged"
+    return f"🔥 {topic_radar.display_count} stuck"
+
+
+def radar_node_badges(radar: learning_radar.CourseRadar) -> dict[str, str]:
+    return {
+        topic_id: radar_badge(topic_radar)
+        for topic_id, topic_radar in radar.topics.items()
+        if _has_flags(topic_radar)
+    }
+
+
+def radar_count_text(topic_radar: learning_radar.TopicRadar | None) -> str:
+    if not _has_flags(topic_radar):
+        return "No one has flagged this topic yet."
+    count = topic_radar.display_count
+    if count is None:
+        return "Some students flagged this"
+    if count == 1:
+        return "1 student is stuck here"
+    return f"{count} students are stuck here"
+
+
+def render_topic_radar(topic_radar: learning_radar.TopicRadar | None) -> None:
+    """Show how many students are stuck on the selected topic."""
+    st.markdown(radar_count_text(topic_radar))
+    if topic_radar is not None and topic_radar.sample_count > 0:
+        st.caption("Includes sample data")
+
+
+def render_radar_panel(
+    radar: learning_radar.CourseRadar,
+    ranked_topics: list[learning_radar.TopicRadar],
+    topic_names: dict[str, str],
+) -> None:
+    """List the course's flagged topics in the order given (most flagged first)."""
+    st.markdown("**Learning Radar**")
+    st.caption("Topics where students marked \"I'm stuck here\", most flagged first.")
+    flagged = [
+        topic_radar
+        for topic_radar in ranked_topics
+        if _has_flags(topic_radar) and topic_radar.topic_id in topic_names
+    ]
+    if flagged:
+        st.markdown(
+            "\n".join(
+                f"{index}. **{topic_names[topic_radar.topic_id]}** — "
+                f"{radar_count_text(topic_radar)}"
+                for index, topic_radar in enumerate(flagged, start=1)
+            )
+        )
+    else:
+        st.caption("No topics have been flagged yet.")
+    if radar.has_sample:
+        st.caption("Includes sample data")
+    if not radar.live:
+        st.caption("Live flags are unavailable right now.")

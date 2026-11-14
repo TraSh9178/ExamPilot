@@ -1,13 +1,19 @@
 from pathlib import Path
+import time
 
 import streamlit as st
 from components.knowledge_graph import (
     render_knowledge_graph,
     get_selected_topic_details,
+    radar_node_badges,
+    render_radar_panel,
     render_topic_details,
+    render_topic_radar,
 )
+from services import learning_radar
 from services.account_sync import save_course_to_account
 from services.ai_service import generate_relationships
+from services.auth_session import current_user
 from services.graph_exploration import local_graph, related_topics
 from services.graph_service import build_mastery_graph
 from services.mastery_engine import calculate_topic_stats
@@ -131,6 +137,39 @@ except ValueError as error:
     st.error(f"Could not calculate mastery: {error}")
     st.stop()
 
+# Learning Radar (demo courses only). Zooming and selecting topics rerun the
+# page, so the course radar and the user's flags are reused for a short time.
+RADAR_CACHE_SECONDS = 15
+radar_cache_key = f"learning_radar_cache_{course.course_id}"
+radar = None
+radar_user = None
+radar_user_flags = {}
+if learning_radar.radar_enabled(course.course_id):
+    radar_user = current_user(st.session_state)
+    radar_user_id = radar_user.user_id if radar_user is not None else None
+    radar_snapshot = st.session_state.get(radar_cache_key)
+    radar_now = time.monotonic()
+    radar_cache_fresh = (
+        isinstance(radar_snapshot, dict)
+        and radar_snapshot.get("user_id") == radar_user_id
+        and isinstance(radar_snapshot.get("fetched_at"), (int, float))
+        and 0 <= radar_now - radar_snapshot["fetched_at"] < RADAR_CACHE_SECONDS
+    )
+    if not radar_cache_fresh:
+        radar_snapshot = {
+            "fetched_at": radar_now,
+            "user_id": radar_user_id,
+            "radar": learning_radar.get_course_radar(course.course_id),
+            "user_flags": (
+                learning_radar.get_user_flags(radar_user_id, course.course_id)
+                if radar_user_id is not None
+                else {}
+            ),
+        }
+        st.session_state[radar_cache_key] = radar_snapshot
+    radar = radar_snapshot["radar"]
+    radar_user_flags = radar_snapshot["user_flags"]
+
 graph_column, details_column = st.columns([2.5, 1], gap="medium")
 
 with graph_column:
@@ -162,8 +201,16 @@ with graph_column:
             view_reset=st.session_state.get(reset_key, 0),
             node_scale=zoom_scale,
             focus_topic_id=focus_id,
+            node_badges=radar_node_badges(radar) if radar is not None else None,
         )
 
+    if radar is not None:
+        with st.container(border=True, key="learning_radar_panel"):
+            render_radar_panel(
+                radar,
+                learning_radar.top_hard_topics(radar, limit=len(course.topics)),
+                topic_names,
+            )
 
     if not course.relationships:
         st.info("This course has no topic relationships yet.")
@@ -301,6 +348,30 @@ with details_column:
             if not any(links.values()):
                 st.caption("No connections recorded for this topic.")
             st.caption("These are course-provided relationships, not a diagnosis of your understanding.")
+            if radar is not None:
+                st.divider()
+                st.markdown("**Learning Radar**")
+                render_topic_radar(radar.topics.get(selected_node_id))
+                if radar_user is not None:
+                    already_flagged = selected_node_id in radar_user_flags
+                    if st.button(
+                        "Not stuck anymore" if already_flagged else "I'm stuck here",
+                        key=f"radar_flag_{course.course_id}_{selected_node_id}",
+                    ):
+                        if already_flagged:
+                            result = learning_radar.clear_flag(
+                                radar_user.user_id, course.course_id, selected_node_id
+                            )
+                        else:
+                            result = learning_radar.set_flag(
+                                radar_user.user_id, course.course_id, selected_node_id
+                            )
+                        if result.success:
+                            # Show the new count right away instead of waiting
+                            # for the cache to expire.
+                            st.session_state.pop(radar_cache_key, None)
+                            st.rerun()
+                        st.warning(result.message)
 
     with st.container(border=True, key="knowledge_graph_legend"):
         st.markdown("**Status Legend**")
