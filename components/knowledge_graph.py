@@ -1,5 +1,8 @@
 import json
+import time
+from collections.abc import MutableMapping
 from pathlib import Path
+from typing import Any
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -232,6 +235,55 @@ def render_topic_details(
             )
     status = details["status"]
     st.badge(_MASTERY_LABELS[status], color=_MASTERY_BADGE_COLORS[status])
+
+
+RADAR_CACHE_SECONDS = 15
+
+
+def radar_cache_key(course_id: str) -> str:
+    return f"learning_radar_cache_{course_id}"
+
+
+def load_course_radar(
+    session_state: MutableMapping[str, Any],
+    course_id: str,
+    user_id: str | None,
+) -> tuple[learning_radar.CourseRadar, dict[str, str | None]]:
+    """Return the course radar and this user's flags, reused for a short time.
+
+    Pages rerun often (zooming, selecting topics, switching pages), so the
+    result is kept in the session for RADAR_CACHE_SECONDS. Every page that
+    shows the radar shares this copy.
+    """
+    key = radar_cache_key(course_id)
+    snapshot = session_state.get(key)
+    now = time.monotonic()
+    fresh = (
+        isinstance(snapshot, dict)
+        and snapshot.get("user_id") == user_id
+        and isinstance(snapshot.get("fetched_at"), (int, float))
+        and 0 <= now - snapshot["fetched_at"] < RADAR_CACHE_SECONDS
+    )
+    if not fresh:
+        snapshot = {
+            "fetched_at": now,
+            "user_id": user_id,
+            "radar": learning_radar.get_course_radar(course_id),
+            "user_flags": (
+                learning_radar.get_user_flags(user_id, course_id)
+                if user_id is not None
+                else {}
+            ),
+        }
+        session_state[key] = snapshot
+    return snapshot["radar"], snapshot["user_flags"]
+
+
+def forget_course_radar(
+    session_state: MutableMapping[str, Any], course_id: str
+) -> None:
+    """Drop the shared copy so the next rerun reads fresh counts."""
+    session_state.pop(radar_cache_key(course_id), None)
 
 
 def _has_flags(topic_radar: learning_radar.TopicRadar | None) -> bool:

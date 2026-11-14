@@ -1,10 +1,11 @@
 from pathlib import Path
-import time
 
 import streamlit as st
 from components.knowledge_graph import (
     render_knowledge_graph,
+    forget_course_radar,
     get_selected_topic_details,
+    load_course_radar,
     radar_node_badges,
     render_radar_panel,
     render_topic_details,
@@ -139,36 +140,16 @@ except ValueError as error:
 
 # Learning Radar (demo courses only). Zooming and selecting topics rerun the
 # page, so the course radar and the user's flags are reused for a short time.
-RADAR_CACHE_SECONDS = 15
-radar_cache_key = f"learning_radar_cache_{course.course_id}"
 radar = None
 radar_user = None
 radar_user_flags = {}
 if learning_radar.radar_enabled(course.course_id):
     radar_user = current_user(st.session_state)
-    radar_user_id = radar_user.user_id if radar_user is not None else None
-    radar_snapshot = st.session_state.get(radar_cache_key)
-    radar_now = time.monotonic()
-    radar_cache_fresh = (
-        isinstance(radar_snapshot, dict)
-        and radar_snapshot.get("user_id") == radar_user_id
-        and isinstance(radar_snapshot.get("fetched_at"), (int, float))
-        and 0 <= radar_now - radar_snapshot["fetched_at"] < RADAR_CACHE_SECONDS
+    radar, radar_user_flags = load_course_radar(
+        st.session_state,
+        course.course_id,
+        radar_user.user_id if radar_user is not None else None,
     )
-    if not radar_cache_fresh:
-        radar_snapshot = {
-            "fetched_at": radar_now,
-            "user_id": radar_user_id,
-            "radar": learning_radar.get_course_radar(course.course_id),
-            "user_flags": (
-                learning_radar.get_user_flags(radar_user_id, course.course_id)
-                if radar_user_id is not None
-                else {}
-            ),
-        }
-        st.session_state[radar_cache_key] = radar_snapshot
-    radar = radar_snapshot["radar"]
-    radar_user_flags = radar_snapshot["user_flags"]
 
 graph_column, details_column = st.columns([2.5, 1], gap="medium")
 
@@ -369,7 +350,7 @@ with details_column:
                         if result.success:
                             # Show the new count right away instead of waiting
                             # for the cache to expire.
-                            st.session_state.pop(radar_cache_key, None)
+                            forget_course_radar(st.session_state, course.course_id)
                             st.rerun()
                         st.warning(result.message)
 
