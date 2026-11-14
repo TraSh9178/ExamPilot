@@ -1,6 +1,9 @@
-"""Tests for the pure mathematics in the Concept Lab."""
+"""Tests for the Concept Lab mathematics and interactive page."""
+
+from pathlib import Path
 
 import pytest
+from streamlit.testing.v1 import AppTest
 
 from services.concept_lab import (
     cubic,
@@ -84,3 +87,17 @@ def test_tangent_line_passes_through_curve_with_exact_slope(x0):
 
     assert slope == pytest.approx(cubic_derivative(x0))
     assert slope * x0 + intercept == pytest.approx(cubic(x0))
+
+PAGE_PATH = Path(__file__).resolve().parents[1] / "pages" / "6_Concept_Lab.py"
+
+
+def test_limits_page_loads_without_a_selected_course():
+    app = AppTest.from_file(str(PAGE_PATH))
+    app.session_state["current_course"] = None
+    app.run()
+
+    assert not app.exception
+    assert "Concept Lab" in [title.value for title in app.title]
+    assert "f(2) is undefined, but f(x) gets as close to 4 as we like." in [
+        item.value for item in app.info
+    ]
