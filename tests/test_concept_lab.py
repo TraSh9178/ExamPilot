@@ -180,6 +180,9 @@ def test_practice_button_sets_contract_and_practice_page_uses_it(monkeypatch, to
     import streamlit as st
 
     destinations = []
+    # Standalone AppTest has no registered navigation for the pending-review link.
+    # The registered-app test below exercises actual navigation without this stub.
+    monkeypatch.setattr(st, "page_link", lambda *args, **kwargs: None)
     monkeypatch.setattr(st, "switch_page", lambda page: destinations.append(page))
     course = load_course()
     app = AppTest.from_file(str(PAGE_PATH))

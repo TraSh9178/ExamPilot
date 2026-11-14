@@ -1,4 +1,3 @@
-
 {
   "course_id": "econ101",
   "course_name": "Introduction to Microeconomics",
@@ -76,6 +75,415 @@
       "correct_index": 0,
       "explanation": "A binding price ceiling is below equilibrium, causing quantity demanded to exceed quantity supplied.",
       "source_pages": []
+    },
+    {
+      "id": "q004",
+      "topic_id": "supply_demand",
+      "question": "With a downward-sloping demand curve, what does a rise in the good’s own price cause, holding other demand determinants fixed?",
+      "options": [
+        "A leftward shift of demand",
+        "A rightward shift of demand",
+        "An increase in quantity demanded",
+        "A decrease in quantity demanded along the demand curve"
+      ],
+      "correct_index": 3,
+      "explanation": "A change in the good’s own price causes movement along its demand curve rather than a shift of the curve.",
+      "source_pages": []
+    },
+    {
+      "id": "q005",
+      "topic_id": "supply_demand",
+      "question": "For a normal good, what happens to demand when consumer income rises, all else equal?",
+      "options": [
+        "Demand shifts right",
+        "Demand shifts left",
+        "Only quantity supplied changes",
+        "Demand becomes vertical"
+      ],
+      "correct_index": 0,
+      "explanation": "A normal good is one whose demand increases as income rises.",
+      "source_pages": []
+    },
+    {
+      "id": "q006",
+      "topic_id": "supply_demand",
+      "question": "What happens to the supply curve when production costs fall, all else equal?",
+      "options": [
+        "It shifts left",
+        "It shifts right",
+        "There is only a movement along supply",
+        "It becomes a demand curve"
+      ],
+      "correct_index": 1,
+      "explanation": "Lower production costs let producers supply more at each price, shifting supply right.",
+      "source_pages": []
+    },
+    {
+      "id": "q007",
+      "topic_id": "supply_demand",
+      "question": "With downward-sloping demand and upward-sloping supply, what follows from an increase in supply alone?",
+      "options": [
+        "Higher price and higher quantity",
+        "Lower price and lower quantity",
+        "Lower equilibrium price and higher equilibrium quantity",
+        "Higher price and lower quantity"
+      ],
+      "correct_index": 2,
+      "explanation": "A rightward supply shift lowers the intersection price and raises the intersection quantity.",
+      "source_pages": []
+    },
+    {
+      "id": "q008",
+      "topic_id": "supply_demand",
+      "question": "What is market equilibrium?",
+      "options": [
+        "A price of zero",
+        "The highest possible price",
+        "A situation where all buyers get unlimited goods",
+        "A price at which quantity demanded equals quantity supplied"
+      ],
+      "correct_index": 3,
+      "explanation": "At equilibrium, planned purchases and sales match, so there is no shortage or surplus at that price.",
+      "source_pages": []
+    },
+    {
+      "id": "q009",
+      "topic_id": "supply_demand",
+      "question": "If quantity demanded exceeds quantity supplied at the current price, what is present?",
+      "options": [
+        "A shortage",
+        "A surplus",
+        "Market equilibrium",
+        "A decrease in demand by definition"
+      ],
+      "correct_index": 0,
+      "explanation": "A shortage is excess demand: buyers want more than sellers offer at the current price.",
+      "source_pages": []
+    },
+    {
+      "id": "q010",
+      "topic_id": "supply_demand",
+      "question": "Tea and coffee are substitutes. If the price of coffee rises, what happens to demand for tea, all else equal?",
+      "options": [
+        "It decreases",
+        "It increases",
+        "It must remain unchanged",
+        "It becomes perfectly inelastic"
+      ],
+      "correct_index": 1,
+      "explanation": "Some buyers switch from coffee to tea, increasing tea demand.",
+      "source_pages": []
+    },
+    {
+      "id": "q011",
+      "topic_id": "supply_demand",
+      "question": "Cars and gasoline are complements. If gasoline becomes more expensive, what happens to demand for cars, all else equal?",
+      "options": [
+        "It increases",
+        "Car supply shifts right automatically",
+        "It decreases",
+        "Car demand becomes perfectly elastic"
+      ],
+      "correct_index": 2,
+      "explanation": "A higher cost of using cars reduces demand for cars when the goods are complements.",
+      "source_pages": []
+    },
+    {
+      "id": "q012",
+      "topic_id": "supply_demand",
+      "question": "If Qd = 20 − 2P and Qs = 2P, what is the equilibrium price?",
+      "options": [
+        "4",
+        "10",
+        "20",
+        "5"
+      ],
+      "correct_index": 3,
+      "explanation": "Set 20 − 2P = 2P, giving 4P = 20 and P = 5; equilibrium quantity is 10.",
+      "source_pages": []
+    },
+    {
+      "id": "q013",
+      "topic_id": "elasticity",
+      "question": "Price rises from 10 to 12 and quantity demanded falls from 100 to 80. What is the absolute midpoint price elasticity, rounded to two decimals?",
+      "options": [
+        "1.22",
+        "0.82",
+        "1.00",
+        "2.00"
+      ],
+      "correct_index": 0,
+      "explanation": "The midpoint quantity change is −20/90 and the midpoint price change is 2/11. The absolute ratio is 11/9 ≈ 1.22.",
+      "source_pages": []
+    },
+    {
+      "id": "q014",
+      "topic_id": "elasticity",
+      "question": "What does an absolute price elasticity of demand of 0.4 mean?",
+      "options": [
+        "Demand is elastic",
+        "Demand is inelastic",
+        "Demand is unit elastic",
+        "Demand is perfectly elastic"
+      ],
+      "correct_index": 1,
+      "explanation": "An absolute elasticity below 1 means quantity demanded changes by a smaller percentage than price.",
+      "source_pages": []
+    },
+    {
+      "id": "q015",
+      "topic_id": "elasticity",
+      "question": "If demand is elastic over a price increase, what happens to total revenue?",
+      "options": [
+        "It increases",
+        "It must stay constant",
+        "It decreases",
+        "It becomes negative"
+      ],
+      "correct_index": 2,
+      "explanation": "With elastic demand, the percentage quantity decline exceeds the percentage price increase, so price times quantity falls.",
+      "source_pages": []
+    },
+    {
+      "id": "q016",
+      "topic_id": "elasticity",
+      "question": "If demand is inelastic over a price increase, what happens to total revenue?",
+      "options": [
+        "It decreases",
+        "It must stay constant",
+        "It becomes zero",
+        "It increases"
+      ],
+      "correct_index": 3,
+      "explanation": "The percentage quantity decline is smaller than the percentage price increase, so total revenue rises.",
+      "source_pages": []
+    },
+    {
+      "id": "q017",
+      "topic_id": "elasticity",
+      "question": "What shape represents perfectly inelastic demand?",
+      "options": [
+        "A vertical demand curve",
+        "A horizontal demand curve",
+        "An upward-sloping demand curve",
+        "A U-shaped demand curve"
+      ],
+      "correct_index": 0,
+      "explanation": "With perfectly inelastic demand, quantity demanded does not respond to price changes.",
+      "source_pages": []
+    },
+    {
+      "id": "q018",
+      "topic_id": "elasticity",
+      "question": "Which demand is generally more price elastic, all else equal?",
+      "options": [
+        "Demand for a necessity with no substitutes",
+        "Demand for a good with many close substitutes",
+        "Demand when buyers have no time to adjust",
+        "Demand for all goods combined"
+      ],
+      "correct_index": 1,
+      "explanation": "Close substitutes make it easier for buyers to switch when a price changes, increasing price responsiveness.",
+      "source_pages": []
+    },
+    {
+      "id": "q019",
+      "topic_id": "elasticity",
+      "question": "What sign of cross-price elasticity indicates substitute goods?",
+      "options": [
+        "Negative",
+        "Always zero",
+        "Positive",
+        "It cannot be defined"
+      ],
+      "correct_index": 2,
+      "explanation": "When the price of one substitute rises, demand for the other rises, producing positive cross-price elasticity.",
+      "source_pages": []
+    },
+    {
+      "id": "q020",
+      "topic_id": "elasticity",
+      "question": "What does negative income elasticity indicate?",
+      "options": [
+        "A normal good",
+        "A perfectly elastic good",
+        "A good with no demand",
+        "An inferior good"
+      ],
+      "correct_index": 3,
+      "explanation": "For an inferior good, demand falls as income rises, so income elasticity is negative.",
+      "source_pages": []
+    },
+    {
+      "id": "q021",
+      "topic_id": "elasticity",
+      "question": "At a point with unit-elastic demand, what is the absolute price elasticity?",
+      "options": [
+        "1",
+        "0",
+        "Less than 0",
+        "Infinite"
+      ],
+      "correct_index": 0,
+      "explanation": "Unit elasticity means equal-magnitude percentage changes in price and quantity demanded.",
+      "source_pages": []
+    },
+    {
+      "id": "q022",
+      "topic_id": "price_controls",
+      "question": "Relative to the unregulated equilibrium price, where must a price ceiling be to bind?",
+      "options": [
+        "Above equilibrium",
+        "Below equilibrium",
+        "At any positive price",
+        "Above every buyer’s willingness to pay"
+      ],
+      "correct_index": 1,
+      "explanation": "A ceiling constrains the market only when it prevents the price from reaching the higher equilibrium level.",
+      "source_pages": []
+    },
+    {
+      "id": "q023",
+      "topic_id": "price_controls",
+      "question": "What is the usual effect of a binding price floor in a competitive market?",
+      "options": [
+        "A shortage",
+        "An automatic increase in demand",
+        "A surplus",
+        "No change in transactions under any conditions"
+      ],
+      "correct_index": 2,
+      "explanation": "A binding floor is above equilibrium, making quantity supplied greater than quantity demanded.",
+      "source_pages": []
+    },
+    {
+      "id": "q024",
+      "topic_id": "price_controls",
+      "question": "A market has equilibrium price 8. What is the effect of a price ceiling of 10?",
+      "options": [
+        "It creates a shortage",
+        "It creates a surplus",
+        "It sets the market price to 10",
+        "It is nonbinding and leaves the equilibrium unchanged"
+      ],
+      "correct_index": 3,
+      "explanation": "A maximum price above the equilibrium does not restrict the equilibrium trade.",
+      "source_pages": []
+    },
+    {
+      "id": "q025",
+      "topic_id": "price_controls",
+      "question": "A market has equilibrium price 8. What is the effect of a price floor of 6?",
+      "options": [
+        "It is nonbinding and leaves the equilibrium unchanged",
+        "It creates a shortage",
+        "It creates a surplus",
+        "It sets the market price to 6"
+      ],
+      "correct_index": 0,
+      "explanation": "A minimum price below the equilibrium does not prevent trade at the equilibrium price.",
+      "source_pages": []
+    },
+    {
+      "id": "q026",
+      "topic_id": "price_controls",
+      "question": "At a binding ceiling, Qd = 120 and Qs = 70. How large is the shortage?",
+      "options": [
+        "190 units",
+        "50 units",
+        "70 units",
+        "120 units"
+      ],
+      "correct_index": 1,
+      "explanation": "The shortage is quantity demanded minus quantity supplied: 120 − 70 = 50.",
+      "source_pages": []
+    },
+    {
+      "id": "q027",
+      "topic_id": "price_controls",
+      "question": "At a binding floor, Qs = 100 and Qd = 60. How large is the surplus?",
+      "options": [
+        "160 units",
+        "60 units",
+        "40 units",
+        "100 units"
+      ],
+      "correct_index": 2,
+      "explanation": "The surplus is quantity supplied minus quantity demanded: 100 − 60 = 40.",
+      "source_pages": []
+    },
+    {
+      "id": "q028",
+      "topic_id": "price_controls",
+      "question": "Under a binding ceiling with Qd = 120 and Qs = 70, how many units can trade if sellers supply exactly Qs and there are no other sources?",
+      "options": [
+        "120 units",
+        "190 units",
+        "Exactly 50 units",
+        "At most 70 units"
+      ],
+      "correct_index": 3,
+      "explanation": "Only 70 units are supplied, so trade cannot exceed 70 even though buyers want 120.",
+      "source_pages": []
+    },
+    {
+      "id": "q029",
+      "topic_id": "price_controls",
+      "question": "In the basic competitive labor-market model, what follows from a minimum wage above equilibrium?",
+      "options": [
+        "Quantity of labor supplied exceeds quantity of labor demanded",
+        "Quantity of labor demanded exceeds supply",
+        "Every worker necessarily gains employment",
+        "Labor demand automatically shifts right"
+      ],
+      "correct_index": 0,
+      "explanation": "A binding wage floor creates excess labor supply in this model; this is a model prediction, not a claim about every real labor market.",
+      "source_pages": []
+    },
+    {
+      "id": "q030",
+      "topic_id": "price_controls",
+      "question": "Why can a binding price control create deadweight loss in the basic competitive model with no externalities?",
+      "options": [
+        "Every consumer necessarily pays more",
+        "Some mutually beneficial trades no longer occur",
+        "The government must buy all output",
+        "Demand and supply disappear"
+      ],
+      "correct_index": 1,
+      "explanation": "When a control reduces trade below the efficient equilibrium quantity, some trades with benefits exceeding costs are lost.",
+      "source_pages": []
     }
-  ]
+  ],
+  "learning_state": {
+    "question_reviews": {
+      "q004": "pending",
+      "q005": "pending",
+      "q006": "pending",
+      "q007": "pending",
+      "q008": "pending",
+      "q009": "pending",
+      "q010": "pending",
+      "q011": "pending",
+      "q012": "pending",
+      "q013": "pending",
+      "q014": "pending",
+      "q015": "pending",
+      "q016": "pending",
+      "q017": "pending",
+      "q018": "pending",
+      "q019": "pending",
+      "q020": "pending",
+      "q021": "pending",
+      "q022": "pending",
+      "q023": "pending",
+      "q024": "pending",
+      "q025": "pending",
+      "q026": "pending",
+      "q027": "pending",
+      "q028": "pending",
+      "q029": "pending",
+      "q030": "pending"
+    }
+  }
 }

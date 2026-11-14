@@ -4,7 +4,7 @@
     "python-basics-topic-2",
     "python-basics-topic-3"
   ],
-  "review_required": false,
+  "review_required": true,
   "model": "gemini-3.5-flash-lite",
   "review": {
     "status": "APPROVED",
@@ -22,6 +22,15 @@
     "notes": [
       "Human review approved the final AI-assisted revisions.",
       "Relationships are empty and relationship generation remains unverified."
+    ]
+  },
+  "expansion": {
+    "added_questions": 21,
+    "total_questions": 30,
+    "review_status": "pending",
+    "notes": [
+      "The historical APPROVED review above covers only python-basics-q1 through python-basics-q9.",
+      "New AI-authored questions python-basics-q10 through python-basics-q30 require human review in Study Plan before practice."
     ]
   }
 }

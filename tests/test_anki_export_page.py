@@ -6,6 +6,7 @@ import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 from models.schemas import AttemptResult, ExamSession, StudyPackage
+from services.question_editor import available_questions
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +15,9 @@ PAGE_PATH = ROOT / "pages" / "5_Export_Anki.py"
 
 def _python_basics_course() -> StudyPackage:
     path = ROOT / "data" / "demo_python_basics.json"
-    return StudyPackage.model_validate_json(path.read_text(encoding="utf-8"))
+    course = StudyPackage.model_validate_json(path.read_text(encoding="utf-8"))
+    # These export/mastery fixtures exercise the nine originally available cards.
+    return course.model_copy(update={"questions": available_questions(course), "learning_state": {}})
 
 
 def _app_with_course(course: StudyPackage | None = None) -> AppTest:
