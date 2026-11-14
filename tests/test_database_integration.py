@@ -176,7 +176,7 @@ def test_real_migration_failure_rolls_back_ddl_and_ledger(db, tmp_path):
     for source in MIGRATION_DIRECTORY.glob("*.sql"):
         (tmp_path / source.name).write_bytes(source.read_bytes())
     # Numbered after every real migration so it never shares a version with one.
-    (tmp_path / "999_deliberate_failure.sql").write_text("CREATE TABLE should_rollback (id INT); SELECT no_such_function();")
+    (tmp_path / "999_deliberate_failure.sql").write_text("CREATE TABLE should_rollback (id INT); SELECT no_such_function();", encoding="utf-8")
     with db() as connection, pytest.raises(psycopg.Error):
         apply_migrations(connection, tmp_path)
     with db() as connection:
