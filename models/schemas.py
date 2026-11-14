@@ -25,6 +25,7 @@ class Question(BaseModel):
     correct_index: int = Field(ge=0, le=3)
     explanation: str
     source_pages: list[int] = Field(default_factory=list)
+    hints: list[str] = Field(default_factory=list, max_length=3)
 
 
 class StudyPackage(BaseModel):

@@ -1,0 +1,68 @@
+{
+  "q001": [
+    "Sketch the market with price on the vertical axis and quantity on the horizontal axis.",
+    "Shift demand to the right and leave the supply curve fixed. Use an upward-sloping supply curve.",
+    "Mark the two intersections and compare their coordinates on each axis."
+  ],
+  "q002": [
+    "Price elasticity compares percentage changes, so focus on relative changes in quantity and price.",
+    "Try an elasticity magnitude of 2. If price changes by 1%, how large is the percentage change in quantity demanded?",
+    "Choose the label for demand that responds more than proportionally to a price change."
+  ],
+  "q003": [
+    "A binding ceiling is a legal maximum below the market-clearing price.",
+    "At that lower price, compare the quantity buyers want with the quantity sellers offer.",
+    "Think about what economists call a market where some willing buyers cannot find sellers at the posted price."
+  ],
+  "calc_q001": [
+    "Direct substitution gives 0/0, so try simplifying the expression before evaluating the limit.",
+    "The numerator is a difference of squares. Factor it into two linear terms.",
+    "Cancel the common factor x − 2 for nearby x ≠ 2, then substitute 2 into the remaining expression."
+  ],
+  "calc_q002": [
+    "Differentiate the cubic and the linear term separately.",
+    "Apply the power rule to the cubic: multiply by the exponent and reduce that exponent by one.",
+    "For the linear term, its derivative is its signed coefficient. Combine that constant with the derivative of the cubic."
+  ],
+  "calc_q003": [
+    "The coefficient of the squared term is positive. Think about the shape of the parabola.",
+    "Differentiate to get 2x − 4. At the bottom of the curve, the tangent is horizontal.",
+    "Set the derivative equal to zero and solve for the input."
+  ],
+  "python-basics-q1": [
+    "Look at a short statement such as `score = 7`. What is on each side of `=`?",
+    "Trace what Python needs to remember so that a later `print(score)` can look up the stored object."
+  ],
+  "python-basics-q2": [
+    "Trace two assignments in order: `label = 'old'`, then `label = 'new'`.",
+    "After the second line, which object does looking up `label` retrieve? Consider what changed about the name itself."
+  ],
+  "python-basics-q3": [
+    "Suppose `a = 3` and `b = 2`. Consider the expression `a * b`.",
+    "Look up the values of the two names, then apply the multiplication operator. What does evaluating the expression give you?"
+  ],
+  "python-basics-q4": [
+    "The test after `if` is checked before any line in that branch runs.",
+    "Try `if score >= 10:` with scores of 8 and 12. Which score passes the test and lets Python enter the branch?"
+  ],
+  "python-basics-q5": [
+    "In an `if/else` statement, the test after `if` is evaluated before either branch runs.",
+    "Try the condition `score >= 10` with a score of 8. Trace where control goes after the test fails."
+  ],
+  "python-basics-q6": [
+    "Read a comparison as a question about two values. It can get a yes-or-no answer.",
+    "Evaluate `3 > 5` and `3 == 3`. What Python type do `False` and `True` share?"
+  ],
+  "python-basics-q7": [
+    "Trace `for letter in 'cat':` one pass at a time.",
+    "Track what `letter` receives on each pass and where those successive values come from."
+  ],
+  "python-basics-q8": [
+    "A `while` loop checks its test before each pass through the body.",
+    "With the test `count < 3`, start at 0 and add 1 each pass. Compare the test at counts 2 and 3."
+  ],
+  "python-basics-q9": [
+    "Picture a `for` header followed by two lines that start farther to the right.",
+    "Imagine moving the second line back to the same column as the header. Which line still runs on each pass, and what tells Python that?"
+  ]
+}

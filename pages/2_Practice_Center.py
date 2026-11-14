@@ -5,6 +5,7 @@ import streamlit as st
 from services.account_sync import render_last_save_status, save_exam_to_account
 from services.question_editor import available_questions
 from services.exam_engine import create_exam, grade_exam
+from services.hints import hint_state_key, hints_for
 from services.question_review import create_mistake_review, mistake_questions, question_sources
 from services.ui_style import apply_app_styles
 
@@ -169,6 +170,18 @@ if active_practice is not None:
                     key=f"answer_{session.session_id}_{question.id}",
                 )
 
+                if session.mode == "topic" and (hints := hints_for(question)):
+                    state_key = hint_state_key(session.session_id, question.id)
+                    shown = st.session_state.get(state_key, 0)
+                    for number, hint in enumerate(hints[:shown], start=1):
+                        st.info(f"Hint {number} of {len(hints)}: {hint}")
+                    if shown < len(hints) and st.button(
+                        "Show a hint" if shown == 0 else "Show next hint",
+                        key=f"hint_button_{session.session_id}_{question.id}",
+                    ):
+                        st.session_state[state_key] = shown + 1
+                        st.rerun()
+
         if st.button("Submit answers", type="primary"):
             selected_answers = {
                 question.id: st.session_state.get(
@@ -285,6 +298,12 @@ if active_practice is not None:
                     else:
                         st.error(f"✕ Your answer: {selected_answer}")
                         st.success(f"✓ Correct answer: {correct_answer}")
+
+                if session.mode == "topic" and (hints := hints_for(question)):
+                    shown = st.session_state.get(
+                        hint_state_key(session.session_id, question.id), 0
+                    )
+                    st.caption(f"Hints used: {shown} of {len(hints)}")
 
                 with st.container(border=True):
                     st.subheader("Explanation")
