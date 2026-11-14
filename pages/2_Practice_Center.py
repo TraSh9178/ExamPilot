@@ -3,7 +3,7 @@ from html import escape
 import streamlit as st
 
 from services.account_sync import render_last_save_status, save_exam_to_account
-from services.accessibility import display_question
+from services.accessibility import display_question, display_text
 from services.question_editor import available_questions
 from services.exam_engine import create_exam, grade_exam
 from services.hints import hint_state_key, hints_for
@@ -182,7 +182,7 @@ if active_practice is not None:
                     state_key = hint_state_key(session.session_id, question.id)
                     shown = st.session_state.get(state_key, 0)
                     for number, hint in enumerate(hints[:shown], start=1):
-                        st.info(f"Hint {number} of {len(hints)}: {hint}")
+                        st.info(f"Hint {number} of {len(hints)}: {display_text(hint, st.session_state)}")
                     if shown < len(hints) and st.button(
                         "Show a hint" if shown == 0 else "Show next hint",
                         key=f"hint_button_{session.session_id}_{question.id}",

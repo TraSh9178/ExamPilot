@@ -6,6 +6,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from models.schemas import StudyPackage
+from services.accessibility import BILINGUAL_KEY, display_text
 from services.hints import MAX_HINTS, hint_state_key, hints_for, validate_hints
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -78,7 +79,7 @@ def test_validate_hints_allows_substrings_and_short_answers():
     validate_hints([], "Elastic")
 
 
-def start_practice(mode, *, use_demo_question=True):
+def start_practice(mode, *, use_demo_question=True, bilingual=None):
     data = read_data(CALCULUS_DEMO)
     question = data["questions"][0]
     if not use_demo_question:
@@ -91,6 +92,9 @@ def start_practice(mode, *, use_demo_question=True):
     app = AppTest.from_file(str(PAGE_PATH))
     app.session_state["current_course"] = course
     app.session_state[f"confirmed_scope_{course.course_id}"] = [question["topic_id"]]
+    if bilingual is not None:
+        # The sidebar toggle lives in app.py; set its session-state key directly.
+        app.session_state[BILINGUAL_KEY] = bilingual
     app.run()
     app.radio(key=f"practice_mode_{course.course_id}").set_value(mode)
     app.number_input(key=f"practice_count_{course.course_id}").set_value(1)
@@ -131,6 +135,43 @@ def test_topic_hints_reveal_in_order_preserve_answer_and_leave_score_unchanged(u
 
     assert not app.exception
     assert f"Hints used: {len(revealed)} of {len(hints)}" in [item.value for item in app.caption]
+    assert next(metric.value for metric in app.metric if metric.label == "Score") == "1 / 1"
+
+
+@pytest.mark.parametrize("bilingual", [False, True])
+def test_hint_text_shows_chinese_key_terms_only_when_toggle_is_on(bilingual):
+    app, session, question = start_practice("Topic Practice", bilingual=bilingual)
+    hints = hints_for(question)
+    answer_key = f"answer_{session.session_id}_{question.id}"
+    button_key = f"hint_button_{session.session_id}_{question.id}"
+    state_key = hint_state_key(session.session_id, question.id)
+
+    app.radio(key=answer_key).set_value(question.correct_index).run()
+    for number in range(1, len(hints) + 1):
+        app.button(key=button_key).click().run()
+
+        assert not app.exception
+        assert app.radio(key=answer_key).value == question.correct_index
+        assert app.session_state[state_key] == number
+    assert all(button.key != button_key for button in app.button)
+
+    shown = [item.value for item in app.info if item.value.startswith("Hint ")]
+    original = [f"Hint {number} of {len(hints)}: {hint}" for number, hint in enumerate(hints, start=1)]
+    if bilingual:
+        # Each hint is annotated on its own; the counter prefix is untouched.
+        assert shown == [
+            f"Hint {number} of {len(hints)}: {display_text(hint, {BILINGUAL_KEY: True})}"
+            for number, hint in enumerate(hints, start=1)
+        ]
+        assert shown != original
+        assert "the limit (极限)" in shown[0]
+    else:
+        assert shown == original
+
+    next(button for button in app.button if button.label == "Submit answers").click().run()
+
+    assert not app.exception
+    assert f"Hints used: {len(hints)} of {len(hints)}" in [item.value for item in app.caption]
     assert next(metric.value for metric in app.metric if metric.label == "Score") == "1 / 1"
 
 
