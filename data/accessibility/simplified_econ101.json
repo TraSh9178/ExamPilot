@@ -1,0 +1,34 @@
+{
+  "questions": {
+    "q001": {
+      "question": "Demand rises. Supply stays the same. What happens to the market price and quantity?",
+      "options": [
+        "Both decrease",
+        "Both increase",
+        "Price rises and quantity falls",
+        "Price falls and quantity rises"
+      ],
+      "explanation": "The demand curve moves right. With an upward-sloping supply curve, the market price rises and the quantity sold rises."
+    },
+    "q002": {
+      "question": "The absolute value of price elasticity of demand is greater than 1. How is demand described?",
+      "options": [
+        "Perfectly inelastic",
+        "Unit elastic",
+        "Elastic",
+        "Inelastic"
+      ],
+      "explanation": "When the absolute value of price elasticity of demand is greater than 1, demand is elastic."
+    },
+    "q003": {
+      "question": "In a competitive market, what usually happens when a binding price ceiling is set?",
+      "options": [
+        "A shortage",
+        "A surplus",
+        "No change in quantity demanded",
+        "Producer surplus is guaranteed to increase"
+      ],
+      "explanation": "A binding price ceiling is below the market equilibrium price. Buyers want more than sellers offer, so there is a shortage."
+    }
+  }
+}

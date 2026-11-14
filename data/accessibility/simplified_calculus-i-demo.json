@@ -1,0 +1,34 @@
+{
+  "questions": {
+    "calc_q001": {
+      "question": "Find lim(x→2) (x² − 4)/(x − 2).",
+      "options": [
+        "0",
+        "2",
+        "4",
+        "The limit does not exist"
+      ],
+      "explanation": "For x ≠ 2, (x² − 4)/(x − 2) = (x − 2)(x + 2)/(x − 2) = x + 2. As x approaches 2, x + 2 approaches 4."
+    },
+    "calc_q002": {
+      "question": "For f(x) = x³ − 5x, find f′(x).",
+      "options": [
+        "3x² − 5",
+        "3x² − 5x",
+        "x² − 5",
+        "3x − 5"
+      ],
+      "explanation": "Use the power rule. The derivative of x³ is 3x². The derivative of −5x is −5. Therefore f′(x) = 3x² − 5."
+    },
+    "calc_q003": {
+      "question": "For f(x) = x² − 4x, at what x-value is f smallest?",
+      "options": [
+        "x = 0",
+        "x = 1",
+        "x = 2",
+        "x = 4"
+      ],
+      "explanation": "f′(x) = 2x − 4. Set it to 0 to find the critical point x = 2. Because f″(x) = 2 > 0, the curve bends up there. So f has a minimum at x = 2."
+    }
+  }
+}
