@@ -5,6 +5,7 @@ from services.mastery_engine import (
     get_mastery_status,
 )
 from services.ui_style import apply_app_styles
+from services.learning_dna_ui import render_learning_dna
 
 
 apply_app_styles()
@@ -96,6 +97,15 @@ if not history:
         "No graded practice sessions yet. Your topic list will update "
         "after you complete a practice session."
     )
+
+# Prefer persisted chronology when restoring histories; keep new local sessions last.
+order = course.learning_state.get("session_order", [])
+ordered_ids = [sid for sid in order if sid in history]
+ordered_ids.extend(sid for sid in history if sid not in ordered_ids)
+render_learning_dna(
+    course, attempts, [history[sid]["session"] for sid in ordered_ids],
+    list(questions_by_id.values()), mode,
+)
 
 status_labels = {
     "unattempted": "Unattempted",

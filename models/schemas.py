@@ -17,6 +17,7 @@ class Relationship(BaseModel):
 
 
 class Question(BaseModel):
+    cognitive_dimension: Literal["computation", "conceptual"] | None = None
     version_of: str | None = None
     id: str
     topic_id: str

@@ -110,6 +110,21 @@ with st.container(key="dashboard_actions"):
         st.session_state.show_course_setup = not st.session_state.show_course_setup
         st.rerun()
 
+with st.container(border=True, key="dashboard_learning_dna"):
+    st.subheader("Learning DNA")
+    st.write("Compare computation and conceptual understanding using your practice evidence.")
+    selected_course = st.session_state.get("current_course")
+    if selected_course is None:
+        st.caption("Open a course below, then view its Learning DNA in Progress.")
+    else:
+        st.caption(f"Current course: {selected_course.course_name}")
+    if st.button(
+        "View Learning DNA", icon=":material/insights:",
+        key="learning_dna_open", disabled=selected_course is None,
+        width="stretch",
+    ):
+        st.switch_page("pages/3_Performance.py")
+
 overview = st.container(key="dashboard_overview")
 
 with st.container(key="dashboard_courses_header"):

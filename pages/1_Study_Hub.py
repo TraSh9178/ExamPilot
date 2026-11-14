@@ -246,12 +246,22 @@ with st.expander("Review and edit questions", expanded=any(status_for(course, q.
             options = [st.text_input(f"Option {chr(65 + index)}", value=value) for index, value in enumerate(original.options)]
             correct = st.selectbox("Correct answer", list(range(4)), index=original.correct_index, format_func=lambda i: chr(65+i))
             explanation = st.text_area("Explanation", value=original.explanation)
+            dimensions = [None, "computation", "conceptual"]
+            dimension = st.selectbox(
+                "Learning DNA evidence type", dimensions,
+                index=dimensions.index(original.cognitive_dimension),
+                format_func=lambda value: {
+                    None: "Untagged", "computation": "Computation",
+                    "conceptual": "Conceptual understanding",
+                }[value],
+                help="Choose what this question tests. Leave uncertain or mixed questions untagged; this label is not a student ability score.",
+            )
             decision = st.radio("Review decision", ["Approve", "Flag as problematic"], horizontal=True)
             apply_review = st.form_submit_button("Save review", type="primary")
         if apply_review:
             try:
                 revised = review_question(course, question_id, "approved" if decision == "Approve" else "flagged",
-                                          {"question": prompt, "options": options, "correct_index": correct, "explanation": explanation})
+                                          {"question": prompt, "options": options, "correct_index": correct, "explanation": explanation, "cognitive_dimension": dimension})
             except ValueError as error:
                 st.error(str(error))
             else:
