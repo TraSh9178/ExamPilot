@@ -1,6 +1,6 @@
 import json
 import time
-from collections.abc import MutableMapping
+from collections.abc import MutableMapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -319,11 +319,105 @@ def radar_count_text(topic_radar: learning_radar.TopicRadar | None) -> str:
     return f"{count} students are stuck here"
 
 
-def render_topic_radar(topic_radar: learning_radar.TopicRadar | None) -> None:
+NO_REASON_LABEL = "No specific reason"
+# Choices offered before flagging: no reason (stored as None), then each code.
+RADAR_REASON_OPTIONS: tuple[str | None, ...] = (
+    None,
+    *learning_radar.REASON_LABELS,
+)
+WORDING_HINT = (
+    "Turn on Accessibility in the sidebar for simpler wording and "
+    "Chinese key terms."
+)
+PREREQUISITE_HINT_MIN_COUNT = 5
+# Topics that pages/6_Concept_Lab.py has an experiment for, by course.
+CONCEPT_LAB_TOPICS = {
+    "calculus-i-demo": frozenset({"calc_limits", "calc_derivatives"}),
+}
+
+
+def radar_reason_label(reason: str | None) -> str:
+    """Readable label for a stored reason code; None means no reason."""
+    if reason is None:
+        return NO_REASON_LABEL
+    return learning_radar.REASON_LABELS.get(reason, NO_REASON_LABEL)
+
+
+def radar_reason_breakdown(
+    topic_radar: learning_radar.TopicRadar | None,
+) -> str | None:
+    """Reason counts such as "Concept unclear 2 · Calculation errors 3".
+
+    Returns None when there are no reasons, and also when the topic's count
+    is hidden by the privacy threshold: the backend does not threshold
+    ``reasons``, so the numbers must not be shown either.
+    """
+    if not _has_flags(topic_radar) or topic_radar.display_count is None:
+        return None
+    parts = [
+        f"{label} {topic_radar.reasons[code]}"
+        for code, label in learning_radar.REASON_LABELS.items()
+        if topic_radar.reasons.get(code, 0) > 0
+    ]
+    return " · ".join(parts) or None
+
+
+def join_names(names: Sequence[str]) -> str:
+    """Join names as English prose: "A", "A and B", "A, B, and C"."""
+    names = list(names)
+    if len(names) <= 2:
+        return " and ".join(names)
+    return f"{', '.join(names[:-1])}, and {names[-1]}"
+
+
+def radar_prerequisite_hint(
+    topic_radar: learning_radar.TopicRadar | None,
+    prerequisite_names: Sequence[str],
+) -> str | None:
+    """Suggest reviewing prerequisites when many students are stuck here.
+
+    Only a visible count can trigger the hint, so a hidden count (privacy
+    threshold) never implies how many students flagged the topic.
+    """
+    if not prerequisite_names or topic_radar is None:
+        return None
+    count = topic_radar.display_count
+    if count is None or count < PREREQUISITE_HINT_MIN_COUNT:
+        return None
+    return (
+        "Many students are stuck here. "
+        f"Reviewing {join_names(prerequisite_names)} first may help."
+    )
+
+
+def concept_lab_available(course_id: str, topic_id: str) -> bool:
+    """True when the Concept Lab page has an experiment for this topic."""
+    return topic_id in CONCEPT_LAB_TOPICS.get(course_id, frozenset())
+
+
+def render_reason_hint(reason: str | None) -> None:
+    """Point users who cannot understand the wording to Accessibility mode."""
+    if reason == "wording":
+        st.info(WORDING_HINT)
+
+
+def render_saved_reason(reason: str | None) -> None:
+    """Show the reason the user gave when flagging the selected topic."""
+    st.caption(f"Your reason: {radar_reason_label(reason)}")
+    render_reason_hint(reason)
+
+
+def render_topic_radar(
+    topic_radar: learning_radar.TopicRadar | None,
+    prerequisite_names: Sequence[str] = (),
+) -> None:
     """Show how many students are stuck on the selected topic."""
     st.markdown(radar_count_text(topic_radar))
     if topic_radar is not None and topic_radar.sample_count > 0:
         st.caption("Includes sample data")
+    hint = radar_prerequisite_hint(topic_radar, prerequisite_names)
+    if hint is not None:
+        st.info(hint)
 
 
 def render_radar_panel(
@@ -340,13 +434,18 @@ def render_radar_panel(
         if _has_flags(topic_radar) and topic_radar.topic_id in topic_names
     ]
     if flagged:
-        st.markdown(
-            "\n".join(
-                f"{index}. **{topic_names[topic_radar.topic_id]}** — "
+        lines = []
+        for index, topic_radar in enumerate(flagged, start=1):
+            marker = f"{index}. "
+            lines.append(
+                f"{marker}**{topic_names[topic_radar.topic_id]}** — "
                 f"{radar_count_text(topic_radar)}"
-                for index, topic_radar in enumerate(flagged, start=1)
             )
-        )
+            breakdown = radar_reason_breakdown(topic_radar)
+            if breakdown is not None:
+                # Indent to the item's content so it renders as a nested bullet.
+                lines.append(f"{' ' * len(marker)}- {breakdown}")
+        st.markdown("\n".join(lines))
     else:
         st.caption("No topics have been flagged yet.")
     if radar.has_sample:

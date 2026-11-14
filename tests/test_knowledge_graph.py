@@ -1225,3 +1225,568 @@ def test_radar_is_reused_for_fifteen_seconds(monkeypatch):
     assert not app.exception
     assert len(radar.calls["get_course_radar"]) == 2
     assert len(radar.calls["get_user_flags"]) == 2
+
+
+# --- Learning Radar: reasons, privacy, hints, Concept Lab ------------------
+
+WORDING_HINT_TEXT = (
+    "Turn on Accessibility in the sidebar for simpler wording and Chinese key terms."
+)
+LIMITS_HINT_TEXT = "Many students are stuck here. Reviewing Limits first may help."
+REASON_DISPLAY_LABELS = [
+    "No specific reason",
+    "Concept unclear",
+    "Calculation errors",
+    "Can't understand the question",
+    "Don't know where to start",
+]
+_NOT_PASSED = object()
+
+
+class ReasonRadarFake(RadarFake):
+    """RadarFake that also records the reason argument given to set_flag."""
+
+    def __init__(self, *args, **kwargs):
+        self.flag_reasons = []
+        super().__init__(*args, **kwargs)
+
+    def set_flag(self, user_id, course_id, topic_id, *args, **kwargs):
+        self.flag_reasons.append(args[0] if args else kwargs.get("reason", _NOT_PASSED))
+        return super().set_flag(user_id, course_id, topic_id, *args, **kwargs)
+
+
+def _reason_topic(topic_id, *, real=0, sample=0, reasons=None, display="total"):
+    return learning_radar.TopicRadar(
+        topic_id=topic_id,
+        real_count=real,
+        sample_count=sample,
+        reasons=dict(reasons or {}),
+        display_count=real + sample if display == "total" else display,
+    )
+
+
+def _custom_course(course_id, topics, relationships=()):
+    return StudyPackage(
+        course_id=course_id,
+        course_name="Custom Course",
+        topics=[
+            {"id": topic_id, "name": name, "summary": f"{name} summary."}
+            for topic_id, name in topics
+        ],
+        relationships=[
+            {"from_topic": source, "to_topic": target, "type": "prerequisite"}
+            for source, target in relationships
+        ],
+        questions=[],
+    )
+
+
+def _econ_course():
+    return StudyPackage.model_validate_json(
+        (CALCULUS_DEMO_PATH.parent / "sample_course.json").read_text(encoding="utf-8")
+    )
+
+
+def _reason_picker(app, topic_id, course_id=CALCULUS_ID):
+    return app.selectbox(key=f"radar_reason_{course_id}_{topic_id}")
+
+
+def _reason_picker_keys(app):
+    return [
+        box.key for box in app.selectbox
+        if box.key and box.key.startswith("radar_reason_")
+    ]
+
+
+def _flag_button(app, topic_id):
+    return app.button(key=f"radar_flag_{CALCULUS_ID}_{topic_id}")
+
+
+def _infos(app):
+    return [item.value for item in app.info]
+
+
+def _concept_lab_buttons(app):
+    return [button for button in app.button if button.label == "Open Concept Lab"]
+
+
+def _record_graph_nodes(monkeypatch):
+    rendered = []
+    monkeypatch.setattr(
+        knowledge_graph,
+        "agraph",
+        lambda nodes, edges, config, node_scale: rendered.append(nodes) or None,
+    )
+    return rendered
+
+
+def test_reason_options_list_no_reason_first_then_every_code():
+    assert knowledge_graph.RADAR_REASON_OPTIONS == (
+        None, "concept", "calculation", "wording", "start",
+    )
+    assert [
+        knowledge_graph.radar_reason_label(option)
+        for option in knowledge_graph.RADAR_REASON_OPTIONS
+    ] == REASON_DISPLAY_LABELS
+
+
+@pytest.mark.parametrize(
+    ("topic_radar", "breakdown"),
+    [
+        (
+            _reason_topic("t", real=5, reasons={"calculation": 3, "concept": 2}),
+            "Concept unclear 2 · Calculation errors 3",
+        ),
+        (
+            _reason_topic("t", real=1, sample=6, reasons={"start": 1, "wording": 4}),
+            "Can't understand the question 4 · Don't know where to start 1",
+        ),
+        (_reason_topic("t", real=5, reasons={}), None),
+        (_reason_topic("t", real=2, reasons={"concept": 2}, display=None), None),
+        (None, None),
+    ],
+)
+def test_radar_reason_breakdown(topic_radar, breakdown):
+    assert knowledge_graph.radar_reason_breakdown(topic_radar) == breakdown
+
+
+@pytest.mark.parametrize(
+    ("names", "joined"),
+    [
+        (["Limits"], "Limits"),
+        (["Limits", "Series"], "Limits and Series"),
+        (["Limits", "Series", "Sums"], "Limits, Series, and Sums"),
+    ],
+)
+def test_join_names(names, joined):
+    assert knowledge_graph.join_names(names) == joined
+
+
+@pytest.mark.parametrize(
+    ("topic_radar", "names", "hint"),
+    [
+        (_reason_topic("t", real=5), ["Limits"], LIMITS_HINT_TEXT),
+        (
+            _reason_topic("t", real=3, sample=6),
+            ["Limits", "Series"],
+            "Many students are stuck here. Reviewing Limits and Series first may help.",
+        ),
+        (_reason_topic("t", real=4), ["Limits"], None),
+        (_reason_topic("t", real=2, display=None), ["Limits"], None),
+        (_reason_topic("t", real=8), [], None),
+        (None, ["Limits"], None),
+    ],
+)
+def test_radar_prerequisite_hint(topic_radar, names, hint):
+    assert knowledge_graph.radar_prerequisite_hint(topic_radar, names) == hint
+
+
+@pytest.mark.parametrize(
+    ("course_id", "topic_id", "available"),
+    [
+        (CALCULUS_ID, "calc_limits", True),
+        (CALCULUS_ID, "calc_derivatives", True),
+        (CALCULUS_ID, "calc_derivative_applications", False),
+        ("econ101", "calc_limits", False),
+        ("econ101", "supply_demand", False),
+        ("course-1", "calc_derivatives", False),
+    ],
+)
+def test_concept_lab_available_only_for_the_two_calculus_topics(
+    course_id, topic_id, available
+):
+    assert knowledge_graph.concept_lab_available(course_id, topic_id) is available
+
+
+@pytest.mark.parametrize("reason", ["concept", "calculation", "wording", "start"])
+def test_chosen_reason_reaches_set_flag_and_is_shown_once_flagged(monkeypatch, reason):
+    radar = ReasonRadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
+
+    app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
+
+    assert not app.exception
+    picker = _reason_picker(app, "calc_derivatives")
+    assert picker.label == "Why are you stuck?"
+    assert picker.options == REASON_DISPLAY_LABELS
+    assert picker.value is None
+
+    picker.set_value(reason).run()
+    _flag_button(app, "calc_derivatives").click().run()
+
+    assert not app.exception
+    assert radar.flag_reasons == [reason]
+    assert radar.calls["set_flag"] == [
+        (TEST_USER.user_id, CALCULUS_ID, "calc_derivatives")
+    ]
+    assert f"Your reason: {learning_radar.REASON_LABELS[reason]}" in _captions(app)
+    assert _flag_button(app, "calc_derivatives").label == "Not stuck anymore"
+    assert _reason_picker_keys(app) == []
+
+
+@pytest.mark.parametrize("pick_another_first", [False, True])
+def test_no_specific_reason_sends_none(monkeypatch, pick_another_first):
+    radar = ReasonRadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
+
+    app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
+    if pick_another_first:
+        _reason_picker(app, "calc_derivatives").set_value("concept").run()
+        _reason_picker(app, "calc_derivatives").set_value(None).run()
+    _flag_button(app, "calc_derivatives").click().run()
+
+    assert not app.exception
+    assert radar.flag_reasons == [None]
+    assert radar.user_flags == {"calc_derivatives": None}
+    assert "Your reason: No specific reason" in _captions(app)
+
+
+@pytest.mark.parametrize(
+    ("saved", "label"),
+    [("calculation", "Calculation errors"), (None, "No specific reason")],
+)
+def test_saved_reason_is_shown_and_changed_by_flagging_again(monkeypatch, saved, label):
+    radar = ReasonRadarFake(
+        monkeypatch,
+        [_topic("calc_derivatives", real=4)],
+        user_flags={"calc_derivatives": saved},
+    )
+
+    app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
+
+    assert not app.exception
+    assert f"Your reason: {label}" in _captions(app)
+    assert _flag_button(app, "calc_derivatives").label == "Not stuck anymore"
+    assert _reason_picker_keys(app) == []
+
+    # Changing the reason: remove the flag, then flag again with a new one.
+    _flag_button(app, "calc_derivatives").click().run()
+
+    assert not app.exception
+    assert radar.calls["clear_flag"] == [
+        (TEST_USER.user_id, CALCULUS_ID, "calc_derivatives")
+    ]
+    assert not any(value.startswith("Your reason:") for value in _captions(app))
+    assert _reason_picker(app, "calc_derivatives").value is None
+
+    _reason_picker(app, "calc_derivatives").set_value("start").run()
+    _flag_button(app, "calc_derivatives").click().run()
+
+    assert not app.exception
+    assert radar.flag_reasons == ["start"]
+    assert "Your reason: Don't know where to start" in _captions(app)
+    assert f"Your reason: {label}" not in _captions(app)
+
+
+@pytest.mark.parametrize(
+    ("picked", "shown"),
+    [
+        ("wording", True),
+        ("concept", False),
+        ("calculation", False),
+        ("start", False),
+        (None, False),
+    ],
+)
+def test_accessibility_pointer_follows_picked_reason(monkeypatch, picked, shown):
+    ReasonRadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
+
+    app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
+    assert WORDING_HINT_TEXT not in _infos(app)
+
+    _reason_picker(app, "calc_derivatives").set_value(picked).run()
+
+    assert not app.exception
+    assert _infos(app).count(WORDING_HINT_TEXT) == (1 if shown else 0)
+
+
+def test_accessibility_pointer_disappears_when_another_reason_is_picked(monkeypatch):
+    ReasonRadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
+
+    app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
+    _reason_picker(app, "calc_derivatives").set_value("wording").run()
+    assert WORDING_HINT_TEXT in _infos(app)
+
+    _reason_picker(app, "calc_derivatives").set_value("concept").run()
+
+    assert not app.exception
+    assert WORDING_HINT_TEXT not in _infos(app)
+
+
+@pytest.mark.parametrize(
+    ("saved", "shown"),
+    [("wording", True), ("concept", False), (None, False)],
+)
+def test_accessibility_pointer_follows_saved_reason(monkeypatch, saved, shown):
+    ReasonRadarFake(
+        monkeypatch,
+        [_topic("calc_derivatives", real=4)],
+        user_flags={"calc_derivatives": saved},
+    )
+
+    app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
+
+    assert not app.exception
+    assert _flag_button(app, "calc_derivatives").label == "Not stuck anymore"
+    assert _infos(app).count(WORDING_HINT_TEXT) == (1 if shown else 0)
+
+
+def test_signed_out_user_sees_no_reason_controls(monkeypatch):
+    radar = ReasonRadarFake(
+        monkeypatch,
+        [_reason_topic("calc_derivatives", real=4, reasons={"wording": 4})],
+    )
+
+    app = _graph_page(_calculus_course(), focus="calc_derivatives")
+
+    assert not app.exception
+    assert "4 students are stuck here" in _markdown(app)
+    assert _reason_picker_keys(app) == []
+    assert _radar_buttons(app) == []
+    assert not any(value.startswith("Your reason:") for value in _captions(app))
+    assert WORDING_HINT_TEXT not in _infos(app)
+    assert radar.calls["get_user_flags"] == []
+    assert radar.flag_reasons == []
+
+
+def test_radar_panel_shows_reason_breakdown_with_labels(monkeypatch):
+    RadarFake(
+        monkeypatch,
+        [
+            _reason_topic(
+                "calc_derivatives",
+                real=3,
+                sample=5,
+                reasons={"calculation": 3, "concept": 2},
+            ),
+            _reason_topic("calc_limits", real=4, reasons={}),
+            _reason_topic(
+                "calc_derivative_applications", real=3, reasons={"wording": 1}
+            ),
+        ],
+        ranked=["calc_derivatives", "calc_limits", "calc_derivative_applications"],
+    )
+
+    app = _graph_page(_calculus_course())
+
+    assert not app.exception
+    assert (
+        "1. **Derivatives** — 8 students are stuck here\n"
+        "   - Concept unclear 2 · Calculation errors 3\n"
+        "2. **Limits** — 4 students are stuck here\n"
+        "3. **Applications of Derivatives** — 3 students are stuck here\n"
+        "   - Can't understand the question 1"
+    ) in _markdown(app)
+
+
+def test_radar_panel_shows_no_breakdown_without_reasons(monkeypatch):
+    RadarFake(monkeypatch, [_reason_topic("calc_derivatives", real=8, reasons={})])
+
+    app = _graph_page(_calculus_course())
+
+    assert not app.exception
+    assert "1. **Derivatives** — 8 students are stuck here" in _markdown(app)
+    assert not any(
+        label in value
+        for value in _markdown(app)
+        for label in learning_radar.REASON_LABELS.values()
+    )
+
+
+def _threshold_topic(real):
+    # display_count comes from the backend's own rule, so this checks the page
+    # against the real threshold (MIN_VISIBLE_COUNT) rather than a copy of it.
+    return learning_radar.TopicRadar(
+        topic_id="calc_derivatives",
+        real_count=real,
+        sample_count=0,
+        reasons={"concept": 1, "start": real - 1},
+        display_count=learning_radar._display_count(real, 0),
+    )
+
+
+def test_hidden_count_shows_no_number_and_no_breakdown_anywhere(monkeypatch):
+    topic = _threshold_topic(2)
+    assert topic.display_count is None
+    RadarFake(monkeypatch, [topic])
+    rendered = _record_graph_nodes(monkeypatch)
+
+    app = _graph_page(_calculus_course(), focus="calc_derivatives")
+
+    assert not app.exception
+    # Topic details: no count.
+    assert "Some students flagged this" in _markdown(app)
+    assert not any("student is" in value or "students are" in value for value in _markdown(app))
+    # Node badge: no number.
+    badge_label = {node.id: node.label for node in rendered[-1]}["calc_derivatives"]
+    assert badge_label == "Derivatives\n🔥 flagged"
+    assert not any(char.isdigit() for char in badge_label)
+    # Panel: no number and no reason breakdown.
+    assert "1. **Derivatives** — Some students flagged this" in _markdown(app)
+    shown_text = _markdown(app) + _captions(app) + _infos(app)
+    assert not any(
+        label in value
+        for value in shown_text
+        for label in learning_radar.REASON_LABELS.values()
+    )
+    # No prerequisite hint either, even though Derivatives has one.
+    assert not any(value.startswith("Many students") for value in _infos(app))
+
+
+def test_exactly_three_real_flags_show_numbers_and_breakdown(monkeypatch):
+    topic = _threshold_topic(learning_radar.MIN_VISIBLE_COUNT)
+    assert topic.display_count == 3
+    RadarFake(monkeypatch, [topic])
+    rendered = _record_graph_nodes(monkeypatch)
+
+    app = _graph_page(_calculus_course(), focus="calc_derivatives")
+
+    assert not app.exception
+    assert "3 students are stuck here" in _markdown(app)
+    assert {node.id: node.label for node in rendered[-1]}["calc_derivatives"] == (
+        "Derivatives\n🔥 3 stuck"
+    )
+    assert (
+        "1. **Derivatives** — 3 students are stuck here\n"
+        "   - Concept unclear 1 · Don't know where to start 2"
+    ) in _markdown(app)
+    assert "Some students flagged this" not in _markdown(app)
+
+
+@pytest.mark.parametrize(
+    ("topic", "shown"),
+    [
+        (_topic("calc_derivatives", real=5), True),
+        (_topic("calc_derivatives", real=3, sample=5), True),
+        (_topic("calc_derivatives", real=4), False),
+        (_topic("calc_derivatives", real=2, display=None), False),
+    ],
+)
+def test_prerequisite_hint_needs_five_visible_flags(monkeypatch, topic, shown):
+    RadarFake(monkeypatch, [topic])
+
+    app = _graph_page(_calculus_course(), focus="calc_derivatives")
+
+    assert not app.exception
+    assert _infos(app).count(LIMITS_HINT_TEXT) == (1 if shown else 0)
+    assert not any(
+        value.startswith("Many students") and value != LIMITS_HINT_TEXT
+        for value in _infos(app)
+    )
+
+
+def test_prerequisite_hint_needs_a_prerequisite(monkeypatch):
+    RadarFake(monkeypatch, [_topic("calc_limits", real=9)])
+
+    app = _graph_page(_calculus_course(), focus="calc_limits")
+
+    assert not app.exception
+    assert "9 students are stuck here" in _markdown(app)
+    assert not any(value.startswith("Many students") for value in _infos(app))
+
+
+def test_prerequisite_hint_names_every_prerequisite(monkeypatch):
+    course = _custom_course(
+        "course-1",
+        [("topic-1", "Limits"), ("topic-2", "Series"), ("topic-3", "Integrals")],
+        relationships=[("topic-1", "topic-3"), ("topic-2", "topic-3")],
+    )
+    RadarFake(monkeypatch, [_topic("topic-3", real=6)])
+
+    app = _graph_page(course, focus="topic-3")
+
+    assert not app.exception
+    assert (
+        "Many students are stuck here. Reviewing Limits and Series first may help."
+        in _infos(app)
+    )
+
+
+@pytest.mark.parametrize("signed_in", [False, True])
+@pytest.mark.parametrize("topic_id", ["calc_limits", "calc_derivatives"])
+def test_concept_lab_button_switches_to_concept_lab(monkeypatch, topic_id, signed_in):
+    import streamlit as st
+
+    destinations = []
+    monkeypatch.setattr(st, "switch_page", lambda page: destinations.append(page))
+    RadarFake(monkeypatch, [_topic(topic_id, real=4)])
+
+    app = _graph_page(_calculus_course(), signed_in=signed_in, focus=topic_id)
+
+    assert not app.exception
+    button = app.button(key=f"radar_concept_lab_{CALCULUS_ID}_{topic_id}")
+    assert button.label == "Open Concept Lab"
+    assert len(_concept_lab_buttons(app)) == 1
+    assert destinations == []
+
+    button.click().run()
+
+    assert not app.exception
+    assert destinations == ["pages/6_Concept_Lab.py"]
+
+
+@pytest.mark.parametrize(
+    ("course_factory", "focus"),
+    [
+        (_calculus_course, "calc_derivative_applications"),
+        (_econ_course, "supply_demand"),
+        (
+            lambda: _custom_course(
+                "course-1", [("calc_limits", "Limits"), ("calc_derivatives", "Derivatives")]
+            ),
+            "calc_limits",
+        ),
+    ],
+)
+def test_no_concept_lab_button_for_other_topics_or_courses(
+    monkeypatch, course_factory, focus
+):
+    RadarFake(monkeypatch, [_topic(focus, real=4)])
+
+    app = _graph_page(course_factory(), signed_in=True, focus=focus)
+
+    assert not app.exception
+    assert "4 students are stuck here" in _markdown(app)
+    assert _concept_lab_buttons(app) == []
+
+
+def test_registered_app_opens_concept_lab_from_knowledge_map(monkeypatch):
+    RadarFake(monkeypatch, [_topic("calc_limits", real=4)])
+    app = signed_in_app(PAGE_PATH.parents[1] / "app.py").run()
+    assert not app.exception
+    app.session_state["current_course"] = _calculus_course()
+    app.session_state[f"graph_pending_focus_{CALCULUS_ID}"] = "calc_limits"
+
+    app.switch_page("pages/4_Knowledge_Graph.py").run()
+
+    assert not app.exception
+    assert app.title[0].value == "Knowledge Map"
+    app.button(key=f"radar_concept_lab_{CALCULUS_ID}_calc_limits").click().run()
+
+    assert not app.exception
+    assert app.title[0].value == "Concept Lab"
+
+
+def test_non_demo_course_shows_no_reason_hint_or_concept_lab_controls(monkeypatch):
+    radar = ReasonRadarFake(
+        monkeypatch,
+        [_reason_topic("calc_derivatives", real=9, reasons={"wording": 9})],
+        enabled=False,
+        user_flags={"calc_derivatives": "wording"},
+    )
+    course = _custom_course(
+        "course-1",
+        [("calc_limits", "Limits"), ("calc_derivatives", "Derivatives")],
+        relationships=[("calc_limits", "calc_derivatives")],
+    )
+
+    app = _graph_page(course, signed_in=True, focus="calc_derivatives")
+
+    assert not app.exception
+    assert "Derivatives summary." in _markdown(app)
+    assert radar.calls["radar_enabled"] == ["course-1"]
+    assert all(
+        calls == [] for name, calls in radar.calls.items() if name != "radar_enabled"
+    )
+    assert _reason_picker_keys(app) == []
+    assert _concept_lab_buttons(app) == []
+    assert not any(value.startswith("Your reason:") for value in _captions(app))
+    assert _infos(app) == []

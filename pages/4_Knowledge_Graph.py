@@ -2,12 +2,17 @@ from pathlib import Path
 
 import streamlit as st
 from components.knowledge_graph import (
+    RADAR_REASON_OPTIONS,
+    concept_lab_available,
     render_knowledge_graph,
     forget_course_radar,
     get_selected_topic_details,
     load_course_radar,
     radar_node_badges,
+    radar_reason_label,
     render_radar_panel,
+    render_reason_hint,
+    render_saved_reason,
     render_topic_details,
     render_topic_radar,
 )
@@ -332,9 +337,28 @@ with details_column:
             if radar is not None:
                 st.divider()
                 st.markdown("**Learning Radar**")
-                render_topic_radar(radar.topics.get(selected_node_id))
+                render_topic_radar(
+                    radar.topics.get(selected_node_id),
+                    prerequisite_names=[
+                        topic_names[item]
+                        for item in links["prerequisites"]
+                        if item in topic_names
+                    ],
+                )
                 if radar_user is not None:
                     already_flagged = selected_node_id in radar_user_flags
+                    if already_flagged:
+                        # To change the reason, remove the flag and flag again.
+                        reason = radar_user_flags[selected_node_id]
+                        render_saved_reason(reason)
+                    else:
+                        reason = st.selectbox(
+                            "Why are you stuck?",
+                            options=RADAR_REASON_OPTIONS,
+                            format_func=radar_reason_label,
+                            key=f"radar_reason_{course.course_id}_{selected_node_id}",
+                        )
+                        render_reason_hint(reason)
                     if st.button(
                         "Not stuck anymore" if already_flagged else "I'm stuck here",
                         key=f"radar_flag_{course.course_id}_{selected_node_id}",
@@ -345,7 +369,10 @@ with details_column:
                             )
                         else:
                             result = learning_radar.set_flag(
-                                radar_user.user_id, course.course_id, selected_node_id
+                                radar_user.user_id,
+                                course.course_id,
+                                selected_node_id,
+                                reason,
                             )
                         if result.success:
                             # Show the new count right away instead of waiting
@@ -353,6 +380,13 @@ with details_column:
                             forget_course_radar(st.session_state, course.course_id)
                             st.rerun()
                         st.warning(result.message)
+                if concept_lab_available(course.course_id, selected_node_id):
+                    if st.button(
+                        "Open Concept Lab",
+                        key=f"radar_concept_lab_{course.course_id}_{selected_node_id}",
+                        icon=":material/science:",
+                    ):
+                        st.switch_page("pages/6_Concept_Lab.py")
 
     with st.container(border=True, key="knowledge_graph_legend"):
         st.markdown("**Status Legend**")
