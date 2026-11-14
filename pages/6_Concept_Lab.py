@@ -4,8 +4,28 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from services.concept_lab import limit_example, limit_table
+from services.concept_lab import (
+    cubic, cubic_derivative, limit_example, limit_table, secant_slope, tangent_line,
+)
 from services.ui_style import apply_app_styles
+
+
+def practice_topic(topic_id: str) -> None:
+    """Use the Practice page's existing course-scoped widget contract."""
+    if not st.button("Practice this topic", key=f"concept_lab_practice_{topic_id}"):
+        return
+    course = st.session_state.get("current_course")
+    if course is None or course.course_id != "calculus-i-demo":
+        st.info("Open the Calculus I Demo course on the Dashboard to practise this topic.")
+        return
+    confirmed = st.session_state.get(f"confirmed_scope_{course.course_id}", [])
+    if topic_id not in confirmed:
+        st.info("Confirm this topic in Study Plan first.")
+        st.page_link("pages/1_Study_Hub.py", label="Go to Study Plan")
+        return
+    st.session_state[f"practice_mode_{course.course_id}"] = "Topic Practice"
+    st.session_state[f"practice_topic_{course.course_id}"] = topic_id
+    st.switch_page("pages/2_Practice_Center.py")
 
 
 apply_app_styles()
@@ -110,5 +130,43 @@ with limits_tab:
     )
     st.info("f(2) is undefined, but f(x) gets as close to 4 as we like.")
 
+    practice_topic("calc_limits")
+
 with derivatives_tab:
-    st.info("The derivatives experiment is coming in the next development step.")
+    st.subheader("Derivatives: from secant to tangent")
+    st.write("For f(x) = x³ − 5x, shrink h and compare the secant with the tangent at x₀.")
+    x0 = st.slider("x₀", -3.0, 3.0, 1.0, 0.5, key="concept_lab_x0")
+    h = st.select_slider(
+        "h", options=distances, value=0.5, key="concept_lab_h",
+    )
+    slope = secant_slope(x0, h)
+    exact, intercept = tangent_line(x0)
+    rows = []
+    for step in range(201):
+        x = -3.5 + 8 * step / 200
+        rows.extend([
+            {"x": x, "y": cubic(x), "Line": "Curve f(x)"},
+            {"x": x, "y": cubic(x0) + slope * (x - x0), "Line": "Secant"},
+            {"x": x, "y": exact * x + intercept, "Line": "Tangent"},
+        ])
+    lines = alt.Chart(pd.DataFrame(rows)).mark_line(strokeWidth=2).encode(
+        x=alt.X("x:Q", title="x"),
+        y=alt.Y("y:Q", title="y", scale=alt.Scale(zero=False)),
+        color=alt.Color("Line:N", scale=alt.Scale(
+            domain=["Curve f(x)", "Secant", "Tangent"],
+            range=["#2166DB", "#16A085", "#CC3344"],
+        )),
+        strokeDash=alt.StrokeDash("Line:N"),
+    )
+    points = alt.Chart(pd.DataFrame([
+        {"x": x0, "y": cubic(x0), "Point": "x₀"},
+        {"x": x0 + h, "y": cubic(x0 + h), "Point": "x₀ + h"},
+    ])).mark_point(filled=True, color="#222222", size=80).encode(
+        x="x:Q", y="y:Q", tooltip=["Point:N", "x:Q", "y:Q"],
+    )
+    st.altair_chart(alt.layer(lines, points).properties(height=360), width="stretch")
+    secant_column, derivative_column = st.columns(2)
+    secant_column.metric("Secant slope", f"{slope:.6f}")
+    derivative_column.metric("Derivative f′(x₀)", f"{cubic_derivative(x0):.6f}")
+    st.info("As h approaches 0, the secant slope approaches f′(x₀) = 3x₀² − 5.")
+    practice_topic("calc_derivatives")
