@@ -35,11 +35,11 @@ def test_both_demo_packages_validate_and_have_distinct_ids(
     ]
     assert len(calculus.questions) >= 3
     assert [
-        question.correct_index for question in calculus.questions
+        question.correct_index for question in calculus.questions[:3]
     ] == [2, 0, 2]
     assert [
         question.options[question.correct_index]
-        for question in calculus.questions
+        for question in calculus.questions[:3]
     ] == ["4", "3x² − 5", "x = 2"]
 
     economics_topic_ids = {topic.id for topic in economics.topics}
@@ -69,9 +69,9 @@ def test_both_demo_packages_validate_and_have_distinct_ids(
         "python-basics-topic-2",
         "python-basics-topic-3",
     ]
-    assert len(python_basics.questions) == 9
+    assert len(python_basics.questions) == 30
     assert [question.id for question in python_basics.questions] == [
-        f"python-basics-q{i}" for i in range(1, 10)
+        f"python-basics-q{i}" for i in range(1, 31)
     ]
     assert python_basics.relationships == []
 

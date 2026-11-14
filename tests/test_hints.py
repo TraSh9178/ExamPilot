@@ -17,7 +17,7 @@ def read_data(filename):
     return json.loads((ROOT / "data" / filename).read_text(encoding="utf-8"))
 
 
-def test_demo_hints_cover_all_and_only_demo_questions():
+def test_demo_hints_cover_original_available_questions():
     hint_bank = read_data("hints/demo_hints.json")
     questions = {
         question["id"]: question
@@ -25,10 +25,17 @@ def test_demo_hints_cover_all_and_only_demo_questions():
         for question in read_data(filename)["questions"]
     }
 
-    assert len(questions) == 15
-    assert hint_bank.keys() == questions.keys()
-    for question_id, question in questions.items():
-        hints = hint_bank[question_id]
+    assert len(questions) == 90
+    pending = {
+        qid
+        for filename in ("sample_course.json", CALCULUS_DEMO, "demo_python_basics.json")
+        for qid, status in read_data(filename).get("learning_state", {}).get("question_reviews", {}).items()
+        if status == "pending"
+    }
+    assert len(pending) == 75
+    assert hint_bank.keys() == questions.keys() - pending
+    for question_id, hints in hint_bank.items():
+        question = questions[question_id]
         assert 2 <= len(hints) <= MAX_HINTS
         validate_hints(hints, question["options"][question["correct_index"]])
 
@@ -77,6 +84,8 @@ def start_practice(mode, *, use_demo_question=True):
     if not use_demo_question:
         question["id"] = "custom-question"
     data["questions"] = [question]
+    # This fixture isolates one original question, not the expanded review bank.
+    data["learning_state"] = {}
     course = StudyPackage.model_validate(data)
 
     app = AppTest.from_file(str(PAGE_PATH))
