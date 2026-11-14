@@ -9,6 +9,7 @@ from services.auth_session import current_user
 
 from services.auth_ui import render_auth_page
 from services.account_ui import render_account_page, render_account_sidebar
+from services.accessibility import render_accessibility_controls
 from services.ui_style import apply_app_styles
 from services.tutor_assistant_ui import clear_tutor_browser_state, render_tutor_assistant
 
@@ -86,6 +87,7 @@ if st.session_state.get("_learning_page_path") != navigation.url_path:
 render_account_sidebar(account_page)
 with st.sidebar:
     render_sidebar_status()
+    render_accessibility_controls()
 
 # Reserve room for the floating entry at the bottom of narrow study pages.
 st.markdown(

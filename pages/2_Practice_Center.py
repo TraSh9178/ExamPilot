@@ -3,6 +3,7 @@ from html import escape
 import streamlit as st
 
 from services.account_sync import render_last_save_status, save_exam_to_account
+from services.accessibility import display_question
 from services.question_editor import available_questions
 from services.exam_engine import create_exam, grade_exam
 from services.hints import hint_state_key, hints_for
@@ -152,17 +153,24 @@ if active_practice is not None:
         st.subheader("Questions")
 
         for question_number, question in enumerate(questions, start=1):
+            display = display_question(course.course_id, question, st.session_state)
             with st.container(
                 border=True,
                 key=f"practice_question_{question.id}",
             ):
                 st.caption(f"QUESTION {question_number} OF {len(questions)}")
-                st.markdown(f"### {question.question}")
+                st.markdown(f"### {display.question}")
+                if display.simplified:
+                    st.caption("Simplified wording")
+                    with st.expander("Show original wording"):
+                        st.write(question.question)
+                        for option in question.options:
+                            st.write(option)
 
                 st.radio(
                     "Choose an answer",
                     options=list(range(len(question.options))),
-                    format_func=lambda index, options=question.options: (
+                    format_func=lambda index, options=display.options: (
                         options[index]
                     ),
                     index=None,
@@ -275,16 +283,23 @@ if active_practice is not None:
             result["question_results"], start=1
         ):
             question = questions_by_id[review["question_id"]]
+            display = display_question(course.course_id, question, st.session_state)
 
             with st.container(
                 border=True,
                 key=f"practice_review_{question.id}",
             ):
                 st.caption(f"QUESTION {question_number}")
-                st.markdown(f"### {question.question}")
+                st.markdown(f"### {display.question}")
+                if display.simplified:
+                    st.caption("Simplified wording")
+                    with st.expander("Show original wording"):
+                        st.write(question.question)
+                        for option in question.options:
+                            st.write(option)
 
                 selected_index = review["selected_index"]
-                correct_answer = question.options[
+                correct_answer = display.options[
                     review["correct_index"]
                 ]
 
@@ -292,7 +307,7 @@ if active_practice is not None:
                     st.warning("Unanswered")
                     st.success(f"✓ Correct answer: {correct_answer}")
                 else:
-                    selected_answer = question.options[selected_index]
+                    selected_answer = display.options[selected_index]
                     if review["is_correct"]:
                         st.success(f"✓ Your answer: {selected_answer}")
                     else:
@@ -307,7 +322,7 @@ if active_practice is not None:
 
                 with st.container(border=True):
                     st.subheader("Explanation")
-                    st.write(review["explanation"])
+                    st.write(display.explanation)
                 if question.source_pages:
                     st.caption("Cited pages: " + ", ".join(map(str, question.source_pages)))
                     sources = question_sources(question, st.session_state.get(f"course_document_{course.course_id}"))

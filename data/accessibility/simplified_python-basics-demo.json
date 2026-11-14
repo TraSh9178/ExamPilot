@@ -1,0 +1,94 @@
+{
+  "questions": {
+    "python-basics-q1": {
+      "question": "What does assignment do to a variable name?",
+      "options": [
+        "It links a value to a variable name.",
+        "It deletes the variable from memory.",
+        "It stops the variable from changing.",
+        "It turns the variable into a conditional statement."
+      ],
+      "explanation": "Assignment links a name to an object. Reassignment can link the name to a different object. It does not by itself change or delete the old object."
+    },
+    "python-basics-q2": {
+      "question": "What happens when you reassign a variable?",
+      "options": [
+        "The old value is deleted forever.",
+        "The variable name is linked to a new object.",
+        "A separate variable is created automatically.",
+        "The variable becomes a constant."
+      ],
+      "explanation": "The name now points to a new object. This alone does not change or delete the old object."
+    },
+    "python-basics-q3": {
+      "question": "What can an expression calculate from stored values?",
+      "options": [
+        "A new result",
+        "The end of a program",
+        "A new while loop automatically",
+        "Text turned into a constant"
+      ],
+      "explanation": "An expression uses stored values to calculate a new result."
+    },
+    "python-basics-q4": {
+      "question": "When does the code in an if branch run?",
+      "options": [
+        "When its condition is false",
+        "When the program ends",
+        "When its condition is true",
+        "When a loop ends"
+      ],
+      "explanation": "The code in an if branch runs when its condition is true."
+    },
+    "python-basics-q5": {
+      "question": "In a simple if/else statement without elif, when does the else branch run?",
+      "options": [
+        "Before the if condition is checked",
+        "When the if condition is false",
+        "When the current loop restarts",
+        "When a variable is reassigned"
+      ],
+      "explanation": "In a simple if/else statement without elif, the else branch runs when the if condition is false."
+    },
+    "python-basics-q6": {
+      "question": "What kind of value comes from comparisons like equality and greater-than?",
+      "options": [
+        "Numbers",
+        "Boolean values",
+        "Text strings",
+        "Variable names"
+      ],
+      "explanation": "Comparisons like equality and greater-than give Boolean values: true or false."
+    },
+    "python-basics-q7": {
+      "question": "What does a for loop go through?",
+      "options": [
+        "Elements of an iterable",
+        "Only Boolean conditions",
+        "One separate assignment",
+        "Only indentation levels"
+      ],
+      "explanation": "A for loop goes through the elements supplied by an iterable object."
+    },
+    "python-basics-q8": {
+      "question": "If it is not stopped early, how long does a while loop repeat?",
+      "options": [
+        "Until the program crashes",
+        "While its condition is true",
+        "Once for each item in a sequence",
+        "Until an else branch runs"
+      ],
+      "explanation": "A while loop repeats as long as its condition is true. A break statement can stop it early."
+    },
+    "python-basics-q9": {
+      "question": "How does Python know which instructions are inside a loop?",
+      "options": [
+        "Assignment operators",
+        "Boolean comparisons",
+        "Indentation",
+        "Variable names"
+      ],
+      "explanation": "Indentation shows which instructions belong to the loop body."
+    }
+  }
+}
