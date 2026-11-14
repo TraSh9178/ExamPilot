@@ -64,6 +64,11 @@ pages = [
         icon=":material/hub:",
     ),
     st.Page(
+        "pages/6_Concept_Lab.py",
+        title="Concept Lab",
+        icon=":material/science:",
+    ),
+    st.Page(
         "pages/5_Export_Anki.py",
         title="Export to Anki",
         icon=":material/download:",
