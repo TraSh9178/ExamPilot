@@ -208,7 +208,8 @@ def test_practice_result_opens_the_same_topic_in_concept_lab():
     active["result"] = grade_exam(session, questions, {questions[0].id: None})
 
     app = signed_in_app(ROOT / "app.py").run()
-    assert {"Home", "Practice"} <= {link.proto.label for link in app.get("page_link")}
+    # Home and Practice are sidebar pages now, not links in a top header row.
+    assert not {"Home", "Practice"} & {link.proto.label for link in app.get("page_link")}
     app.session_state["current_course"] = course
     app.session_state[f"confirmed_scope_{course.course_id}"] = [topic_id]
     app.session_state[f"active_practice_{course.course_id}"] = active
@@ -219,11 +220,17 @@ def test_practice_result_opens_the_same_topic_in_concept_lab():
     assert app.session_state[f"concept_lab_topic_{course.course_id}"] == topic_id
     assert app.session_state[f"active_practice_{course.course_id}"]["session"] == session
 
-def test_top_review_menu_opens_destination_with_a_clear_selection():
+def test_sidebar_lists_every_study_page_and_opens_each_one(monkeypatch):
+    from tests.test_paper_shell import expected_sidebar_titles, sidebar_navigation
+
+    visible, hidden, position = sidebar_navigation(monkeypatch)
+    assert position == "sidebar"
+    assert [page.title for page in visible] == expected_sidebar_titles()
+    assert [page.url_path for page in hidden] == ["account"]
+
+    # Opening a page from the list leaves no top review menu behind.
     app = signed_in_app(ROOT / "app.py").run()
-    menu = app.selectbox(key="flight_review_destination_")
-    menu.set_value("Study_Hub").run()
+    app.switch_page("pages/1_Study_Hub.py").run()
     assert not app.exception
-    new_menu = app.selectbox(key="flight_review_destination_Study_Hub")
-    assert new_menu.value is None
-    assert "Study Plan" not in new_menu.options
+    assert app.title[0].value == "Study Plan"
+    assert not any((box.key or "").startswith("flight_review") for box in app.selectbox)
