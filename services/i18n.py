@@ -517,6 +517,7 @@ _TRANSLATIONS.update({
 _TRANSLATIONS.update({
     "Practice history": "练习记录",
     "Answers behind Learning DNA": "学习画像的依据",
+    "Why it works": "为什么是这样",
 })
 
 _DYNAMIC = [
