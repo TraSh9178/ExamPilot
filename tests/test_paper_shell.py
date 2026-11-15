@@ -220,7 +220,10 @@ def test_account_avatar_is_a_round_button_fixed_in_the_top_right_corner():
     corner = css_rule(shell, ".st-key-account_menu")
     assert "position: fixed;" in corner
     assert "top: .5rem;" in corner
-    assert "right: 7.5rem;" in corner
+    # A fixed distance that clears the visitor toolbar, then the exact position
+    # beside Streamlit's leftmost header button where the browser supports it.
+    assert corner.index("right: 8.75rem;") < corner.index("right: calc(anchor(--header-tools left, 8rem) + .75rem);")
+    assert "anchor-name: --header-tools;" in shell
     button = css_rule(shell, '.st-key-account_menu [data-testid="stPopover"] button')
     assert "border-radius: 50%;" in button
     assert "width: 2.75rem;" in button and "height: 2.75rem;" in button

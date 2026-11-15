@@ -219,12 +219,24 @@ a[data-testid="stSidebarNavLink"]:focus-visible {
 }
 
 /* ---- Account: a round avatar in the top-right corner ---------------------- */
-/* Fixed in Streamlit's header strip, left of its own toolbar. My account and
-   Log out live in the menu and are not on screen until the avatar is clicked. */
+/* Fixed in Streamlit's header strip, just left of its own buttons. My account
+   and Log out live in the menu and are not on screen until the avatar is
+   clicked. */
+
+/* The leftmost of Streamlit's header buttons. Their number differs between
+   visitors (Fork, GitHub, menu), the app owner and a local run, and the
+   running indicator comes and goes, so it is skipped. */
+[data-testid="stToolbar"] > div > div:last-child > :nth-child(1 of :not([data-testid="stStatusWidget"])) {
+  anchor-name: --header-tools;
+}
+
 .st-key-account_menu {
   position: fixed;
   top: .5rem;
-  right: 7.5rem;
+  /* Clear of the visitor's three buttons where anchors are not supported... */
+  right: 8.75rem;
+  /* ...and exactly beside the leftmost button where they are. */
+  right: calc(anchor(--header-tools left, 8rem) + .75rem);
   z-index: 999991;
   width: auto;
 }
