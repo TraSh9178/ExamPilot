@@ -12,6 +12,8 @@ from services import account_sync
 from tests.test_account_sync import FakeStore, make_course, signed_in_state, TEST_USER
 
 ROOT = Path(__file__).resolve().parents[1]
+# Question review and saved material live on the Course tools page.
+COURSE_TOOLS_PATH = ROOT / "pages" / "9_Course_Tools.py"
 
 
 def material():
@@ -105,7 +107,7 @@ def test_edit_creates_version_and_keeps_original_question_and_evidence_root():
 def test_question_editor_ui_approves_pending_question():
     course = make_course()
     course.learning_state = {"question_reviews": {q.id: "pending" for q in course.questions}}
-    app = AppTest.from_file(str(ROOT / "pages/1_Study_Hub.py"))
+    app = AppTest.from_file(str(COURSE_TOOLS_PATH))
     app.session_state["current_course"] = course
     app.run()
     next(b for b in app.button if b.label == "Save review").click().run()
@@ -119,11 +121,12 @@ def test_delete_material_ui_preserves_course_and_scope(monkeypatch):
     store = FakeStore(); store.install(monkeypatch)
     course = make_course()
     state = signed_in_state()
-    app = AppTest.from_file(str(ROOT / "pages/1_Study_Hub.py"))
+    app = AppTest.from_file(str(COURSE_TOOLS_PATH))
     for key,value in state.items(): app.session_state[key] = value
     app.session_state["current_course"] = course
     app.session_state[f"confirmed_scope_{course.course_id}"] = ["t1"]
     app.session_state[f"course_document_{course.course_id}"] = material()
+    app.session_state[f"course_tools_choice_{course.course_id}"] = "source"
     app.run()
     app.checkbox(key=f"confirm_material_delete_{course.course_id}").check().run()
     app.button(key=f"delete_material_{course.course_id}").click().run()
@@ -137,10 +140,11 @@ def test_delete_material_ui_preserves_course_and_scope(monkeypatch):
 def test_failed_material_deletion_keeps_local_material(monkeypatch):
     store = FakeStore(); store.install(monkeypatch); store.fail.add("save_course")
     course = make_course()
-    app = AppTest.from_file(str(ROOT / "pages/1_Study_Hub.py"))
+    app = AppTest.from_file(str(COURSE_TOOLS_PATH))
     for key,value in signed_in_state().items(): app.session_state[key] = value
     app.session_state["current_course"] = course
     app.session_state[f"course_document_{course.course_id}"] = material()
+    app.session_state[f"course_tools_choice_{course.course_id}"] = "source"
     app.run()
     app.checkbox(key=f"confirm_material_delete_{course.course_id}").check().run()
     app.button(key=f"delete_material_{course.course_id}").click().run()
@@ -174,9 +178,10 @@ def test_first_study_page_entry_hydrates_saved_scope_over_stale_widget_default()
 
 def test_material_delete_without_confirmation_does_nothing():
     course = make_course()
-    app = AppTest.from_file(str(ROOT / "pages/1_Study_Hub.py"))
+    app = AppTest.from_file(str(COURSE_TOOLS_PATH))
     app.session_state["current_course"] = course
     app.session_state[f"course_document_{course.course_id}"] = material()
+    app.session_state[f"course_tools_choice_{course.course_id}"] = "source"
     app.run()
     app.button(key=f"delete_material_{course.course_id}").click().run()
     assert not app.exception

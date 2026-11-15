@@ -23,21 +23,30 @@ def test_evidence_uses_learning_details_without_internal_identifiers():
     assert 'Sure' in frames[0]['Confidence'].values
 
 
-def test_course_maintenance_is_grouped_and_stays_closed_with_pending_review():
+def test_course_maintenance_is_grouped_on_its_own_page_with_pending_review():
     from tests.test_learning_flow_ux import calculus
     app = AppTest.from_file(str(ROOT/'pages/1_Study_Hub.py'))
     app.session_state['current_course'] = calculus()
     app.run()
     assert not app.exception
-    tools = next(e for e in app.expander if e.label == 'Course tools')
-    assert not tools.proto.expanded
+    # Study Plan keeps one small Course tools button and none of the tools.
+    assert [b.label for b in app.button].count('Course tools') == 1
+    assert not app.expander
     top_labels = [getattr(node,'label',None) for node in app.main.children.values()]
     assert 'Review and edit questions' not in top_labels
     assert 'Save / Restore' not in top_labels and 'Saved course material' not in top_labels
-    assert not next(e for e in app.expander if e.label=='Question classification (advanced)').proto.expanded
     # Pending questions do not put a review prompt on the student's page.
     assert 'Review pending questions' not in [b.label for b in app.button]
-    assert not next(e for e in app.expander if e.label=='Review and edit questions').proto.expanded
+
+    tools = AppTest.from_file(str(ROOT/'pages/9_Course_Tools.py'))
+    tools.session_state['current_course'] = calculus()
+    tools.run()
+    assert not tools.exception
+    # One tool at a time; the review tool first, its classification collapsed.
+    assert tools.button_group(key='course_tools_choice_calculus-i-demo').value == 'review'
+    assert not any((b.key or '').startswith('database_') for b in tools.button)
+    assert not tools.checkbox
+    assert not next(e for e in tools.expander if e.label=='Question classification (advanced)').proto.expanded
 
 
 def test_saved_session_display_is_readable_and_selection_keeps_stable_ids():

@@ -126,11 +126,11 @@ def test_python_historical_review_applies_only_to_original_questions():
 
 
 @pytest.mark.parametrize('filename', FILES)
-def test_new_questions_can_be_reviewed_in_existing_study_plan(filename):
+def test_new_questions_can_be_reviewed_in_course_tools(filename):
     from streamlit.testing.v1 import AppTest
 
     course = load(filename)
-    app = AppTest.from_file(str(DATA.parent / 'pages' / '1_Study_Hub.py'))
+    app = AppTest.from_file(str(DATA.parent / 'pages' / '9_Course_Tools.py'))
     app.session_state['current_course'] = course
     app.session_state[f'confirmed_scope_{course.course_id}'] = [t.id for t in course.topics]
     app.run()
