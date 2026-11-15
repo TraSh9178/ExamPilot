@@ -162,9 +162,9 @@ export default function(component) {
       empty.className = 'tutor-empty';
       const title = document.createElement('strong');
       title.textContent = courseId ? text('Let’s work through it together', '我们一起弄懂它') : text('Choose a course to get started', '先选择一门课程');
-      const text = document.createElement('p');
-      text.textContent = courseId ? (zh ? '可以提问概念解释、例题或知识点。' : 'Ask for an explanation, a worked example, or help understanding a topic.') : (zh ? '从主页打开课程后，可以在这里询问课程笔记。' : 'Open a course from the Dashboard, then ask about its study notes here.');
-      empty.append(title, text);
+      const hint = document.createElement('p');
+      hint.textContent = courseId ? (zh ? '可以提问概念解释、例题或知识点。' : 'Ask for an explanation, a worked example, or help understanding a topic.') : (zh ? '从主页打开课程后，可以在这里询问课程笔记。' : 'Open a course from the Dashboard, then ask about its study notes here.');
+      empty.append(title, hint);
       messages.append(empty);
     }
     for (const message of history) appendMessage(message.role, message.content);
