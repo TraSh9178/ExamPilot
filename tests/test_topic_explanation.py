@@ -77,7 +77,7 @@ def test_map_details_open_dedicated_page_and_return_to_same_topic(monkeypatch):
     from tests.auth_helpers import signed_in_app
     from models.schemas import StudyPackage
     root = Path(__file__).resolve().parents[1]
-    course = StudyPackage.model_validate_json((root/'data/calculus_i_demo.json').read_text())
+    course = StudyPackage.model_validate_json((root/'data/calculus_i_demo.json').read_text(encoding='utf-8'))
     app = signed_in_app(root/'app.py').run()
     app.session_state['current_course'] = course
     app.session_state[f'graph_pending_focus_{course.course_id}'] = 'calc_limits'
