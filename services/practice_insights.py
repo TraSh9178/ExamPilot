@@ -91,6 +91,24 @@ def settle_focus(active, now):
     timer['since'] = now
 
 
+def pause_or_resume_for_page(active, on_practice_page, now):
+    """Stop the clock while the student is on another page; restart it when they return.
+
+    A pause the student chose stays a pause: only a clock this function stopped
+    (marked 'away') is started again.
+    """
+    timer = active.get('focus_timer')
+    if timer is None:
+        return
+    settle_focus(active, now)
+    if on_practice_page:
+        if timer.pop('away', False):
+            timer['since'] = now
+    elif timer.get('since') is not None:
+        timer['since'] = None
+        timer['away'] = True
+
+
 def focus_question(active, qid, now):
     if qid not in active['session'].question_ids:
         raise ValueError('Unknown focus question')

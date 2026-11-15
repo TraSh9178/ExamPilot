@@ -111,9 +111,11 @@ if st.session_state.get("_learning_page_path") != navigation.url_path:
         active = st.session_state.get(f"active_practice_{selected_course.course_id}")
         if active and "result" not in active and active.get("focus_timer"):
             import time
-            from services.practice_insights import settle_focus
-            settle_focus(active, time.monotonic())
-            active["focus_timer"]["since"] = None
+            from services.practice_insights import pause_or_resume_for_page
+            # Time on other pages is not counted; the clock starts again on return.
+            pause_or_resume_for_page(
+                active, navigation.url_path == "Practice_Center", time.monotonic(),
+            )
     if selected_course is not None:
         st.session_state.pop(f"scope_initialised_{selected_course.course_id}", None)
     st.session_state["_learning_page_path"] = navigation.url_path

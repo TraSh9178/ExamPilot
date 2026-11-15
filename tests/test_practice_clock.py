@@ -11,7 +11,9 @@ from streamlit.proto.Block_pb2 import Block as BlockProto
 from models.schemas import ExamSession
 from services import practice_insights_ui
 from services.i18n import LANGUAGE_KEY
-from services.practice_insights import clock_text, focus_question, session_seconds, settle_focus
+from services.practice_insights import (
+    clock_text, focus_question, pause_or_resume_for_page, session_seconds, settle_focus,
+)
 from tests.auth_helpers import signed_in_app
 from tests.test_paper_practice import mock_app, page_markdown, texts
 from tests.test_practice_insights import start_app
@@ -29,8 +31,12 @@ def new_active(question_ids=("q0", "q1", "q2")):
 
 def leave_page(active, now):
     """What app.py does when the student opens another page."""
-    settle_focus(active, now)
-    active["focus_timer"]["since"] = None
+    pause_or_resume_for_page(active, False, now)
+
+
+def return_to_practice(active, now):
+    """What app.py does when the student comes back to the practice page."""
+    pause_or_resume_for_page(active, True, now)
 
 
 def find_block(app, key):
@@ -122,6 +128,40 @@ def test_leaving_the_page_pauses_the_clock_with_the_right_total():
     # Leaving again while paused changes nothing.
     leave_page(active, 9500)
     assert active["session_seconds"] == 95
+
+
+def test_returning_to_practice_restarts_a_clock_that_leaving_stopped():
+    active = new_active()
+    focus_question(active, "q0", 1000)
+    leave_page(active, 1060)
+    assert active["focus_timer"] == {"question_id": "q0", "since": None, "away": True}
+    # Ten minutes on other pages, including a second page change, are not counted.
+    leave_page(active, 1300)
+    return_to_practice(active, 1660)
+    assert active["focus_timer"] == {"question_id": "q0", "since": 1660}
+    assert active["session_seconds"] == 60
+    settle_focus(active, 1690)
+    assert active["session_seconds"] == 90
+    assert active["focus_seconds"] == {"q0": 90}
+
+
+def test_a_pause_the_student_chose_survives_leaving_and_returning():
+    active = new_active()
+    focus_question(active, "q0", 1000)
+    settle_focus(active, 1040)
+    active["focus_timer"]["since"] = None  # the Pause button
+    leave_page(active, 1100)
+    assert "away" not in active["focus_timer"]
+    return_to_practice(active, 1500)
+    assert active["focus_timer"]["since"] is None
+    assert active["session_seconds"] == 40
+
+
+def test_page_changes_without_a_timer_are_ignored():
+    active = new_active()
+    leave_page(active, 10)
+    return_to_practice(active, 20)
+    assert "focus_timer" not in active and "session_seconds" not in active
 
 
 def test_older_state_without_a_clock_starts_from_its_focus_totals():
@@ -285,7 +325,7 @@ def test_changing_question_keeps_the_clock_running():
     assert clock_state(app)["base"] >= 500
 
 
-def test_leaving_the_practice_page_pauses_the_clock():
+def test_leaving_the_practice_page_stops_the_clock_and_returning_restarts_it():
     from tests.test_practice_page import make_practice_state
     app = signed_in_app(ROOT / "app.py").run()
     for key, value in make_practice_state(graded=False).items():
@@ -301,13 +341,15 @@ def test_leaving_the_practice_page_pauses_the_clock():
     assert active["focus_timer"]["since"] is None
     total = active["session_seconds"]
     assert 700 <= total < 760
+    assert active["focus_timer"]["away"] is True
     app.switch_page("pages/2_Practice_Center.py").run()
     assert not app.exception
+    # Back on the practice page the clock runs again from where it stopped.
     state = clock_state(app)
-    assert state["paused"] and not state["running"]
-    assert state["base"] == int(total)
-    assert app.session_state["active_practice_course-1"]["session_seconds"] == total
-    assert app.button(key="focus_pause_session-1").label == "Resume"
+    assert state["running"] and not state["paused"]
+    assert int(total) <= state["base"] <= int(total) + 2
+    assert "away" not in app.session_state["active_practice_course-1"]["focus_timer"]
+    assert app.button(key="focus_pause_session-1").label == "Pause"
 
 
 # 5 · Clock markup -------------------------------------------------------------------
