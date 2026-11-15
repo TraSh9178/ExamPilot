@@ -59,9 +59,12 @@ if course.course_id == "calculus-i-demo" and not course.relationships:
         st.error(f"Could not update the Calculus demo course: {error}")
         st.stop()
 
-    if demo_course.relationships:
+    topic_ids = {topic.id for topic in course.topics}
+    compatible_edges = [edge for edge in demo_course.relationships
+                        if edge.from_topic in topic_ids and edge.to_topic in topic_ids]
+    if compatible_edges:
         course = course.model_copy(
-            update={"relationships": demo_course.relationships}
+            update={"relationships": compatible_edges}
         )
         save_course(st.session_state, course)
 

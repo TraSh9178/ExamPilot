@@ -31,7 +31,7 @@ def test_demo_update_appends_drafts_preserving_old_questions_metadata_and_scope(
     old=StudyPackage.model_validate(data)
     before=deepcopy(old)
     updated,count=demo_update(old)
-    assert count==30-old_count and len(updated.questions)==30
+    assert count==len(current.questions)-old_count and len(updated.questions)==len(current.questions)
     assert updated.questions[:old_count]==old.questions
     assert old==before
     assert updated.learning_state['confirmed_scope']==old.learning_state['confirmed_scope']
@@ -52,7 +52,7 @@ def test_demo_update_dashboard_button_preserves_history_and_adds_questions():
     app.run()
     app.button(key='update_demo_calculus-i-demo').click().run()
     assert not app.exception
-    assert len(app.session_state['current_course'].questions)==30
+    assert len(app.session_state['current_course'].questions)==len(current.questions)
     assert app.session_state['practice_history_calculus-i-demo']=={}
 
 

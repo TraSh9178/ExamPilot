@@ -1,6 +1,6 @@
 # Demo question bank expansion
 
-Each demo now contains 30 questions, with 10 in each existing topic. Existing topic IDs, question IDs, answers and relationships are preserved. This adds 75 questions to the original 15.
+The first expansion gave each demo 30 questions, with 10 in each original topic. Calculus has since grown to 15 topics and 66 questions; see [Calculus knowledge expansion](calculus_knowledge_expansion.md). Existing topic IDs, question IDs, answers and relationships are preserved. This adds 75 questions to the original 15.
 
 | Course | Topics | Existing questions | Added questions |
 | --- | --- | ---: | ---: |
@@ -16,7 +16,7 @@ All added questions are AI-authored drafts marked `pending` in `learning_state.q
 
 The historical Python metadata approval covers only q1–q9; an expansion entry records q10–q30 as pending. No reviewer name or approval date has been invented for the new material. These demo questions have no supplied textbook or uploaded-document page sources, so `source_pages` stays empty.
 
-Load the updated demo from the Dashboard to obtain its revised bank. Already saved account courses are not migrated automatically. Do not replace a saved course with valuable progress without checking the app's existing course-loading behavior.
+Load the updated demo from the Dashboard to obtain its revised bank. Already saved account courses are not migrated automatically. Use the course card’s update button to append new content while preserving progress; Calculus also appends new topic cards and graph links. Do not replace a saved course with valuable progress without checking the app's existing course-loading behavior.
 
 ## Validation
 

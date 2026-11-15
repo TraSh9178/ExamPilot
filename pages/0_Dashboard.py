@@ -402,9 +402,11 @@ else:
                         )
                     if is_demo:
                         updated_demo, added_count = demo_update(course)
-                        if added_count:
-                            st.caption(f"Demo update available: {added_count} new questions. Existing answers and saved questions are preserved.")
-                            if st.button("Add new demo questions", key=f"update_demo_{course.course_id}", width="stretch"):
+                        if updated_demo != course:
+                            added_topics = len(updated_demo.topics) - len(course.topics)
+                            st.caption(f"Demo update available: {added_topics} new topics · {added_count} new questions. Existing answers and saved content are preserved. New questions need review in Study Plan; confirm new topics there before practice.")
+                            update_label = "Add calculus knowledge update" if course.course_id == "calculus-i-demo" else "Add new demo questions"
+                            if st.button(update_label, key=f"update_demo_{course.course_id}", width="stretch"):
                                 save_course(st.session_state, updated_demo)
                                 outcome = save_course_to_account(st.session_state, updated_demo)
                                 if outcome is not None and not outcome.success:
