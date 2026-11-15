@@ -254,6 +254,7 @@ def test_radar_uses_the_picked_topic_for_practice_without_changing_scope(monkeyp
     assert app.title[0].value == "Practice"
     assert "Price Elasticity of Demand" in [heading.value for heading in app.subheader]
     assert not any(radio.label == "Practice mode" for radio in app.radio)
+    assert not any(caption.startswith("Choose a mode") for caption in _captions(app))
     focus_key = f"learning_radar_focus_{ECON_ID}"
     assert app.session_state[focus_key] == "elasticity"
 

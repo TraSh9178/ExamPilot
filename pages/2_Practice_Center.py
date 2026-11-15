@@ -296,9 +296,10 @@ def follow_question(active, question_id):
 
 # ---- Screens ------------------------------------------------------------------------
 
-def setup_heading():
+def setup_heading(*, focused=False):
     st.title(tr("Practice"))
-    st.caption(tr("Choose a mode, then focus on one question at a time."))
+    if not focused:
+        st.caption(tr("Choose a mode, then focus on one question at a time."))
 
 
 def choose_topic(course_id, confirmed_topic_ids, topic_names):
@@ -337,7 +338,7 @@ def render_setup_screen(
     if st.session_state[f"practice_topic_drawn_{cid}"]:
         st.session_state[f"practice_topic_{cid}"] = choice["topic_id"]
 
-    setup_heading()
+    setup_heading(focused=focused_topic is not None)
     if pending_entry is not None and not focused_topic:
         target = pending_entry.get("topic_id")
         st.info(
