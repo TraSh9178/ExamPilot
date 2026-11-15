@@ -47,8 +47,12 @@ def test_route_is_valid_svg_with_a_winding_path_and_bounded_flight(index, previo
     assert len(circles) == min(total,12)
     route = next(node for node in svg if node.tag == 'path')
     assert len(set(pair.split(',')[1] for pair in route.attrib['d'].split(' L')[1:])) > 10
-    motion = next(node for node in svg.iter() if node.tag == 'animateMotion')
-    assert all(0 <= float(x) <= 1 for x in motion.attrib['keyPoints'].split(';'))
+    import math
+    plane = next(node for node in svg if node.attrib.get('class') == 'route-plane-moving')
+    fraction = max(0, min(index/max(1,total-1),1))
+    assert plane.attrib['transform'] == f'translate({20+560*fraction:.2f} {48+22*math.sin(4*math.pi*fraction):.2f})'
+    style = next(node.text for node in svg if node.tag == 'style')
+    assert '@keyframes route-flight-' in style and '100%' in style
 
 
 def test_tooltip_escapes_text_and_connects_native_focus_target():
