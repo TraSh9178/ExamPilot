@@ -19,6 +19,78 @@
       "name": "Applications of Derivatives",
       "summary": "Derivatives identify critical points and help analyze increasing, decreasing, and concavity behavior.",
       "source_pages": []
+    },
+    {
+      "id": "calc_limit_laws",
+      "name": "Limit Laws",
+      "summary": "Use sum, product and quotient laws to combine limits when the component limits exist. The quotient law requires a nonzero denominator limit; an indeterminate form such as 0/0 requires more analysis.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_continuity",
+      "name": "Continuity",
+      "summary": "A function is continuous at a when f(a) is defined, the two-sided limit exists, and that limit equals f(a). Distinguish removable holes from jumps. The Intermediate Value Theorem requires continuity on a closed interval.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_trig_limits",
+      "name": "Trigonometric Limits",
+      "summary": "With angles in radians, lim(x→0) sin(x)/x = 1 and lim(x→0) (1 − cos(x))/x = 0. Rescaling the argument changes the coefficient. These limits support the derivatives of sine and cosine.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_differentiation_rules",
+      "name": "Differentiation Rules",
+      "summary": "Combine the power, sum, product and quotient rules. For a product uv use u′v + uv′; for a quotient u/v use (u′v − uv′)/v² where v ≠ 0. Do not differentiate each factor and multiply.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_chain_rule",
+      "name": "Chain Rule",
+      "summary": "Differentiate a composition f(g(x)) by multiplying f′(g(x)) by g′(x). Identify outer and inner functions before computing. The rule links polynomial, trigonometric, exponential and logarithmic derivatives.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_implicit_differentiation",
+      "name": "Implicit Differentiation",
+      "summary": "When y is defined by an equation in x and y, treat y as a function of x. Differentiating y² gives 2y·dy/dx. Solve for dy/dx where the resulting denominator is nonzero; vertical tangents require separate attention.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_related_rates",
+      "name": "Related Rates",
+      "summary": "Write an equation connecting changing quantities, differentiate with respect to time, and then substitute the values at the specified instant. Track signs and units; a rate describes change, not the current size.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_mean_value_theorem",
+      "name": "Mean Value Theorem",
+      "summary": "If f is continuous on [a, b] and differentiable on (a, b), some c in (a, b) satisfies f′(c) = [f(b) − f(a)]/(b − a). Rolle’s theorem is the equal-endpoint case. Check both hypotheses before using the conclusion.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_curve_sketching",
+      "name": "Curve Sketching",
+      "summary": "Use the sign of f′ to find increasing and decreasing intervals, and the sign of f″ for concavity. A critical point need not be an extremum; an inflection point requires a change in concavity, not just f″ = 0.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_antiderivatives",
+      "name": "Antiderivatives",
+      "summary": "An antiderivative F satisfies F′ = f. Indefinite integrals include an arbitrary constant C; on an interval any two antiderivatives differ by a constant. For n ≠ −1 integrate xⁿ as xⁿ⁺¹/(n + 1); integrate 1/x as ln|x| on intervals avoiding zero.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_definite_integrals",
+      "name": "Definite Integrals",
+      "summary": "A definite integral is a limit of Riemann sums and represents signed accumulation. Areas below the x-axis contribute negatively. Reversing bounds changes the sign; splitting an interval preserves the total. Geometric area may require integrating |f|.",
+      "source_pages": []
+    },
+    {
+      "id": "calc_fundamental_theorem",
+      "name": "Fundamental Theorem of Calculus",
+      "summary": "For continuous f, the accumulation function A(x) = ∫ from a to x of f(t) dt has derivative f(x). If F′ = f, then ∫ from a to b of f(x) dx = F(b) − F(a). Variable upper bounds also require the chain rule.",
+      "source_pages": []
     }
   ],
   "relationships": [
@@ -30,6 +102,96 @@
     {
       "from_topic": "calc_derivatives",
       "to_topic": "calc_derivative_applications",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_limits",
+      "to_topic": "calc_limit_laws",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_limit_laws",
+      "to_topic": "calc_continuity",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_limits",
+      "to_topic": "calc_trig_limits",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_continuity",
+      "to_topic": "calc_derivatives",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_trig_limits",
+      "to_topic": "calc_differentiation_rules",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_derivatives",
+      "to_topic": "calc_differentiation_rules",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_differentiation_rules",
+      "to_topic": "calc_chain_rule",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_chain_rule",
+      "to_topic": "calc_implicit_differentiation",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_implicit_differentiation",
+      "to_topic": "calc_related_rates",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_continuity",
+      "to_topic": "calc_mean_value_theorem",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_derivatives",
+      "to_topic": "calc_mean_value_theorem",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_derivative_applications",
+      "to_topic": "calc_curve_sketching",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_differentiation_rules",
+      "to_topic": "calc_antiderivatives",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_limits",
+      "to_topic": "calc_definite_integrals",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_antiderivatives",
+      "to_topic": "calc_fundamental_theorem",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_definite_integrals",
+      "to_topic": "calc_fundamental_theorem",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_continuity",
+      "to_topic": "calc_fundamental_theorem",
+      "type": "prerequisite"
+    },
+    {
+      "from_topic": "calc_chain_rule",
+      "to_topic": "calc_fundamental_theorem",
       "type": "prerequisite"
     }
   ],
@@ -513,6 +675,582 @@
       "source_pages": [],
       "cognitive_dimension": "computation",
       "practice_structure": "position_velocity"
+    },
+    {
+      "id": "calc_limit_laws_q01",
+      "topic_id": "calc_limit_laws",
+      "question": "If lim(x→a) f(x) = 2 and lim(x→a) g(x) = 3, what is lim(x→a) [2f(x) + g(x)]?",
+      "options": [
+        "6",
+        "7",
+        "5",
+        "10"
+      ],
+      "correct_index": 1,
+      "explanation": "The sum and constant-multiple laws give 2·2 + 3 = 7.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "combine_limits"
+    },
+    {
+      "id": "calc_limit_laws_q02",
+      "topic_id": "calc_limit_laws",
+      "question": "Why can the quotient limit law not be applied directly to (x² − 1)/(x − 1) at x = 1?",
+      "options": [
+        "The denominator limit is zero",
+        "Polynomials have no limits",
+        "The numerator limit is infinite",
+        "Every quotient is discontinuous"
+      ],
+      "correct_index": 0,
+      "explanation": "The quotient law requires a nonzero denominator limit. Here both numerator and denominator approach zero; factor and cancel for x ≠ 1 before taking the limit.",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "quotient_condition"
+    },
+    {
+      "id": "calc_limit_laws_q03",
+      "topic_id": "calc_limit_laws",
+      "question": "What is lim(x→3) (x² + 2x − 1)?",
+      "options": [
+        "8",
+        "12",
+        "15",
+        "14"
+      ],
+      "correct_index": 3,
+      "explanation": "Polynomials are continuous, so substitution gives 9 + 6 − 1 = 14.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "polynomial_substitution"
+    },
+    {
+      "id": "calc_continuity_q01",
+      "topic_id": "calc_continuity",
+      "question": "Let f(x) = (x² − 4)/(x − 2) for x ≠ 2. Which value of f(2) makes f continuous?",
+      "options": [
+        "2",
+        "No value works",
+        "4",
+        "0"
+      ],
+      "correct_index": 2,
+      "explanation": "For x ≠ 2, f(x) = x + 2, whose limit at 2 is 4. Define f(2) = 4 to fill the removable hole.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "fill_hole"
+    },
+    {
+      "id": "calc_continuity_q02",
+      "topic_id": "calc_continuity",
+      "question": "A function has left limit 1 and right limit 3 at a. Can changing only f(a) make it continuous at a?",
+      "options": [
+        "Yes, set f(a) = 3",
+        "No, the two-sided limit does not exist",
+        "Yes, set f(a) = 2",
+        "Yes, set f(a) = 1"
+      ],
+      "correct_index": 1,
+      "explanation": "Continuity requires the two one-sided limits to agree. Changing one function value cannot repair a jump.",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "jump_discontinuity"
+    },
+    {
+      "id": "calc_continuity_q03",
+      "topic_id": "calc_continuity",
+      "question": "If f is continuous on [0, 2], f(0) = −1 and f(2) = 3, what must be true?",
+      "options": [
+        "f(c) = 0 for some c in (0, 2)",
+        "f is increasing everywhere",
+        "f has exactly one zero",
+        "f is differentiable everywhere"
+      ],
+      "correct_index": 0,
+      "explanation": "The Intermediate Value Theorem guarantees at least one zero between opposite-sign endpoint values. It does not guarantee uniqueness, monotonicity or differentiability.",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "intermediate_value"
+    },
+    {
+      "id": "calc_trig_limits_q01",
+      "topic_id": "calc_trig_limits",
+      "question": "With angles in radians, what is lim(x→0) sin(5x)/x?",
+      "options": [
+        "1",
+        "0",
+        "1/5",
+        "5"
+      ],
+      "correct_index": 3,
+      "explanation": "Write sin(5x)/x = 5·sin(5x)/(5x). The ratio approaches 1, so the limit is 5.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "rescale_sine_limit"
+    },
+    {
+      "id": "calc_trig_limits_q02",
+      "topic_id": "calc_trig_limits",
+      "question": "With angles in radians, what is lim(x→0) (1 − cos(x))/x?",
+      "options": [
+        "−1",
+        "The limit does not exist",
+        "0",
+        "1"
+      ],
+      "correct_index": 2,
+      "explanation": "Rationalizing gives sin²(x)/[x(1 + cos(x))] = [sin(x)/x]·[sin(x)/(1 + cos(x))], which approaches 1·0 = 0.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "cosine_limit"
+    },
+    {
+      "id": "calc_trig_limits_q03",
+      "topic_id": "calc_trig_limits",
+      "question": "Which unit is assumed in the formula lim(x→0) sin(x)/x = 1?",
+      "options": [
+        "No angle unit is needed",
+        "Radians",
+        "Degrees",
+        "Any angle unit gives 1"
+      ],
+      "correct_index": 1,
+      "explanation": "The standard formula uses radians. If x measures degrees, the corresponding limit is π/180.",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "radian_condition"
+    },
+    {
+      "id": "calc_differentiation_rules_q01",
+      "topic_id": "calc_differentiation_rules",
+      "question": "What is the derivative of (x² + 1)(x − 1)?",
+      "options": [
+        "3x² − 2x + 1",
+        "2x",
+        "2x(x − 1)",
+        "3x² + 1"
+      ],
+      "correct_index": 0,
+      "explanation": "The product rule gives 2x(x − 1) + (x² + 1) = 3x² − 2x + 1.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "product_rule"
+    },
+    {
+      "id": "calc_differentiation_rules_q02",
+      "topic_id": "calc_differentiation_rules",
+      "question": "For x ≠ −1, what is the derivative of x/(x + 1)?",
+      "options": [
+        "1",
+        "−1/(x + 1)²",
+        "x/(x + 1)²",
+        "1/(x + 1)²"
+      ],
+      "correct_index": 3,
+      "explanation": "The quotient rule gives [(x + 1) − x]/(x + 1)² = 1/(x + 1)².",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "quotient_rule"
+    },
+    {
+      "id": "calc_differentiation_rules_q03",
+      "topic_id": "calc_differentiation_rules",
+      "question": "For differentiable u and v, which expression equals (uv)′?",
+      "options": [
+        "u′ + v′",
+        "uv′ − u′v",
+        "u′v + uv′",
+        "u′v′"
+      ],
+      "correct_index": 2,
+      "explanation": "The product rule differentiates one factor at a time and adds the terms; multiplying derivatives omits both contributions.",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "product_rule_meaning"
+    },
+    {
+      "id": "calc_chain_rule_q01",
+      "topic_id": "calc_chain_rule",
+      "question": "What is the derivative of (3x + 1)⁴?",
+      "options": [
+        "(3x + 1)³",
+        "12(3x + 1)³",
+        "4(3x + 1)³",
+        "12(3x + 1)⁴"
+      ],
+      "correct_index": 1,
+      "explanation": "Differentiate the outer fourth power and multiply by the inner derivative 3: 4(3x + 1)³·3.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "power_composition"
+    },
+    {
+      "id": "calc_chain_rule_q02",
+      "topic_id": "calc_chain_rule",
+      "question": "What is the derivative of sin(x²), with angles in radians?",
+      "options": [
+        "2x cos(x²)",
+        "cos(x²)",
+        "2x sin(x²)",
+        "cos(2x)"
+      ],
+      "correct_index": 0,
+      "explanation": "The outer derivative is cosine at x²; the inner derivative is 2x. Multiply them.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "trig_composition"
+    },
+    {
+      "id": "calc_chain_rule_q03",
+      "topic_id": "calc_chain_rule",
+      "question": "Why is the derivative of e^(2x) equal to 2e^(2x)?",
+      "options": [
+        "Every exponential derivative is doubled",
+        "The exponent decreases by one",
+        "The power rule gives 2x",
+        "The inner function 2x contributes a factor of 2"
+      ],
+      "correct_index": 3,
+      "explanation": "The exponential derivative preserves e^(2x), and the chain rule multiplies it by d(2x)/dx = 2.",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "inner_derivative"
+    },
+    {
+      "id": "calc_implicit_differentiation_q01",
+      "topic_id": "calc_implicit_differentiation",
+      "question": "On x² + y² = 25, what is dy/dx at (3, 4)?",
+      "options": [
+        "−4/3",
+        "0",
+        "−3/4",
+        "3/4"
+      ],
+      "correct_index": 2,
+      "explanation": "Differentiate to get 2x + 2y y′ = 0, so y′ = −x/y = −3/4 at (3, 4).",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "circle_slope"
+    },
+    {
+      "id": "calc_implicit_differentiation_q02",
+      "topic_id": "calc_implicit_differentiation",
+      "question": "If y = y(x), what is d(y³)/dx?",
+      "options": [
+        "3x²",
+        "3y² dy/dx",
+        "3y²",
+        "y³ dy/dx"
+      ],
+      "correct_index": 1,
+      "explanation": "The chain rule gives 3y² multiplied by the derivative of the inner function y(x).",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "implicit_chain"
+    },
+    {
+      "id": "calc_implicit_differentiation_q03",
+      "topic_id": "calc_implicit_differentiation",
+      "question": "For xy = 6, what is dy/dx at (2, 3)?",
+      "options": [
+        "−3/2",
+        "3/2",
+        "−2/3",
+        "6"
+      ],
+      "correct_index": 0,
+      "explanation": "Differentiate with the product rule: y + xy′ = 0. Thus y′ = −y/x = −3/2.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "implicit_product"
+    },
+    {
+      "id": "calc_related_rates_q01",
+      "topic_id": "calc_related_rates",
+      "question": "A circle has dr/dt = 2 cm/s. What is dA/dt when r = 3 cm?",
+      "options": [
+        "6π cm²/s",
+        "4π cm²/s",
+        "18π cm²/s",
+        "12π cm²/s"
+      ],
+      "correct_index": 3,
+      "explanation": "A = πr² implies dA/dt = 2πr·dr/dt = 2π·3·2 = 12π cm²/s.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "area_rate"
+    },
+    {
+      "id": "calc_related_rates_q02",
+      "topic_id": "calc_related_rates",
+      "question": "A 5 m ladder has x² + y² = 25. The foot moves away at dx/dt = 1 m/s. When x = 3 m and y = 4 m, what is dy/dt?",
+      "options": [
+        "−4/3 m/s",
+        "1 m/s",
+        "−3/4 m/s",
+        "3/4 m/s"
+      ],
+      "correct_index": 2,
+      "explanation": "Time differentiation gives 2x x′ + 2y y′ = 0. Therefore y′ = −(3·1)/4 m/s; the top moves down.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "ladder_rate"
+    },
+    {
+      "id": "calc_related_rates_q03",
+      "topic_id": "calc_related_rates",
+      "question": "In a related-rates calculation, when should instant-specific values usually be substituted?",
+      "options": [
+        "Never",
+        "After differentiating the relation with respect to time",
+        "Before differentiating, replacing every variable by a constant",
+        "Only after taking a second derivative"
+      ],
+      "correct_index": 1,
+      "explanation": "Differentiate while the changing quantities remain variables, then evaluate at the instant. Premature substitution can erase the changing relationship.",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "rates_method"
+    },
+    {
+      "id": "calc_mean_value_theorem_q01",
+      "topic_id": "calc_mean_value_theorem",
+      "question": "For f(x) = x² on [1, 3], which c satisfies the Mean Value Theorem?",
+      "options": [
+        "2",
+        "1",
+        "3",
+        "4"
+      ],
+      "correct_index": 0,
+      "explanation": "The secant slope is (9 − 1)/(3 − 1) = 4. Solve f′(c) = 2c = 4 to get c = 2.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "mvt_point"
+    },
+    {
+      "id": "calc_mean_value_theorem_q02",
+      "topic_id": "calc_mean_value_theorem",
+      "question": "Why does the Mean Value Theorem not apply to f(x) = |x| on [−1, 1]?",
+      "options": [
+        "f is not continuous at 0",
+        "The interval is closed",
+        "The endpoint values are equal",
+        "f is not differentiable at 0"
+      ],
+      "correct_index": 3,
+      "explanation": "Absolute value is continuous on the interval but has a corner at the interior point 0, violating differentiability on (−1, 1).",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "mvt_hypotheses"
+    },
+    {
+      "id": "calc_mean_value_theorem_q03",
+      "topic_id": "calc_mean_value_theorem",
+      "question": "If f is continuous on [a, b], differentiable on (a, b), and f(a) = f(b), what does Rolle’s theorem guarantee?",
+      "options": [
+        "f′ is zero at every point",
+        "f has no extrema",
+        "f′(c) = 0 for some c in (a, b)",
+        "f is identically zero"
+      ],
+      "correct_index": 2,
+      "explanation": "Equal endpoint values make the secant slope zero. Rolle’s theorem guarantees at least one interior horizontal tangent.",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "rolle_conclusion"
+    },
+    {
+      "id": "calc_curve_sketching_q01",
+      "topic_id": "calc_curve_sketching",
+      "question": "For f(x) = x³ − 3x, on which intervals is f increasing?",
+      "options": [
+        "Everywhere",
+        "(−∞, −1) and (1, ∞)",
+        "(−1, 1)",
+        "(0, ∞)"
+      ],
+      "correct_index": 1,
+      "explanation": "f′(x) = 3(x² − 1) is positive when |x| > 1 and negative between −1 and 1.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "derivative_sign"
+    },
+    {
+      "id": "calc_curve_sketching_q02",
+      "topic_id": "calc_curve_sketching",
+      "question": "For f(x) = x⁴, is x = 0 an inflection point?",
+      "options": [
+        "No; concavity does not change across 0",
+        "Yes; f″(0) = 0 is sufficient",
+        "Yes; f′(0) = 0 is sufficient",
+        "No; f is not differentiable there"
+      ],
+      "correct_index": 0,
+      "explanation": "f″(x) = 12x² is positive on both sides of 0. Although f″(0) = 0, concavity does not change.",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "inflection_condition"
+    },
+    {
+      "id": "calc_curve_sketching_q03",
+      "topic_id": "calc_curve_sketching",
+      "question": "Where is f(x) = x³ concave down?",
+      "options": [
+        "x > 0",
+        "For every x",
+        "Nowhere",
+        "x < 0"
+      ],
+      "correct_index": 3,
+      "explanation": "f″(x) = 6x is negative exactly when x < 0, so the graph is concave down there.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "concavity_sign"
+    },
+    {
+      "id": "calc_antiderivatives_q01",
+      "topic_id": "calc_antiderivatives",
+      "question": "What is the general antiderivative of 3x² − 4?",
+      "options": [
+        "x³ − 4 + C",
+        "3x³ − 4x + C",
+        "x³ − 4x + C",
+        "6x + C"
+      ],
+      "correct_index": 2,
+      "explanation": "Integrate each term: ∫3x² dx = x³ and ∫−4 dx = −4x. Add C; differentiation checks the result.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "polynomial_antiderivative"
+    },
+    {
+      "id": "calc_antiderivatives_q02",
+      "topic_id": "calc_antiderivatives",
+      "question": "Why do indefinite integrals include + C?",
+      "options": [
+        "C represents the upper endpoint",
+        "Differentiating any constant gives zero",
+        "Every function has exactly one antiderivative",
+        "C makes every integral positive"
+      ],
+      "correct_index": 1,
+      "explanation": "The derivative does not determine an additive constant. On an interval the complete family of antiderivatives differs by constants.",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "integration_constant"
+    },
+    {
+      "id": "calc_antiderivatives_q03",
+      "topic_id": "calc_antiderivatives",
+      "question": "If F′(x) = 2x and F(1) = 5, what is F(x)?",
+      "options": [
+        "x² + 4",
+        "x² + 5",
+        "2x² + 3",
+        "x² − 4"
+      ],
+      "correct_index": 0,
+      "explanation": "Integrating gives F(x) = x² + C. The condition 1 + C = 5 gives C = 4.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "initial_condition"
+    },
+    {
+      "id": "calc_definite_integrals_q01",
+      "topic_id": "calc_definite_integrals",
+      "question": "What is ∫ from 0 to 2 of (x − 1) dx?",
+      "options": [
+        "1",
+        "2",
+        "−1",
+        "0"
+      ],
+      "correct_index": 3,
+      "explanation": "An antiderivative is x²/2 − x. Endpoint evaluation gives 0. The negative and positive triangular signed areas cancel.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "signed_integral"
+    },
+    {
+      "id": "calc_definite_integrals_q02",
+      "topic_id": "calc_definite_integrals",
+      "question": "If ∫ from a to b of f(x) dx = 5, what is ∫ from b to a of f(x) dx?",
+      "options": [
+        "0",
+        "1/5",
+        "−5",
+        "5"
+      ],
+      "correct_index": 2,
+      "explanation": "Reversing the bounds of a definite integral changes its sign.",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "reverse_bounds"
+    },
+    {
+      "id": "calc_definite_integrals_q03",
+      "topic_id": "calc_definite_integrals",
+      "question": "What is the total geometric area between y = x and the x-axis on [−1, 1]?",
+      "options": [
+        "−1",
+        "1",
+        "0",
+        "2"
+      ],
+      "correct_index": 1,
+      "explanation": "There are two triangles, each with base 1 and height 1, giving total area 1. The signed integral would instead be 0.",
+      "source_pages": [],
+      "cognitive_dimension": "conceptual",
+      "practice_structure": "area_vs_integral"
+    },
+    {
+      "id": "calc_fundamental_theorem_q01",
+      "topic_id": "calc_fundamental_theorem",
+      "question": "If A(x) = ∫ from 0 to x of (t² + 1) dt, what is A′(x)?",
+      "options": [
+        "x² + 1",
+        "2x",
+        "x³/3 + x",
+        "t² + 1"
+      ],
+      "correct_index": 0,
+      "explanation": "The integrand is continuous, so the first part of the Fundamental Theorem gives A′(x) = x² + 1.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "accumulation_derivative"
+    },
+    {
+      "id": "calc_fundamental_theorem_q02",
+      "topic_id": "calc_fundamental_theorem",
+      "question": "What is ∫ from 0 to 2 of 3x² dx?",
+      "options": [
+        "12",
+        "4",
+        "6",
+        "8"
+      ],
+      "correct_index": 3,
+      "explanation": "An antiderivative is x³. By the Fundamental Theorem the integral is 2³ − 0³ = 8.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "endpoint_evaluation"
+    },
+    {
+      "id": "calc_fundamental_theorem_q03",
+      "topic_id": "calc_fundamental_theorem",
+      "question": "If B(x) = ∫ from 0 to x² of cos(t) dt, what is B′(x)?",
+      "options": [
+        "sin(x²)",
+        "2x cos(x)",
+        "2x cos(x²)",
+        "cos(x²)"
+      ],
+      "correct_index": 2,
+      "explanation": "Apply the Fundamental Theorem at the upper bound x², then multiply by its derivative 2x: B′(x) = cos(x²)·2x.",
+      "source_pages": [],
+      "cognitive_dimension": "computation",
+      "practice_structure": "variable_bound_chain"
     }
   ],
   "learning_state": {
@@ -543,7 +1281,43 @@
       "calc_q027": "pending",
       "calc_q028": "pending",
       "calc_q029": "pending",
-      "calc_q030": "pending"
+      "calc_q030": "pending",
+      "calc_limit_laws_q01": "pending",
+      "calc_limit_laws_q02": "pending",
+      "calc_limit_laws_q03": "pending",
+      "calc_continuity_q01": "pending",
+      "calc_continuity_q02": "pending",
+      "calc_continuity_q03": "pending",
+      "calc_trig_limits_q01": "pending",
+      "calc_trig_limits_q02": "pending",
+      "calc_trig_limits_q03": "pending",
+      "calc_differentiation_rules_q01": "pending",
+      "calc_differentiation_rules_q02": "pending",
+      "calc_differentiation_rules_q03": "pending",
+      "calc_chain_rule_q01": "pending",
+      "calc_chain_rule_q02": "pending",
+      "calc_chain_rule_q03": "pending",
+      "calc_implicit_differentiation_q01": "pending",
+      "calc_implicit_differentiation_q02": "pending",
+      "calc_implicit_differentiation_q03": "pending",
+      "calc_related_rates_q01": "pending",
+      "calc_related_rates_q02": "pending",
+      "calc_related_rates_q03": "pending",
+      "calc_mean_value_theorem_q01": "pending",
+      "calc_mean_value_theorem_q02": "pending",
+      "calc_mean_value_theorem_q03": "pending",
+      "calc_curve_sketching_q01": "pending",
+      "calc_curve_sketching_q02": "pending",
+      "calc_curve_sketching_q03": "pending",
+      "calc_antiderivatives_q01": "pending",
+      "calc_antiderivatives_q02": "pending",
+      "calc_antiderivatives_q03": "pending",
+      "calc_definite_integrals_q01": "pending",
+      "calc_definite_integrals_q02": "pending",
+      "calc_definite_integrals_q03": "pending",
+      "calc_fundamental_theorem_q01": "pending",
+      "calc_fundamental_theorem_q02": "pending",
+      "calc_fundamental_theorem_q03": "pending"
     }
   }
 }

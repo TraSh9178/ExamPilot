@@ -9,9 +9,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.fixture
 def course():
-    return StudyPackage.model_validate_json(
+    full = StudyPackage.model_validate_json(
         (ROOT / "data/calculus_i_demo.json").read_text(encoding="utf-8")
     )
+    # Keep this small graph fixture stable; expansion coverage uses the full demo.
+    data = full.model_dump()
+    data.update(topics=data["topics"][:3], relationships=data["relationships"][:2], questions=data["questions"][:3], learning_state={})
+    return StudyPackage.model_validate(data)
 
 
 def test_local_graph_does_not_mutate_course_or_invent_links(course):

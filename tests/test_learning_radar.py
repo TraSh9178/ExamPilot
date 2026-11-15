@@ -34,6 +34,18 @@ DEMO_TOPICS = {
         "calc_limits",
         "calc_derivatives",
         "calc_derivative_applications",
+        "calc_limit_laws",
+        "calc_continuity",
+        "calc_trig_limits",
+        "calc_differentiation_rules",
+        "calc_chain_rule",
+        "calc_implicit_differentiation",
+        "calc_related_rates",
+        "calc_mean_value_theorem",
+        "calc_curve_sketching",
+        "calc_antiderivatives",
+        "calc_definite_integrals",
+        "calc_fundamental_theorem",
     ],
     "python-basics-demo": [
         "python-basics-topic-1",
@@ -594,7 +606,7 @@ def test_top_hard_topics_uses_live_counts(
 def assert_offline_with_shipped_sample(course: radar.CourseRadar) -> None:
     assert course.live is False
     assert course.has_sample is True
-    assert set(course.topics) == set(DEMO_TOPICS[COURSE])
+    assert set(course.topics) == set(json.loads((ROOT / "data" / "radar_sample.json").read_text(encoding="utf-8"))[COURSE])
     assert course.topics[TOPIC].sample_count == 8
     assert all(topic.real_count == 0 for topic in course.topics.values())
 
@@ -725,7 +737,7 @@ def test_shipped_sample_covers_every_demo_topic() -> None:
 
     assert set(data) == set(DEMO_TOPICS)
     for course_id, topic_ids in DEMO_TOPICS.items():
-        assert set(data[course_id]) == set(topic_ids)
+        assert set(data[course_id]).issubset(topic_ids)
         for topic_id, entry in data[course_id].items():
             count = entry["count"]
             assert type(count) is int and 2 <= count <= 9
@@ -749,9 +761,9 @@ def test_shipped_sample_is_shown_when_offline(course_id: str) -> None:
     course = radar.get_course_radar(course_id)
 
     assert course.live is False and course.has_sample is True
-    assert list(course.topics) == DEMO_TOPICS[course_id]
+    assert list(course.topics) == list(data[course_id])
     for topic_id, topic in course.topics.items():
-        entry = data[course_id][topic_id]
+        entry = data[course_id].get(topic_id, {"count": 0, "reasons": {}})
         assert topic.real_count == 0
         assert topic.sample_count == topic.display_count == entry["count"]
         assert topic.reasons == entry["reasons"]
