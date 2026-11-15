@@ -236,6 +236,27 @@
   white-space: nowrap;
 }
 
+/* ---- The three figures: a long label wraps instead of being cut off ----------- */
+[data-testid="stMain"] .st-key-progress_overview [data-testid="stMetricLabel"],
+[data-testid="stMain"] .st-key-progress_overview [data-testid="stMetricLabel"] * {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+/* ---- Learning DNA: topic cards side by side when the page is wide enough ------ */
+[data-testid="stMain"] .st-key-learning_dna_cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  align-items: stretch;
+  gap: 1rem;
+}
+
+[data-testid="stMain"] .st-key-learning_dna_cards > * {
+  width: auto;
+  min-width: 0;
+}
+
 /* ---- Narrow screens: every section full width, nothing wider than the page --- */
 @media (max-width: 759.98px) {
   .progress-bar-value {

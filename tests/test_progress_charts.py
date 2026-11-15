@@ -652,3 +652,35 @@ def test_numbered_chart_words_have_chinese_patterns(monkeypatch):
     assert visible_text(example_banner_html(tr)) == (
         "示例报告 · 这些数字是示例数据。完成一次练习后就会显示你自己的结果。"
     )
+
+
+# ---- Layout: Learning DNA cards side by side, long figure labels wrap ----------------
+
+def test_learning_dna_cards_share_one_block_laid_out_as_a_grid():
+    course, history = chart_course_and_history()
+    app = progress_app(course, history)
+    assert not app.exception
+
+    def find(node, suffix):
+        for child in node.children.values():
+            if isinstance(child, Block):
+                if (getattr(child.proto, "id", "") or "").endswith(suffix):
+                    return child
+                found = find(child, suffix)
+                if found is not None:
+                    return found
+        return None
+
+    holder = find(app.main, "learning_dna_cards")
+    assert holder is not None
+    inside = list(block_ids(holder))
+    for topic_id, _ in TOPICS:
+        assert any(block.endswith(f"learning_dna_{topic_id}") for block in inside)
+    css = (ROOT / "assets" / "paper_progress.css").read_text(encoding="utf-8")
+    rule = css.split(".st-key-learning_dna_cards {", 1)[1].split("}", 1)[0]
+    assert "display: grid" in rule
+    # One column on a phone: a card is never forced wider than the page.
+    assert "minmax(min(100%," in rule
+    # A long label on the three figures wraps; it is not cut off with an ellipsis.
+    label_rule = css.split('.st-key-progress_overview [data-testid="stMetricLabel"] * {', 1)[1].split("}", 1)[0]
+    assert "white-space: normal" in label_rule

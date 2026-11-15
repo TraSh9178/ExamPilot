@@ -102,13 +102,15 @@ def render_learning_dna(course, attempts, sessions, questions, mode, *, example=
         return
     st.caption(tr("Uses your latest answer to each question. Fewer than 3 different questions shows as insufficient evidence."))
     by_key = {(p.topic_id, p.dimension): p for p in profile}
-    for topic in course.topics:
-        pair = {dimension: by_key.get((topic.id, dimension)) for dimension in DIMENSIONS}
-        with st.container(border=True, key=f"learning_dna_{topic.id}"):
-            render_bar_chart(title, dna_rows(pair, tr), kind="dna", heading=topic.name)
-            if all(pair.values()):
-                st.write(tr(comparison(*pair.values())))
-            else:
-                st.write(tr("Answer more different questions in both dimensions before comparing them."))
-            if not example and any(item is not None and item.evidence for item in pair.values()):
-                _view_answers_button(course, topic)
+    # One block around the topic cards: the stylesheet sets them side by side on a wide page.
+    with st.container(key="learning_dna_cards"):
+        for topic in course.topics:
+            pair = {dimension: by_key.get((topic.id, dimension)) for dimension in DIMENSIONS}
+            with st.container(border=True, key=f"learning_dna_{topic.id}"):
+                render_bar_chart(title, dna_rows(pair, tr), kind="dna", heading=topic.name)
+                if all(pair.values()):
+                    st.write(tr(comparison(*pair.values())))
+                else:
+                    st.write(tr("Answer more different questions in both dimensions before comparing them."))
+                if not example and any(item is not None and item.evidence for item in pair.values()):
+                    _view_answers_button(course, topic)
