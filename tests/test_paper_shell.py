@@ -396,7 +396,10 @@ def test_no_stylesheet_hides_the_sidebar_or_its_buttons_after_sign_in():
     hiding = [
         selector for selector, body in rules
         if re.search(r"display:\s*none|visibility:\s*hidden", body)
-        and any(f'"{control}"' in selector for control in SIDEBAR_CONTROLS)
+        # A :has() condition can mention the sidebar while targeting a
+        # different element (for example, floating controls behind it).
+        and any(f'"{control}"' in re.sub(r':has\([^)]*\)', '', selector)
+                for control in SIDEBAR_CONTROLS)
     ]
     # Only the sign-in page, which has no navigation, keeps the sidebar away.
     assert hiding

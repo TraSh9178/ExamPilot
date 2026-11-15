@@ -25,3 +25,7 @@ Preserve functional colors in graphs and scoring; color must not be the only sig
 UI/UX Pro Max searches: `education learning dashboard` suggested a child-oriented clay style; the single retry `university analytics dashboard` suggested enterprise marketing structure. Neither is accepted as a product-level template. Visual direction therefore uses the existing paper identity plus the skill's general accessibility/interaction defaults. Verified focused UX matches: predictable back navigation, fixed navigation offsets, and focus-not-obscured guidance. No Streamlit-specific database guidance was available; implementation follows this repository's existing components.
 
 Design Token provides primitive → semantic → component architecture. Heuristic Evaluation provides task walkthroughs and severity prioritization. The changes apply to all users; grades, drafts and personal conversations remain account-scoped.
+
+## Verification
+
+Full Python 3.12 suite after integrating main: 1560 passed, 20 skipped. Browser walkthroughs cover desktop, 375px portrait and 812px landscape, including pause/return, retained answers, retained Pilot draft, mobile navigation, panel bounds and focused controls. Reduced-motion rules were inspected in source; OS preference switching was not emulated. No live AI request or production account data was used.
