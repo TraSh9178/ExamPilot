@@ -461,18 +461,19 @@ def test_course_tools_page_without_a_course(monkeypatch):
 # ---- Review and edit questions on the new page --------------------------------------
 
 def test_review_list_shows_plain_status_words_and_pending_first():
-    course = make_course({"q1": "pending", "q3": "flagged", "q4": "approved", "q2": "pending"})
-    course.learning_state["question_reviews"].pop("q2")
+    # q2 has no review decision recorded.
+    course = make_course({"q1": "approved", "q3": "pending", "q4": "flagged"})
     app = course_tools_page(course).run()
 
     assert not app.exception
     picker = app.selectbox(key="editor_question_c1")
     assert picker.label == "Question to review"
+    assert picker.value == "q3"
     assert picker.options == [
-        "Needs check · Question 1?",
+        "Needs check · Question 3?",
+        "Approved · Question 1?",
         "Question 2?",
-        "Flagged · Question 3?",
-        "Approved · Question 4?",
+        "Flagged · Question 4?",
     ]
     assert not any("[" in option or "legacy" in option.lower() for option in picker.options)
     assert (
