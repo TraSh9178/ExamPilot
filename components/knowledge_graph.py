@@ -215,6 +215,7 @@ def get_selected_topic_details(
 def render_topic_details(
     details: dict | None,
     topic_stats: TopicStats | None = None,
+    course: StudyPackage | None = None,
 ) -> None:
     if details is None:
         st.info(tr("Click a knowledge point to see its details."))
@@ -226,6 +227,10 @@ def render_topic_details(
     with st.container(key="knowledge_topic_summary"):
         st.subheader(tr("Summary"))
         st.write(details["summary"])
+
+    if course is not None:
+        from components.topic_explanation import render_topic_explanation
+        render_topic_explanation(course, details["id"])
 
     source_pages = details["source_pages"]
     if source_pages:
