@@ -531,6 +531,19 @@ _TRANSLATIONS.update({
     "#### Learning Radar": "#### 学习雷达",
 })
 
+# concept lab steps; home materials note
+_TRANSLATIONS.update({
+    "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text; reading text from images may not always be available. Scanned PDFs, PPTX slide notes and DOCX files are not supported.": "使用 UTF-8 TXT、文字型 PDF/PPTX 或清晰的英文图片；图片中的文字有时可能无法读取。暂不支持扫描版 PDF、PPTX 备注或 DOCX 文件。",
+    "Steps": "步骤", "Predict": "预测", "Explore": "探索", "Explain": "解释",
+    "Back": "返回", "Next: explore": "下一步：探索", "Next: explain": "下一步：解释",
+    "Your explanation": "你的解释",
+    "Only you see this. Write it first, then compare.": "只有你能看到。先写下来，再对照答案。",
+    "Hide answer": "收起答案",
+    "Your prediction was right.": "你的预测是对的。",
+    "I had it right": "我答对了", "I missed something": "我漏掉了一些",
+    "Your self-check: ": "你的自评：", "Start again": "重新开始",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
@@ -609,6 +622,8 @@ _DYNAMIC = [
     (r"^Last time you chose ([A-D])\.$", r"上次你选了 \1。"),
     # practice clock
     (r"^Session time (.+)$", r"本次用时 \1"),
+    # concept lab steps (the choices arrive already translated)
+    (r"^Your prediction was “(.+)”; the experiment shows “(.+)”\.$", r"你的预测是“\1”；实验表明是“\2”。"),
 ]
 
 

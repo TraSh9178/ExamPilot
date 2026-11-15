@@ -98,8 +98,9 @@ def test_limits_page_loads_without_a_selected_course():
 
     assert not app.exception
     assert "Concept Lab" in [title.value for title in app.title]
-    assert any("Both sides approach 4" in item.value for item in app.markdown)
-    assert not next(e for e in app.expander if "missing point" in e.label).proto.expanded
+    # Step 1 comes first; the explanation waits for step 3 and "Show answer".
+    assert not any("Both sides approach 4" in item.value for item in app.markdown)
+    assert not app.expander
 
 
 def load_course(filename="calculus_i_demo.json"):
@@ -122,7 +123,9 @@ def test_page_loads_with_selected_course(filename):
 def test_limits_slider_updates_both_sides_and_keeps_hole():
     import json
 
-    app = AppTest.from_file(str(PAGE_PATH)).run()
+    app = AppTest.from_file(str(PAGE_PATH))
+    app.session_state["lab_limits_step"] = 2  # the explore step
+    app.run()
     for distance in [1, 0.001]:
         app.select_slider(key="concept_lab_limit_distance").set_value(distance).run()
         assert not app.exception
@@ -137,7 +140,9 @@ def test_limits_slider_updates_both_sides_and_keeps_hole():
 def test_derivative_sliders_update_exact_and_secant_values(x0, exact):
     import json
 
-    app = AppTest.from_file(str(PAGE_PATH)).run()
+    app = AppTest.from_file(str(PAGE_PATH))
+    app.session_state["lab_derivatives_step"] = 2  # the explore step
+    app.run()
     app.slider(key="concept_lab_x0").set_value(float(x0)).run()
     errors = []
     for h in [1, 0.001]:
@@ -153,6 +158,10 @@ def test_derivative_sliders_update_exact_and_secant_values(x0, exact):
     ]
 
 
+# The lab tab whose step 3 holds each topic's "Practice this topic" button.
+EXPLAIN_STEP = {"calc_limits": "lab_limits_step", "calc_derivatives": "lab_derivatives_step"}
+
+
 @pytest.mark.parametrize("topic", ["calc_limits", "calc_derivatives"])
 @pytest.mark.parametrize("filename", [None, "sample_course.json", "calculus_i_demo.json"])
 def test_practice_button_explains_missing_course_or_scope(monkeypatch, topic, filename):
@@ -162,6 +171,7 @@ def test_practice_button_explains_missing_course_or_scope(monkeypatch, topic, fi
     monkeypatch.setattr(st, "page_link", lambda page, **kwargs: links.append(page))
     app = AppTest.from_file(str(PAGE_PATH))
     app.session_state["current_course"] = load_course(filename) if filename else None
+    app.session_state[EXPLAIN_STEP[topic]] = 3  # the practice button sits in step 3
     app.run().button(key=f"concept_lab_practice_{topic}").click().run()
     assert not app.exception
     expected = (
@@ -189,6 +199,7 @@ def test_practice_button_sets_contract_and_practice_page_uses_it(monkeypatch, to
     app.session_state["confirmed_scope_calculus-i-demo"] = [t.id for t in course.topics]
     history = {"saved-session": {"result": "preserved"}}
     app.session_state["practice_history_calculus-i-demo"] = history
+    app.session_state[EXPLAIN_STEP[topic]] = 3  # the practice button sits in step 3
     app.run().button(key=f"concept_lab_practice_{topic}").click().run()
     assert not app.exception
     assert destinations == ["pages/2_Practice_Center.py"]
@@ -213,6 +224,7 @@ def test_registered_app_navigates_from_lab_to_selected_practice(topic):
     app.session_state["confirmed_scope_calculus-i-demo"] = [
         "calc_limits", "calc_derivatives",
     ]
+    app.session_state[EXPLAIN_STEP[topic]] = 3  # the practice button sits in step 3
     app.switch_page("pages/6_Concept_Lab.py").run()
     assert not app.exception
     assert app.title[0].value == "Concept Lab"

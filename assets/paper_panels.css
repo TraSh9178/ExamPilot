@@ -55,16 +55,68 @@
   }
 }
 
-/* ---- Knowledge Map: the Learning Radar card's heading ---------------------- */
-[data-testid="stMain"] .st-key-learning_radar_panel h4 {
+/* ---- Concept Lab: the step indicator ---------------------------------------- */
+/* "1 Predict  2 Explore  3 Explain" at the top of the left column; the current
+   step is a rust pill (and aria-current="step" for screen readers). */
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] ol.lab-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] ol.lab-steps li.lab-step {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  margin: 0;
+  padding: .2rem .8rem .2rem .25rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--paper-badge);
+  color: var(--exam-muted);
+  font-size: var(--exam-font-meta);
+  line-height: 1.4;
+}
+
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] ol.lab-steps .lab-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  background: var(--paper-card);
+  font-weight: 700;
+}
+
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] ol.lab-steps li.lab-step.is-current {
+  border-color: var(--accent-rust);
+  background: var(--paper-select);
+  color: var(--accent-rust-text);
+  font-weight: 650;
+}
+
+/* The list is not a paragraph, so its block must not pull the step below it
+   up by 1rem (see "Breathing room" in paper_shell.css). */
+[data-testid="stMain"] [data-testid="stMarkdownContainer"]:has(> ol.lab-steps) {
+  margin-bottom: 0;
+}
+
+/* ---- Concept Lab: the step-3 question --------------------------------------- */
+/* A short title in the paper heading face, on the column's left edge. */
+[data-testid="stMain"] :is(.st-key-lab_limits_explain, .st-key-lab_derivatives_explain, .st-key-lab_corner_explain) h5 {
   margin: 0;
   padding: 0;
   color: var(--ink);
   font-family: var(--font-title);
+  font-size: 1.05rem;
+  font-weight: 600;
 }
 
-/* The heading block ends in a heading, not a paragraph, so it must not pull
-   the caption under it up by 1rem (see "Breathing room" in paper_shell.css). */
-[data-testid="stMain"] .st-key-learning_radar_panel [data-testid="stMarkdownContainer"]:has(h4) {
+/* The question's block ends in a heading, not a paragraph, so it must not pull
+   the text area up against it. */
+[data-testid="stMain"] :is(.st-key-lab_limits_explain, .st-key-lab_derivatives_explain, .st-key-lab_corner_explain) [data-testid="stMarkdownContainer"]:has(h5) {
   margin-bottom: 0;
 }

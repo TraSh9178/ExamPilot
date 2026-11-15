@@ -987,7 +987,73 @@ def _has_clear_button(app, topic_id):
     return any(button.key == f"{_flag_key(topic_id)}_clear" for button in app.button)
 
 
-def test_radar_panel_lists_flagged_topics_most_flagged_first(monkeypatch):
+def _ranking_script(radar, topic_names, course, focus):
+    # AppTest runs this function's source as a script, so it imports what it needs.
+    from components.knowledge_graph import render_radar_panel
+    from services import learning_radar
+
+    render_radar_panel(
+        radar,
+        learning_radar.top_hard_topics(radar, limit=len(topic_names)),
+        topic_names,
+        course=course,
+        focus_topic_id=focus,
+    )
+
+
+def _radar_ranking(radar_fake, *, chart=False, focus=None):
+    """render_radar_panel on its own: the ranking the Learning Radar page shows.
+
+    The Knowledge Map no longer draws it, so its behaviour is checked here.
+    """
+    course = _calculus_course()
+    return AppTest.from_function(
+        _ranking_script,
+        kwargs={
+            "radar": radar_fake.get_course_radar(CALCULUS_ID),
+            "topic_names": {topic.id: topic.name for topic in course.topics},
+            "course": course if chart else None,
+            "focus": focus,
+        },
+    ).run()
+
+
+def test_knowledge_map_links_to_the_radar_page_instead_of_a_panel(monkeypatch):
+    import streamlit as st
+
+    destinations = []
+    monkeypatch.setattr(st, "switch_page", lambda page: destinations.append(page))
+    radar = RadarFake(
+        monkeypatch,
+        [
+            _topic("calc_limits", real=2, display=None),
+            _topic("calc_derivative_applications", real=5),
+            _topic("calc_derivatives", real=8),
+        ],
+        ranked=["calc_derivatives", "calc_derivative_applications", "calc_limits"],
+        has_sample=True,
+    )
+
+    app = _graph_page(_calculus_course())
+
+    assert not app.exception
+    # No panel, chart, ranking or sample note on the map...
+    assert not any("Learning Radar" in value for value in _markdown(app))
+    assert not any(value.startswith("1. ") or "<svg" in value for value in _markdown(app))
+    assert not any(
+        value in {"Includes sample data", "No topics have been flagged yet.", "Students stuck per topic"}
+        for value in _captions(app)
+    )
+    assert radar.calls["top_hard_topics"] == []
+    assert radar.calls["radar_enabled"][0] == CALCULUS_ID
+    # ...only the way to the page that has them.
+    link = app.button(key="knowledge_map_learning_radar")
+    assert link.label == "Learning Radar"
+    link.click().run()
+    assert destinations == ["pages/7_Learning_Radar.py"]
+
+
+def test_radar_ranking_lists_flagged_topics_most_flagged_first(monkeypatch):
     radar = RadarFake(
         monkeypatch,
         [
@@ -998,11 +1064,10 @@ def test_radar_panel_lists_flagged_topics_most_flagged_first(monkeypatch):
         ranked=["calc_derivatives", "calc_derivative_applications", "calc_limits"],
     )
 
-    app = _graph_page(_calculus_course())
+    app = _radar_ranking(radar)
 
     assert not app.exception
-    # The panel is always open; its title is a heading.
-    assert "#### Learning Radar" in _markdown(app)
+    assert "**Learning Radar**" in _markdown(app)
     assert (
         "1. **Derivatives** — 8 students are stuck here\n"
         "2. **Applications of Derivatives** — 5 students are stuck here\n"
@@ -1010,13 +1075,12 @@ def test_radar_panel_lists_flagged_topics_most_flagged_first(monkeypatch):
     ) in _markdown(app)
     assert "No topics have been flagged yet." not in _captions(app)
     assert [limit for _, limit in radar.calls["top_hard_topics"]] == [3]
-    assert radar.calls["radar_enabled"][0] == CALCULUS_ID
 
 
-def test_radar_panel_says_when_nothing_is_flagged(monkeypatch):
-    RadarFake(monkeypatch, [])
+def test_radar_ranking_says_when_nothing_is_flagged(monkeypatch):
+    radar = RadarFake(monkeypatch, [])
 
-    app = _graph_page(_calculus_course())
+    app = _radar_ranking(radar)
 
     assert not app.exception
     assert "No topics have been flagged yet." in _captions(app)
@@ -1083,31 +1147,37 @@ def test_non_demo_course_shows_no_radar_ui_and_fetches_nothing(monkeypatch):
 
 
 @pytest.mark.parametrize("live", [True, False])
-def test_radar_panel_never_mentions_the_database(monkeypatch, live):
-    RadarFake(monkeypatch, [_topic("calc_derivatives", sample=8)], live=live)
+def test_radar_never_mentions_the_database(monkeypatch, live):
+    radar = RadarFake(monkeypatch, [_topic("calc_derivatives", sample=8)], live=live)
 
-    app = _graph_page(_calculus_course())
+    app = _graph_page(_calculus_course(), focus="calc_derivatives")
+    ranking = _radar_ranking(radar)
 
-    assert not app.exception
-    assert "Live flags are unavailable right now." not in _captions(app)
-    assert "1. **Derivatives** — 8 students are stuck here" in _markdown(app)
+    assert not app.exception and not ranking.exception
+    for shown in (app, ranking):
+        assert "Live flags are unavailable right now." not in _captions(shown)
+    assert "8 students are stuck here" in _markdown(app)
+    assert "1. **Derivatives** — 8 students are stuck here" in _markdown(ranking)
 
 
 @pytest.mark.parametrize("has_sample", [True, False])
-def test_radar_panel_marks_sample_data(monkeypatch, has_sample):
-    RadarFake(
+def test_radar_ranking_marks_sample_data(monkeypatch, has_sample):
+    radar = RadarFake(
         monkeypatch, [_topic("calc_derivatives", real=4)], has_sample=has_sample
     )
 
     app = _graph_page(_calculus_course())
+    ranking = _radar_ranking(radar)
 
-    assert not app.exception
-    assert _captions(app).count("Includes sample data") == (1 if has_sample else 0)
+    assert not app.exception and not ranking.exception
+    # The map without a selected topic has no sample note; the ranking keeps its own.
+    assert "Includes sample data" not in _captions(app)
+    assert _captions(ranking).count("Includes sample data") == (1 if has_sample else 0)
 
 
 @pytest.mark.parametrize(
     ("focus", "sample_captions"),
-    [("calc_derivatives", 2), ("calc_limits", 1)],
+    [("calc_derivatives", 1), ("calc_limits", 0)],
 )
 def test_topic_details_mark_sample_data_per_topic(monkeypatch, focus, sample_captions):
     RadarFake(
@@ -1122,7 +1192,7 @@ def test_topic_details_mark_sample_data_per_topic(monkeypatch, focus, sample_cap
     app = _graph_page(_calculus_course(), focus=focus)
 
     assert not app.exception
-    # One caption from the panel, plus one when the selected topic has samples.
+    # The selected topic's details say so when its own count includes samples.
     assert _captions(app).count("Includes sample data") == sample_captions
 
 
@@ -1150,7 +1220,6 @@ def test_hidden_count_shows_some_students_flagged_this(monkeypatch):
 
     assert not app.exception
     assert "Some students flagged this" in _markdown(app)
-    assert "1. **Limits** — Some students flagged this" in _markdown(app)
     assert not any("2 student" in value for value in _markdown(app))
 
 
@@ -1578,8 +1647,8 @@ def test_signed_out_user_sees_no_reason_controls(monkeypatch):
     assert radar.flag_reasons == []
 
 
-def test_radar_panel_shows_reason_breakdown_with_labels(monkeypatch):
-    RadarFake(
+def test_radar_ranking_shows_reason_breakdown_with_labels(monkeypatch):
+    radar = RadarFake(
         monkeypatch,
         [
             _reason_topic(
@@ -1596,7 +1665,7 @@ def test_radar_panel_shows_reason_breakdown_with_labels(monkeypatch):
         ranked=["calc_derivatives", "calc_limits", "calc_derivative_applications"],
     )
 
-    app = _graph_page(_calculus_course())
+    app = _radar_ranking(radar)
 
     assert not app.exception
     assert (
@@ -1608,10 +1677,10 @@ def test_radar_panel_shows_reason_breakdown_with_labels(monkeypatch):
     ) in _markdown(app)
 
 
-def test_radar_panel_shows_no_breakdown_without_reasons(monkeypatch):
-    RadarFake(monkeypatch, [_reason_topic("calc_derivatives", real=8, reasons={})])
+def test_radar_ranking_shows_no_breakdown_without_reasons(monkeypatch):
+    radar = RadarFake(monkeypatch, [_reason_topic("calc_derivatives", real=8, reasons={})])
 
-    app = _graph_page(_calculus_course())
+    app = _radar_ranking(radar)
 
     assert not app.exception
     assert "1. **Derivatives** — 8 students are stuck here" in _markdown(app)
@@ -1637,12 +1706,13 @@ def _threshold_topic(real):
 def test_hidden_count_shows_no_number_and_no_breakdown_anywhere(monkeypatch):
     topic = _threshold_topic(2)
     assert topic.display_count is None
-    RadarFake(monkeypatch, [topic])
+    radar = RadarFake(monkeypatch, [topic])
     rendered = _record_graph_nodes(monkeypatch)
 
     app = _graph_page(_calculus_course(), focus="calc_derivatives")
+    ranking = _radar_ranking(radar)
 
-    assert not app.exception
+    assert not app.exception and not ranking.exception
     # Topic details: no count.
     assert "Some students flagged this" in _markdown(app)
     assert not any("student is" in value or "students are" in value for value in _markdown(app))
@@ -1650,9 +1720,9 @@ def test_hidden_count_shows_no_number_and_no_breakdown_anywhere(monkeypatch):
     badge_label = {node.id: node.label for node in rendered[-1]}["calc_derivatives"]
     assert badge_label == "Derivatives\n🔥 flagged"
     assert not any(char.isdigit() for char in badge_label)
-    # Panel: no number and no reason breakdown.
-    assert "1. **Derivatives** — Some students flagged this" in _markdown(app)
-    shown_text = _markdown(app) + _captions(app) + _infos(app)
+    # Ranking (Learning Radar page): no number and no reason breakdown.
+    assert "1. **Derivatives** — Some students flagged this" in _markdown(ranking)
+    shown_text = _markdown(app) + _captions(app) + _infos(app) + _markdown(ranking) + _captions(ranking)
     assert not any(
         label in value
         for value in shown_text
@@ -1665,12 +1735,13 @@ def test_hidden_count_shows_no_number_and_no_breakdown_anywhere(monkeypatch):
 def test_exactly_three_real_flags_show_numbers_and_breakdown(monkeypatch):
     topic = _threshold_topic(learning_radar.MIN_VISIBLE_COUNT)
     assert topic.display_count == 3
-    RadarFake(monkeypatch, [topic])
+    radar = RadarFake(monkeypatch, [topic])
     rendered = _record_graph_nodes(monkeypatch)
 
     app = _graph_page(_calculus_course(), focus="calc_derivatives")
+    ranking = _radar_ranking(radar)
 
-    assert not app.exception
+    assert not app.exception and not ranking.exception
     assert "3 students are stuck here" in _markdown(app)
     assert {node.id: node.label for node in rendered[-1]}["calc_derivatives"] == (
         "Derivatives\n🔥 3 stuck"
@@ -1678,8 +1749,8 @@ def test_exactly_three_real_flags_show_numbers_and_breakdown(monkeypatch):
     assert (
         "1. **Derivatives** — 3 students are stuck here\n"
         "   - Concept unclear 1 · Don't know where to start 2"
-    ) in _markdown(app)
-    assert "Some students flagged this" not in _markdown(app)
+    ) in _markdown(ranking)
+    assert "Some students flagged this" not in _markdown(app) + _markdown(ranking)
 
 
 @pytest.mark.parametrize(
@@ -1835,15 +1906,17 @@ def _svgs(app):
     ("focus", "highlighted"),
     [(None, None), ("calc_limits", "Limits")],
 )
-def test_radar_panel_draws_the_chart_above_the_ranking(monkeypatch, focus, highlighted):
-    RadarFake(
+def test_radar_ranking_draws_the_chart_above_the_list(monkeypatch, focus, highlighted):
+    radar = RadarFake(
         monkeypatch,
         [_topic("calc_derivatives", real=8), _topic("calc_limits", real=2, display=None)],
         ranked=["calc_derivatives", "calc_limits"],
         has_sample=True,
     )
 
-    app = _graph_page(_calculus_course(), focus=focus)
+    # The map itself draws no chart; render_radar_panel still can, with a course.
+    assert _svgs(_graph_page(_calculus_course(), focus=focus)) == []
+    app = _radar_ranking(radar, chart=True, focus=focus)
 
     assert not app.exception
     markdown = _markdown(app)
@@ -1857,14 +1930,14 @@ def test_radar_panel_draws_the_chart_above_the_ranking(monkeypatch, focus, highl
     )
     assert focus_labels == ([highlighted] if highlighted else [])
     assert "Students stuck per topic" in _captions(app)
-    # The panel keeps one sample note and draws no second one for the chart.
+    # One sample note for the list, and no second one for the chart.
     assert _captions(app).count("Includes sample data") == 1
 
 
-def test_radar_panel_chart_shows_only_the_grid_when_nothing_is_flagged(monkeypatch):
-    RadarFake(monkeypatch, [])
+def test_radar_ranking_chart_shows_only_the_grid_when_nothing_is_flagged(monkeypatch):
+    radar = RadarFake(monkeypatch, [])
 
-    app = _graph_page(_calculus_course())
+    app = _radar_ranking(radar, chart=True)
 
     assert not app.exception
     (svg,) = _svgs(app)

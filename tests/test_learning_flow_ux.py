@@ -83,6 +83,7 @@ def test_lab_default_matches_requested_topic():
     course=calculus()
     state={}
     open_lab(state,course.course_id,'calc_derivatives')
+    state['lab_derivatives_step']=2  # the explore step, where the sliders are
     app=AppTest.from_file(str(ROOT/'pages/6_Concept_Lab.py'))
     for key,value in state.items():app.session_state[key]=value
     app.run()
@@ -168,6 +169,7 @@ def test_map_to_derivatives_lab_to_practice_preserves_context_and_old_result(mon
     )}
     app=signed_in_app(ROOT/'app.py').run()
     for key,value in carried.items():app.session_state[key]=value
+    app.session_state['lab_derivatives_step']=3  # practice sits in the explain step
     app.switch_page('pages/6_Concept_Lab.py').run()
     app.button(key='concept_lab_practice_calc_derivatives').click().run()
     assert not app.exception

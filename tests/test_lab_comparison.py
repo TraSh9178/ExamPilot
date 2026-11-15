@@ -19,7 +19,9 @@ def test_corner_distance_must_be_positive_finite(distance):
 
 
 def test_saved_comparison_stays_fixed_and_is_hidden_at_another_x0():
-    app=AppTest.from_file(str(PAGE)).run()
+    app=AppTest.from_file(str(PAGE))
+    app.session_state['lab_derivatives_step']=2  # the explore step
+    app.run()
     app.button(key='lab_save_secant').click().run()
     saved=dict(app.session_state['lab_saved_secant'])
     app.select_slider(key='concept_lab_h').set_value(0.01).run()
@@ -36,7 +38,10 @@ def test_saved_comparison_stays_fixed_and_is_hidden_at_another_x0():
 
 
 def test_corner_controls_do_not_change_derivative_controls_or_private_history():
-    app=AppTest.from_file(str(PAGE)).run()
+    app=AppTest.from_file(str(PAGE))
+    app.session_state['lab_derivatives_step']=2  # both tabs on their explore step
+    app.session_state['lab_corner_step']=2
+    app.run()
     app.session_state['practice_history_calculus-i-demo']={'keep':'unchanged'}
     app.slider(key='concept_lab_x0').set_value(2.).run()
     app.select_slider(key='concept_lab_corner_h').set_value(0.001).run()
@@ -44,7 +49,9 @@ def test_corner_controls_do_not_change_derivative_controls_or_private_history():
     app.button(key='lab_corner_reset').click().run()
     assert not app.exception
     assert app.slider(key='concept_lab_x0').value==2.
-    assert app.select_slider(key='concept_lab_corner_h').value==0.5
+    # The corner tab starts again at step 1 with its control back at the start.
+    assert app.session_state['lab_corner_step']==1
+    assert app.session_state['concept_lab_corner_h']==0.5
     assert app.session_state['practice_history_calculus-i-demo']=={'keep':'unchanged'}
 
 
@@ -64,6 +71,7 @@ def test_feedback_targets_the_selected_misconception(key,choice,expected):
 def test_corner_and_saved_graph_labels_follow_chinese_setting():
     app=AppTest.from_file(str(PAGE))
     app.session_state[LANGUAGE_KEY]=True
+    app.session_state['lab_derivatives_step']=2  # the explore step
     app.run().button(key='lab_save_secant').click().run()
     assert not app.exception
     assert app.tabs[-1].label=='尖点与可导性'

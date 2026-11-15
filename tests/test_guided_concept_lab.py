@@ -22,7 +22,9 @@ def test_prediction_feedback_is_optional_and_does_not_record_an_exam():
 
 @pytest.mark.parametrize('topic,key,start',[('limits','concept_lab_limit_distance',0.1),('derivatives','concept_lab_h',0.5)])
 def test_step_closer_has_a_finite_end_and_reset_restores_controls(topic,key,start):
-    app=AppTest.from_file(str(PAGE)).run()
+    app=AppTest.from_file(str(PAGE))
+    app.session_state[f'lab_{topic}_step']=2  # the explore step
+    app.run()
     app.session_state['private_record']={'score':42}
     for _ in range(6):
         button=app.button(key=f'lab_{topic}_approach')
@@ -31,14 +33,18 @@ def test_step_closer_has_a_finite_end_and_reset_restores_controls(topic,key,star
     assert app.button(key=f'lab_{topic}_approach').disabled
     app.button(key=f'lab_{topic}_reset').click().run()
     assert not app.exception
-    assert app.select_slider(key=key).value==start
+    # Reset starts the experiment again at step 1, with the controls at their start.
+    assert app.session_state[f'lab_{topic}_step']==1
+    assert app.session_state[key]==start
     assert app.session_state['private_record']=={'score':42}
     assert not any('Session State API' in w.value for w in app.warning)
 
 
 @pytest.mark.parametrize('x0',[-3.,0.,1.,3.])
 def test_left_approach_uses_signed_h_and_converges(x0):
-    app=AppTest.from_file(str(PAGE)).run()
+    app=AppTest.from_file(str(PAGE))
+    app.session_state['lab_derivatives_step']=2  # the explore step
+    app.run()
     app.slider(key='concept_lab_x0').set_value(x0).run()
     app.radio(key='concept_lab_side').set_value('Left').run()
     errors=[]
@@ -50,16 +56,21 @@ def test_left_approach_uses_signed_h_and_converges(x0):
         errors.append(abs(actual-cubic_derivative(x0)))
     assert errors[-1]<errors[0]
     app.button(key='lab_derivatives_reset').click().run()
-    assert app.radio(key='concept_lab_side').value=='Right'
-    assert app.slider(key='concept_lab_x0').value==1.0
+    assert app.session_state['lab_derivatives_step']==1
+    assert app.session_state['concept_lab_side']=='Right'
+    assert app.session_state['concept_lab_x0']==1.0
 
 
 def test_new_controls_translate_without_changing_widget_contracts():
     from services.i18n import LANGUAGE_KEY
     app=AppTest.from_file(str(PAGE))
     app.session_state[LANGUAGE_KEY]=True
+    app.session_state['lab_limits_step']=2  # the explore step
+    app.session_state['lab_derivatives_step']=2
     app.run()
     assert not app.exception
     assert app.button(key='lab_limits_reset').label=='重置实验'
     assert app.radio(key='concept_lab_side').options==['右侧','左侧']
-    assert app.button(key='concept_lab_practice_calc_derivatives').label
+    app.session_state['lab_derivatives_step']=3  # practice sits in the explain step
+    app.run()
+    assert app.button(key='concept_lab_practice_calc_derivatives').label=='练习这个知识点'

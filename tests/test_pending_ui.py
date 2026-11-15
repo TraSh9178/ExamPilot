@@ -137,10 +137,12 @@ def test_dashboard_image_ocr_uses_image_labels_and_updated_copy(monkeypatch):
     assert not any("Image (1)" in item.label for item in app.expander)
     assert not any("PDF pages" in item.label for item in app.expander)
     assert any("scan.png · Image 1" in item.value for item in app.caption)
+    # The materials note says scanned PDFs are not read, without naming the OCR engine.
     assert any(
-        "scanned pdf ocr" in item.value.lower()
+        "scanned pdfs" in item.value.lower()
         for item in app.caption
     )
+    assert not any("tesseract" in item.value.lower() for item in app.caption)
 
 
 def test_dashboard_failure_message_clears_old_document_and_disables_generation(
