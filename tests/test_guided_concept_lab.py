@@ -12,7 +12,7 @@ def test_prediction_feedback_is_optional_and_does_not_record_an_exam():
     assert any('Choose a prediction' in x.value for x in app.info)
     app.radio(key='lab_limits_prediction').set_value('0').run()
     app.button(key='lab_limits_check').click().run()
-    assert any('Try the experiment' in x.value for x in app.info)
+    assert any('zero numerator' in x.value for x in app.info)
     app.radio(key='lab_limits_prediction').set_value('4').run()
     assert not any('Your prediction' in x.value for x in app.success)
     app.button(key='lab_limits_check').click().run()

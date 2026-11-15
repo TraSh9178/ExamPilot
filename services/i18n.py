@@ -353,6 +353,53 @@ _TRANSLATIONS.update(
 )
 
 
+_TRANSLATIONS.update(
+{'1 · Predict before exploring': '1 · 实验前先预测',
+ 'Corners & differentiability': '尖点与可导性',
+ 'A zero numerator does not make this limit zero. Compare nearby values after cancelling x − 2.': '分子趋近 '
+                                                                                                  '0 '
+                                                                                                  '不代表这个极限是 '
+                                                                                                  '0。约去 '
+                                                                                                  'x '
+                                                                                                  '− '
+                                                                                                  '2 '
+                                                                                                  '后，再比较附近的值。',
+ 'A missing point and a missing limit are different. Track the nearby values from both sides.': '点值未定义与极限不存在是两回事。请跟踪两侧附近的函数值。',
+ 'A smaller interval does not imply a horizontal line. Keep x₀ fixed and compare the two slopes.': '区间变小不代表斜率为 '
+                                                                                                   '0。固定 '
+                                                                                                   'x₀，比较割线与切线斜率。',
+ 'A function value is a height; a derivative is a slope. Compare rise divided by run.': '函数值表示高度，导数表示斜率。请比较纵向变化量与横向变化量之比。',
+ 'Continuity alone does not guarantee a derivative. Compare the left and right slopes at the corner.': '连续不一定可导。请比较尖点处的左侧与右侧斜率。',
+ 'Both sides of |x| approach its value 0. Now compare slopes rather than heights.': '|x| 两侧的值都趋近它在 '
+                                                                                    '0 '
+                                                                                    '处的值。接下来比较斜率，而不是高度。',
+ 'Change your prediction and check again after exploring.': '实验后可修改预测，再检查一次。',
+ 'At x = 0, which statement describes f(x) = |x|?': '在 x = 0 处，哪种描述符合 f(x) = |x|？',
+ 'Continuous, but not differentiable at 0': '在 0 处连续但不可导',
+ 'Continuous and differentiable at 0': '在 0 处连续且可导',
+ 'Discontinuous at 0': '在 0 处不连续',
+ 'Save this secant for comparison': '保存当前割线用于比较',
+ 'Saved secant': '已保存的割线',
+ 'Saved comparison: ': '已保存的对照：',
+ 'x₀ changed. Save a new secant to compare slopes at the same point.': 'x₀ 已改变。请重新保存割线，以比较同一点处的斜率。',
+ 'Continuous does not always mean differentiable': '连续不一定可导',
+ 'Distance from the corner': '距尖点的距离',
+ 'Left secant slope': '左侧割线斜率',
+ 'Right secant slope': '右侧割线斜率',
+ 'The two slopes disagree: no derivative at 0.': '左右斜率不一致，因此在 0 处不可导。',
+ 'Why is the corner continuous but not differentiable?': '为什么尖点处连续但不可导？',
+ 'The nearby heights approach f(0) = 0, so |x| is continuous. The left slopes stay −1 and the right slopes stay 1, so no single derivative exists at 0.': '附近函数值趋近 '
+                                                                                                                                                          'f(0) '
+                                                                                                                                                          '= '
+                                                                                                                                                          '0，因此 '
+                                                                                                                                                          '|x| '
+                                                                                                                                                          '连续。左侧斜率始终是 '
+                                                                                                                                                          '−1，右侧始终是 '
+                                                                                                                                                          '1，所以 '
+                                                                                                                                                          '0 '
+                                                                                                                                                          '处不存在唯一的导数。'}
+)
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),

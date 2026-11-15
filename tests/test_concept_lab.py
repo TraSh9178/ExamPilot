@@ -116,7 +116,7 @@ def test_page_loads_with_selected_course(filename):
     app.session_state["current_course"] = load_course(filename)
     app.run()
     assert not app.exception
-    assert [tab.label for tab in app.tabs] == ["Limits", "Derivatives"]
+    assert [tab.label for tab in app.tabs] == ["Limits", "Derivatives", "Corners & differentiability"]
 
 
 def test_limits_slider_updates_both_sides_and_keeps_hole():
