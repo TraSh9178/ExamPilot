@@ -191,15 +191,16 @@ with graph_column:
         )
 
     if radar is not None:
+        # Always on screen, under its own heading: chart, ranking and notes.
         with st.container(border=True, key="learning_radar_panel"):
-            with st.expander(tr("Learning Radar · community signals")):
-                render_radar_panel(
-                    radar,
-                    learning_radar.top_hard_topics(radar, limit=len(course.topics)),
-                    topic_names,
-                    course=course,
-                    focus_topic_id=focus_id,
-                )
+            render_radar_panel(
+                radar,
+                learning_radar.top_hard_topics(radar, limit=len(course.topics)),
+                topic_names,
+                course=course,
+                focus_topic_id=focus_id,
+                title="#### Learning Radar",
+            )
 
     if not course.relationships:
         st.info(tr("This course has no topic relationships yet."))

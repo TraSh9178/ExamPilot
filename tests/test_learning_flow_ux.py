@@ -129,7 +129,9 @@ def test_dashboard_prioritizes_course_over_secondary_features():
     app.run()
     assert not app.exception
     assert app.button(key='dashboard_continue_learning').label=='Start practice'
-    assert any(e.label=='Study totals' and not e.proto.expanded for e in app.expander)
+    # The study totals are small tiles on the page, not a folded panel.
+    assert 'Study totals' not in [e.label for e in app.expander]
+    assert [m.label for m in app.metric]==['Courses','Knowledge points','Practice sessions']
     app.button(key='dashboard_continue_learning').click().run()
     assert not app.exception
     assert app.title[0].value=='Practice'
