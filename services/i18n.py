@@ -570,6 +570,14 @@ _TRANSLATIONS.update({
     "Go back to the questions to change these answers, or submit them as they are.": "可以返回题目修改这些答案，也可以按现在的答案提交。",
 })
 
+# learning evidence page
+_TRANSLATIONS.update({
+    "Back to Progress": "返回学习进度",
+    "View answers": "查看作答",
+    "Your latest answer to each question behind your Learning DNA, topic by topic.": "学习画像所依据的每道题的最近一次作答，按知识点列出。",
+    "No answers behind Learning DNA in this mode yet.": "此模式下还没有学习画像所依据的作答。",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
@@ -657,6 +665,8 @@ _DYNAMIC = [
     # practice focus
     (r"^Practice · (.+)$", r"练习 · \1"),
     (r"^(\d+) of (\d+) answered$", r"已作答 \1 / \2"),
+    # learning evidence page: the practice result's time bars keep one decimal place
+    (r"^(\d+\.\d) s$", r"\1 秒"),
 ]
 
 

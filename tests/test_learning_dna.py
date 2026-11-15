@@ -127,13 +127,21 @@ def test_progress_exposes_learning_dna_evidence(with_history):
     assert 'not a validated cognitive diagnosis' in captions
     if with_history:
         assert 'Computation answers are more consistent' in ' '.join(m.value for m in app.markdown)
-        assert len(next(frame.value for frame in app.dataframe if 'Dimension' in frame.value.columns))==6
+        # The answers behind the bars open on their own page.
+        assert app.button(key='learning_evidence_open_t').label=='View answers'
+        evidence=AppTest.from_file(str(ROOT/'pages/12_Learning_Evidence.py'))
+        for key in ('current_course','performance_mode_test-dna','practice_history_test-dna'):
+            evidence.session_state[key]=app.session_state[key]
+        evidence.run()
+        assert not evidence.exception
+        assert len(next(frame.value for frame in evidence.dataframe if 'Dimension' in frame.value.columns))==6
     else:
         from tests.test_progress_charts import bar_rows, chart
         assert [row['value'] for row in bar_rows(chart(app,'dna'))]==['Not enough answers yet']*2
     app.radio(key='performance_mode_test-dna').set_value('Mock Exam').run()
     assert not app.exception
     assert not any("Dimension" in frame.value.columns for frame in app.dataframe)
+    assert not [b for b in app.button if b.label=='View answers']
 
 
 def test_review_ui_can_tag_an_untagged_question_without_rewriting_history():

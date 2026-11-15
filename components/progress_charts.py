@@ -105,6 +105,12 @@ def duration_text(seconds: float, tr: Translate = _same) -> str:
     return tr(f"{minutes} min {rest} s")
 
 
+def seconds_text(seconds: float, tr: Translate = _same) -> str:
+    """Seconds to one decimal place, as the practice result's time table showed them."""
+    text = f"{round(seconds, 1):.1f}"
+    return tr(f"{text[:-2] if text.endswith('.0') else text} s")
+
+
 # ---- Rows from the existing calculations -------------------------------------
 
 
@@ -154,13 +160,18 @@ def dna_rows(by_dimension: Mapping[str, DimensionEvidence | None], tr: Translate
 
 
 def time_rows(total_seconds: Mapping[str, float], names: Mapping[str, str], fallback: str,
-              tr: Translate = _same) -> list[BarRow]:
-    """Tracked time per topic, longest first; the longest fills the track."""
+              tr: Translate = _same, *, precise: bool = False) -> list[BarRow]:
+    """Tracked time per topic, longest first; the longest fills the track.
+
+    ``precise`` writes the seconds to one decimal place (the practice result)
+    instead of whole minutes and seconds (Progress).
+    """
     ordered = sorted(total_seconds.items(), key=lambda pair: -pair[1])
     peak = max((seconds for _, seconds in ordered), default=0)
+    written = seconds_text if precise else duration_text
     return [
         BarRow(names.get(topic_id, fallback), 100 * seconds / peak if peak > 0 else 0.0, "plain", None,
-               duration_text(seconds, tr))
+               written(seconds, tr))
         for topic_id, seconds in ordered
     ]
 
