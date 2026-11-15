@@ -89,10 +89,8 @@ def start_focus_controls(active):
 
 
 def answer_controls(active, question, course_id):
+    """Confidence for the question on screen; the focus timer follows that question on its own."""
     sid = active['session'].session_id
-    if st.button(tr('Work on this question'), key=f'focus_{sid}_{question.id}'):
-        focus_question(active, question.id, time.monotonic())
-        st.rerun()
     # One click records confidence; no selection (None) means "not recorded".
     key = f'confidence_{sid}_{question.id}'
     st.segmented_control(tr('How confident are you?'), [value for value in CONFIDENCE if value is not None],
@@ -108,7 +106,7 @@ def checklist(active):
     st.subheader(tr('Review before submit'))
     if rows:
         st.dataframe([{tr(key): ', '.join(tr(flag.strip()) for flag in value.split(',')) if key == 'Check' else value for key, value in row.items()} for row in rows], hide_index=True, width='stretch')
-        st.caption(tr('You can change these answers above or submit them as they are.'))
+        st.caption(tr('Go back to the questions to change these answers, or submit them as they are.'))
     else:
         st.caption(tr('No unanswered, unsure or guessed answers to review.'))
 

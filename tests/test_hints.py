@@ -8,6 +8,7 @@ from streamlit.testing.v1 import AppTest
 from models.schemas import StudyPackage
 from services.accessibility import BILINGUAL_KEY, display_text
 from services.hints import MAX_HINTS, hint_state_key, hints_for, validate_hints
+from tests.test_practice_page import submit_answers
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE_PATH = ROOT / "pages" / "2_Practice_Center.py"
@@ -132,7 +133,7 @@ def test_topic_hints_reveal_in_order_preserve_answer_and_leave_score_unchanged(u
             else:
                 assert all(button.key != button_key for button in app.button)
 
-    next(button for button in app.button if button.label == "Submit answers").click().run()
+    submit_answers(app)
 
     assert not app.exception
     assert f"Hints used: {len(revealed)} of {len(hints)}" in [item.value for item in app.caption]
@@ -169,7 +170,7 @@ def test_hint_text_shows_chinese_key_terms_only_when_toggle_is_on(bilingual):
     else:
         assert shown == original
 
-    next(button for button in app.button if button.label == ("提交答案" if bilingual else "Submit answers")).click().run()
+    submit_answers(app)
 
     assert not app.exception
     expected_hints = (f"已使用提示：{len(hints)} / {len(hints)}" if bilingual
@@ -188,7 +189,7 @@ def test_hints_are_absent_during_practice_and_review_when_unavailable(mode, use_
     assert not any(button.label in {"Hint", "Next hint"} for button in app.button)
     assert not any(item.value.startswith("Hint ") for item in app.info)
 
-    next(button for button in app.button if button.label == "Submit answers").click().run()
+    submit_answers(app)
 
     assert not app.exception
     assert not any(item.value.startswith("Hints used:") for item in app.caption)

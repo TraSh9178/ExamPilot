@@ -17,6 +17,7 @@ from services.practice_insights import (
 from tests.auth_helpers import signed_in_app
 from tests.test_paper_practice import mock_app, page_markdown, texts
 from tests.test_practice_insights import start_app
+from tests.test_practice_page import submit_answers
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "pages" / "2_Practice_Center.py"
@@ -255,7 +256,7 @@ def test_topic_practice_shows_the_clock_in_the_header_without_a_click():
     assert header is not None
     flex = header.proto.flex_container
     assert flex.direction == BlockProto.FlexContainer.Direction.HORIZONTAL and flex.wrap
-    assert [c.value for c in find_block(app, "flight_progress_count").caption] == ["Question 01 / 02", "Answered · 0 / 2"]
+    assert [c.value for c in find_block(app, "flight_progress_count").caption] == ["Question 01 / 02"]
     assert any("flight-waypoints" in m.value for m in find_block(app, "flight_progress_track").markdown)
     clock = find_block(app, "flight_progress_clock")
     assert any('class="flight-clock' in m.value for m in clock.markdown)
@@ -274,9 +275,11 @@ def test_mock_exam_shows_the_clock_until_the_answers_are_submitted():
     assert "Focus controls" not in [e.label for e in app.expander]
     clock = find_block(app, "flight_progress_clock")
     assert clock is not None and any('class="flight-clock' in m.value for m in clock.markdown)
-    assert find_block(app, "flight_progress_track").get("progress")
-    assert [c.value for c in find_block(app, "flight_progress_count").caption] == ["Questions", "Answered · 0 / 2"]
-    next(b for b in app.button if b.label == "Submit answers").click().run()
+    # The same header as Topic Practice: counter and flight path, no progress bar.
+    assert not find_block(app, "flight_progress_track").get("progress")
+    assert any("flight-waypoints" in m.value for m in find_block(app, "flight_progress_track").markdown)
+    assert [c.value for c in find_block(app, "flight_progress_count").caption] == ["Question 01 / 02"]
+    submit_answers(app)
     assert not app.exception
     assert "result" in app.session_state["active_practice_insights"]
     assert clock_html(app) is None
@@ -318,7 +321,8 @@ def test_changing_question_keeps_the_clock_running():
     assert active["focus_timer"]["question_id"] == "q1" and active["focus_timer"]["since"] is not None
     assert active["session_seconds"] >= 500
     assert clock_state(app)["base"] >= 500 and clock_state(app)["running"]
-    app.button(key="focus_s_q1").click().run()  # "Work on this question"
+    app.run()  # any other rerun on the same question
+    assert app.session_state["active_practice_insights"]["focus_timer"]["question_id"] == "q1"
     assert app.session_state["active_practice_insights"]["session_seconds"] >= 500
     app.button(key="worksheet_previous_s").click().run()
     assert app.session_state["active_practice_insights"]["session_seconds"] >= 500

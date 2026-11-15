@@ -169,6 +169,96 @@
   .flight-clock.is-paused .flight-clock-time { animation: none; }
 }
 
+/* ---- Question screen: one question, nothing else ------------------------------ */
+
+/* Title row: "Practice · <topic>", then two quiet controls at the right end
+   (the session menu and the side-panel toggle). On a phone they wrap under
+   the title and stay right-aligned. */
+[data-testid="stMain"] .st-key-practice_title_row {
+  row-gap: .25rem;
+}
+[data-testid="stMain"] .st-key-practice_title_row > [data-testid="stElementContainer"] {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+[data-testid="stMain"] .st-key-practice_title_row h1 {
+  overflow-wrap: anywhere;
+}
+[data-testid="stMain"] .st-key-practice_title_row > [data-testid="stLayoutWrapper"]:has(> .st-key-practice_title_tools) {
+  flex: 0 0 auto;
+  min-width: 0;
+  margin-left: auto;
+}
+[data-testid="stMain"] .st-key-practice_title_tools button {
+  white-space: nowrap;
+}
+/* The session menu and the panel toggle are tertiary: quiet ink until hovered. */
+[data-testid="stMain"] .st-key-practice_title_tools button:not(:is([data-testid="stBaseButton-primary"], [data-testid="stBaseButton-secondary"])),
+[data-testid="stMain"] .st-key-practice_title_tools button:not(:is([data-testid="stBaseButton-primary"], [data-testid="stBaseButton-secondary"])) :is(p, [data-testid="stIconMaterial"]) {
+  color: var(--ink-muted, #6B7280);
+}
+[data-testid="stMain"] .st-key-practice_title_tools button:not(:is([data-testid="stBaseButton-primary"], [data-testid="stBaseButton-secondary"])):not(:disabled):hover :is(p, [data-testid="stIconMaterial"]) {
+  color: var(--accent-rust-text, #9A5426);
+}
+
+/* Without the side panel the question takes the full width. Keep the right end
+   of the buttons row clear of the floating Pilot button in the lower-right corner. */
+[data-testid="stMain"] .st-key-practice_main_full [class*="st-key-paper_actions_"],
+[data-testid="stMain"] .st-key-practice_review_actions {
+  box-sizing: border-box;
+  padding-right: 5rem;
+}
+
+/* Page turn when the question changes. The card container's key names the last
+   move and alternates a/b: practice_turn_next_a_<session>, ..._next_b_, ..._prev_a_,
+   ..._prev_b_, and practice_turn_none_<session> on any rerun that kept the question
+   (answering, confidence, a hint, the clock). Streamlit may keep the DOM node and
+   only swap its class, and a CSS animation restarts only when animation-name
+   changes, so a and b use identical keyframes under different names. The turning
+   edge moves away from the reader, so the card never grows past its column. */
+[data-testid="stMain"] [class*="st-key-practice_turn_next_a_"] {
+  transform-origin: left center;
+  animation: practice-turn-next-a .35s cubic-bezier(.2, .7, .3, 1) backwards;
+}
+[data-testid="stMain"] [class*="st-key-practice_turn_next_b_"] {
+  transform-origin: left center;
+  animation: practice-turn-next-b .35s cubic-bezier(.2, .7, .3, 1) backwards;
+}
+[data-testid="stMain"] [class*="st-key-practice_turn_prev_a_"] {
+  transform-origin: right center;
+  animation: practice-turn-prev-a .35s cubic-bezier(.2, .7, .3, 1) backwards;
+}
+[data-testid="stMain"] [class*="st-key-practice_turn_prev_b_"] {
+  transform-origin: right center;
+  animation: practice-turn-prev-b .35s cubic-bezier(.2, .7, .3, 1) backwards;
+}
+@keyframes practice-turn-next-a {
+  from { opacity: 0; transform: perspective(1400px) rotateY(24deg); }
+  to { opacity: 1; transform: perspective(1400px) rotateY(0deg); }
+}
+@keyframes practice-turn-next-b {
+  from { opacity: 0; transform: perspective(1400px) rotateY(24deg); }
+  to { opacity: 1; transform: perspective(1400px) rotateY(0deg); }
+}
+@keyframes practice-turn-prev-a {
+  from { opacity: 0; transform: perspective(1400px) rotateY(-24deg); }
+  to { opacity: 1; transform: perspective(1400px) rotateY(0deg); }
+}
+@keyframes practice-turn-prev-b {
+  from { opacity: 0; transform: perspective(1400px) rotateY(-24deg); }
+  to { opacity: 1; transform: perspective(1400px) rotateY(0deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-testid="stMain"] [class*="st-key-practice_turn_"] {
+    animation: none !important;
+  }
+}
+
+/* Setup screen: the knowledge-point pills wrap instead of running off the row. */
+[data-testid="stMain"] [class*="st-key-practice_topic_"] [data-baseweb="button-group"] {
+  flex-wrap: wrap;
+}
+
 @media (max-width: 640px) {
   .paper-question { gap: .6rem; }
   .paper-question-badge {

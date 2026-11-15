@@ -220,4 +220,5 @@ def test_registered_app_navigates_from_lab_to_selected_practice(topic):
     assert not app.exception
     assert app.title[0].value == "Practice"
     assert app.radio(key="practice_mode_calculus-i-demo").value == "Topic Practice"
-    assert app.selectbox(key="practice_topic_calculus-i-demo").value == topic
+    # Two confirmed topics: the knowledge point is a one-click pill.
+    assert app.button_group(key="practice_topic_calculus-i-demo").value == topic

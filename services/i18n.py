@@ -556,6 +556,20 @@ _TRANSLATIONS.update({
     "This question duplicates a different question family.": "这道题与另一道已有题目重复。",
 })
 
+# practice focus
+_TRANSLATIONS.update({
+    "Finish": "完成",
+    "Review and submit": "检查并交卷",
+    "Back to questions": "返回题目",
+    "Return to your session": "回到当前练习",
+    "New practice": "新的练习",
+    "This session": "本次练习",
+    "Hide side panel": "收起右栏",
+    "Show side panel": "展开右栏",
+    "Practice · Review": "练习 · 检查",
+    "Go back to the questions to change these answers, or submit them as they are.": "可以返回题目修改这些答案，也可以按现在的答案提交。",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
@@ -640,6 +654,9 @@ _DYNAMIC = [
     (r"^Session (\d+): (\d+)%$", r"第 \1 次练习：\2%"),
     (r"^Latest session: (\d+)%$", r"最近一次练习：\1%"),
     (r"^(\d+) min (\d+) s$", r"\1 分 \2 秒"),
+    # practice focus
+    (r"^Practice · (.+)$", r"练习 · \1"),
+    (r"^(\d+) of (\d+) answered$", r"已作答 \1 / \2"),
 ]
 
 

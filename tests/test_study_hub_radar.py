@@ -402,7 +402,8 @@ def test_registered_app_navigates_from_study_plan_to_selected_practice(monkeypat
     assert not app.exception
     assert app.title[0].value == "Practice"
     assert app.radio(key="practice_mode_calculus-i-demo").value == "Topic Practice"
-    assert app.selectbox(key="practice_topic_calculus-i-demo").value == "calc_derivatives"
+    # Two confirmed topics: the knowledge point is a one-click pill.
+    assert app.button_group(key="practice_topic_calculus-i-demo").value == "calc_derivatives"
 
 
 def test_two_reruns_within_the_cache_window_fetch_the_radar_once(monkeypatch):

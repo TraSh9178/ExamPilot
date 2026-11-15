@@ -387,7 +387,9 @@ def test_review_list_button_on_progress_still_starts_a_practice_session():
     assert not app.exception and app.title[0].value == "Progress"
     app.button(key=f"priorities_{COURSE_ID}").click().run()
     assert not app.exception
-    assert app.title[0].value == "Practice"
+    # A mixed-topic review session is recorded in Mock Exam mode, and the
+    # question screen names the mode in its title.
+    assert app.title[0].value == "Practice · Mock Exam"
     active = app.session_state[f"active_practice_{COURSE_ID}"]
     assert "result" not in active and active["session"].session_id not in history
     assert app.session_state[f"practice_history_{COURSE_ID}"] == history
