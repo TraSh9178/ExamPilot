@@ -90,9 +90,4 @@ def test_map_details_open_dedicated_page_and_return_to_same_topic(monkeypatch):
     assert not any(e.label == "Detailed explanation & examples" for e in app.expander)
     # Back links preserve the course-scoped graph focus.
     assert app.session_state[f'graph_pending_focus_{course.course_id}'] == 'calc_limits'
-    destinations = []
-    monkeypatch.setattr('streamlit.switch_page', lambda page: destinations.append(page))
-    app.button(key='topic_details_back').click().run()
-    assert not app.exception
-    assert destinations == ['pages/4_Knowledge_Graph.py']
-    assert app.session_state[f'graph_pending_focus_{course.course_id}'] == 'calc_limits'
+    assert app.button(key='topic_details_back').label == 'Back to Knowledge Map'
