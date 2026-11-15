@@ -160,7 +160,12 @@ def _merge_course_packages(
         question.model_dump(mode="json") for question in questions
     ]
     metadata = {**existing.learning_state, **incoming.learning_state}
-    reviews = {**existing.learning_state.get("question_reviews", {}), **incoming.learning_state.get("question_reviews", {})}
+    reviews = dict(existing.learning_state.get("question_reviews", {}))
+    for question_id, status in incoming.learning_state.get("question_reviews", {}).items():
+        # A stale session's "pending" must not undo a decision saved elsewhere.
+        if status == "pending" and reviews.get(question_id) in {"approved", "flagged", "superseded"}:
+            continue
+        reviews[question_id] = status
     if reviews:
         metadata["question_reviews"] = reviews
     insights = deepcopy(existing.learning_state.get("practice_insights", {}))

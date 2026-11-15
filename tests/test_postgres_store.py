@@ -1031,3 +1031,50 @@ def test_corrupt_stored_course_identity_cannot_be_saved_or_restored(monkeypatch,
     assert not postgres_store.load_course("user", package.course_id).success
     assert not postgres_store.load_course_history("user", package.course_id).success
     assert not postgres_store.save_course("user", package).success
+
+
+def _with_reviews(package: StudyPackage, reviews: dict[str, str]) -> StudyPackage:
+    data = package.model_dump(mode="json")
+    data["learning_state"] = {"question_reviews": reviews}
+    return StudyPackage.model_validate(data)
+
+
+def test_incoming_pending_review_never_overwrites_a_stored_decision(package):
+    stored = _with_reviews(package, {"q-0": "approved", "q-1": "flagged", "q-2": "superseded"})
+    incoming = _with_reviews(package, {"q-0": "pending", "q-1": "pending", "q-2": "pending"})
+
+    merged = postgres_store._merge_course_packages(stored, incoming)
+
+    assert merged.learning_state["question_reviews"] == {
+        "q-0": "approved", "q-1": "flagged", "q-2": "superseded",
+    }
+
+
+def test_other_review_combinations_still_let_the_incoming_session_win(package):
+    stored = _with_reviews(package, {"q-0": "pending", "q-1": "approved", "q-2": "pending"})
+    incoming = _with_reviews(package, {"q-0": "approved", "q-1": "flagged", "q-2": "pending"})
+
+    merged = postgres_store._merge_course_packages(stored, incoming)
+
+    assert merged.learning_state["question_reviews"] == {
+        "q-0": "approved", "q-1": "flagged", "q-2": "pending",
+    }
+    only_incoming = postgres_store._merge_course_packages(
+        _with_reviews(package, {}), _with_reviews(package, {"q-0": "pending"}),
+    )
+    assert only_incoming.learning_state["question_reviews"] == {"q-0": "pending"}
+
+
+def test_stale_session_save_keeps_an_approval_from_another_session(monkeypatch, package):
+    connection = FakeConnection()
+    use_connection(monkeypatch, connection)
+    session_a = _with_reviews(package, {"q-0": "approved", "q-1": "pending"})
+    session_b = _with_reviews(package, {"q-0": "pending", "q-1": "pending", "q-2": "pending"})
+
+    assert postgres_store.save_course("user", session_a).success
+    assert postgres_store.save_course("user", session_b).success
+
+    saved = connection.course_packages[("user", package.course_id)]
+    assert saved["learning_state"]["question_reviews"] == {
+        "q-0": "approved", "q-1": "pending", "q-2": "pending",
+    }
