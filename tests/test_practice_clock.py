@@ -73,7 +73,7 @@ def clock_state(app):
 
 
 def visible_text(html):
-    return re.sub(r"<[^>]+>", " ", html)
+    return re.sub(r"<[^>]+>", " ", re.sub(r"<style\b[^>]*>.*?</style>", "", html, flags=re.S))
 
 
 # 1 · One source of truth: settle_focus --------------------------------------------

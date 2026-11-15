@@ -16,7 +16,7 @@ from services.i18n import LANGUAGE_KEY
 from tests.auth_helpers import signed_in_app
 from tests.test_learning_flow_ux import calculus
 from tests.test_paper_practice import FakeRadarChart, badges, page_markdown
-from tests.test_practice_clock import clock_html, find_block
+from tests.test_practice_clock import clock_html, find_block, visible_text
 from tests.test_practice_insights import setup_course, start_app
 from tests.test_practice_page import (
     HISTORY_PAGE_PATH, carry_to, history_rows, keyed_button, make_practice_state, open_review, open_setup,
@@ -765,7 +765,7 @@ def chinese_course():
 def shown_strings(app):
     """Every interface string on the page. Radio options are left out: their A-D letters
     label the course's own options."""
-    values = titles(app) + [re.sub(r"<[^>]+>", " ", value) for value in page_markdown(app)]
+    values = titles(app) + [visible_text(value) for value in page_markdown(app)]
     for kind in ("caption", "info", "warning", "error", "success", "subheader"):
         values += [item.value for item in app.get(kind)]
     values += [expander.label for expander in app.expander] + popover_labels(app)
