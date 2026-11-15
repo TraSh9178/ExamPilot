@@ -2,7 +2,7 @@ from pathlib import Path
 from streamlit.testing.v1 import AppTest
 from tests.test_learning_dna import course_and_history
 from tests.test_practice_insights import start_app
-from tests.test_practice_page import open_setup
+from tests.test_practice_page import HISTORY_PAGE_PATH, carry_to, history_rows
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -51,12 +51,14 @@ def test_course_maintenance_is_grouped_on_its_own_page_with_pending_review():
     assert not next(e for e in tools.expander if e.label=='Question classification (advanced)').proto.expanded
 
 
-def test_saved_session_display_is_readable_and_selection_keeps_stable_ids():
+def test_saved_session_display_is_readable_and_selection_keeps_stable_ids(monkeypatch):
+    import streamlit as st
+    monkeypatch.setattr(st, 'switch_page', lambda page: None)
     app,_ = start_app(graded=True)
-    open_setup(app)  # saved sessions are listed on the setup screen
-    selector = app.selectbox(key='saved_session_insights')
-    assert selector.value == 's'
-    assert list(selector.options) == ['1 · Topic practice · 2 questions · 1/2 correct']
-    app.button(key='open_saved_result_insights').click().run()
-    assert not app.exception
-    assert app.session_state['active_practice_insights']['session'].session_id == 's'
+    app.session_state['active_practice_insights'] = None
+    app.run()
+    page = carry_to(app, HISTORY_PAGE_PATH)  # saved sessions are listed on Practice history
+    assert history_rows(page) == [('1 · Topic practice · 2 questions · 1/2 correct', 'Open result')]
+    page.button(key='practice_history_open_s').click().run()
+    assert not page.exception
+    assert page.session_state['active_practice_insights']['session'].session_id == 's'

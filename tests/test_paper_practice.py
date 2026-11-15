@@ -20,7 +20,9 @@ from services.practice_insights import session_insights, set_session_insights
 from tests.auth_helpers import TEST_USER, signed_in_app
 from tests.test_learning_flow_ux import calculus
 from tests.test_practice_insights import setup_course, start_app
-from tests.test_practice_page import open_review, open_setup, submit_answers
+from tests.test_practice_page import (
+    HISTORY_PAGE_PATH, carry_to, history_rows, open_review, open_setup, submit_answers,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "pages" / "2_Practice_Center.py"
@@ -83,9 +85,12 @@ def test_mock_exam_and_review_use_the_same_badges():
     app.button(key="worksheet_next_m").click().run()
     assert badges(app) == ["Q02"]
     assert app.radio(key="answer_m_q1").options[0] == "A. A"
-    app = mock_app(graded=True)
-    assert badges(app) == ["Q01", "Q02"]
-    assert not any(c.value.startswith("QUESTION") for c in app.caption)
+    # The graded answers are on the Review answers page, one question at a time.
+    review = carry_to(mock_app(graded=True))
+    assert badges(review) == ["Q01"]
+    review.button(key="review_next_m").click().run()
+    assert badges(review) == ["Q02"]
+    assert not any(c.value.startswith("QUESTION") for c in review.caption)
 
 
 def test_question_text_is_escaped_and_keeps_line_breaks():
@@ -270,13 +275,16 @@ def test_bookkeeping_text_is_gone_from_practice_and_result():
                     "Question availability"):
         assert removed not in shown
     app, course = start_app(graded=True)
-    shown = " ".join(texts(app))
+    shown = " ".join(texts(app) + texts(carry_to(app)))  # the result and its answers
     for removed in ("Confidence is self-reported", "Answered questions:", "used in-app hints",
                     "Hint use was not recorded", "No focus-time measurements", "Saved practice sessions",
                     "No source page was provided", "Source text is not available", "A review creates"):
         assert removed not in shown
-    open_setup(app)  # "New practice": saved sessions can still be reopened from there
-    assert app.button(key="open_saved_result_insights")
+    open_setup(app)  # "New practice": saved sessions can still be reopened, from Practice history
+    assert app.button(key="open_practice_history").label == "Practice history"
+    assert history_rows(carry_to(app, HISTORY_PAGE_PATH)) == [
+        ("1 · Topic practice · 2 questions · 1/2 correct", "Open result"),
+    ]
 
 
 def test_pending_questions_no_longer_show_an_availability_note(monkeypatch):
@@ -356,10 +364,12 @@ def test_transfer_without_a_match_says_no_similar_question_yet():
     course.questions[2].practice_structure = None
     app.session_state["current_course"] = course
     app.run()
-    app.button(key="transfer_s_q1").click().run()
-    assert not app.exception
-    assert "No similar question yet." in [i.value for i in app.info]
-    assert not any("structure label" in v or "No approved question" in v for v in texts(app))
+    review = carry_to(app)  # the missed question is the second one on Review answers
+    review.button(key="review_next_s").click().run()
+    review.button(key="transfer_s_q1").click().run()
+    assert not review.exception
+    assert "No similar question yet." in [i.value for i in review.info]
+    assert not any("structure label" in v or "No approved question" in v for v in texts(review))
 
 
 # Coordinator 1 · save failures never show the stored reason -------------------
@@ -367,7 +377,7 @@ def test_transfer_without_a_match_says_no_similar_question_yet():
 def test_account_save_failure_shows_a_generic_message(monkeypatch):
     monkeypatch.setattr(practice_insights_ui, "save_course_with_history",
                         lambda state, course: SyncOutcome(False, RAW_DB_ERROR))
-    app, _ = start_app(graded=True)
+    app = carry_to(start_app(graded=True)[0])  # reflections are on Review answers
     app.text_area(key="explain_s_q0").set_value("My reasoning.")
     next(b for b in app.button if b.label == "Save reflection").click().run()
     assert not app.exception
@@ -410,21 +420,20 @@ def test_guessed_note_and_saved_session_label_use_plural_forms():
     app.run()
     assert ("2 correct answers were marked Guessed. Revisit them before treating them as secure knowledge."
             in [i.value for i in app.info])
-    open_setup(app)  # saved sessions are listed on the setup screen
     history = app.session_state["practice_history_insights"]
     record = history["s"]
     single = ExamSession(session_id="one", mode="topic", question_ids=["q0"])
     single_result = grade_exam(single, record["questions"][:1], {"q0": 0})
     history["one"] = {"session": single, "questions": record["questions"][:1],
                       "attempts": single_result["attempts"], "result": single_result}
-    app.run()
-    assert list(app.selectbox(key="saved_session_insights").options) == [
-        "1 · Topic practice · 2 questions · 2/2 correct",
+    page = carry_to(app, HISTORY_PAGE_PATH)  # saved sessions are listed there, newest first
+    assert [label for label, _ in history_rows(page)] == [
         "2 · Topic practice · 1 question · 1/1 correct",
+        "1 · Topic practice · 2 questions · 2/2 correct",
     ]
-    app.session_state[LANGUAGE_KEY] = True
-    app.run()
-    assert list(app.selectbox(key="saved_session_insights").options)[1] == "2 · 知识点练习 · 1 道题 · 答对 1/1"
+    page.session_state[LANGUAGE_KEY] = True
+    page.run()
+    assert history_rows(page)[0] == ("2 · 知识点练习 · 1 道题 · 答对 1/1", "查看成绩")
 
 
 def test_unfinished_sessions_label_is_translated():
@@ -438,17 +447,21 @@ def test_unfinished_sessions_label_is_translated():
     state["active_practice_insights"] = replacement
     state["practice_drafts_insights"] = plain["practice_drafts_insights"]
     app.run()
-    open_setup(app)  # drafts are listed on the setup screen
-    assert any(e.label == "Unfinished sessions (1)" for e in app.expander)
-    assert list(app.selectbox(key="draft_choice_insights").options) == ["1 · Topic practice · 2 questions · Unfinished"]
-    state[LANGUAGE_KEY] = True
-    app.run()
-    assert any(e.label == "未完成的场次（1）" for e in app.expander)
+    page = carry_to(app, HISTORY_PAGE_PATH)  # drafts are listed on Practice history
+    assert [s.value for s in page.subheader] == ["Unfinished sessions"]
+    assert history_rows(page) == [("1 · Topic practice · 2 questions · Unfinished", "Resume")]
+    page.session_state[LANGUAGE_KEY] = True
+    page.run()
+    assert [s.value for s in page.subheader] == ["未完成的场次"]
+    assert history_rows(page) == [("1 · 知识点练习 · 2 道题 · 未完成", "继续")]
 
 
 # Coordinator 3 · every literal tr() string has a Chinese entry -------------------
 
-@pytest.mark.parametrize("relative", ["pages/2_Practice_Center.py", "services/practice_insights_ui.py"])
+@pytest.mark.parametrize("relative", [
+    "pages/2_Practice_Center.py", "services/practice_insights_ui.py", "services/practice_pages_ui.py",
+    "pages/8_Practice_History.py", "pages/13_Answer_Review.py",
+])
 def test_practice_interface_strings_have_chinese_entries(relative):
     tree = ast.parse((ROOT / relative).read_text(encoding="utf-8"))
     constants = {

@@ -206,7 +206,12 @@ def test_practice_page_shows_simplified_wording_and_original(monkeypatch) -> Non
     app.run()
     assert not app.exception
     assert any("Demand rises. Supply stays the same." in element.value for element in app.markdown)
-    assert any(element.label == "Show original wording" for element in app.expander)
+    # The original wording is revealed in place by a button, not an expander.
+    assert not app.expander
+    reveal = app.button(key=f"original_wording_toggle_accessibility-page_{question.id}")
+    assert reveal.label == "Show original wording"
+    reveal.click().run()
+    assert question.question in [element.value for element in app.markdown]
 
     # The same displayed wording is used for the result; grading still reads
     # the original question and selected option index.
@@ -215,8 +220,13 @@ def test_practice_page_shows_simplified_wording_and_original(monkeypatch) -> Non
     )
     app.run()
     assert not app.exception
-    assert any("Demand rises. Supply stays the same." in item.value for item in app.markdown)
     assert any(item.label == "Score" and item.value == "1 / 1" for item in app.metric)
+    # Each answer is on the Review answers page, with the same displayed wording.
+    from tests.test_practice_page import carry_to
+    review = carry_to(app)
+    assert not review.exception
+    assert any("Demand rises. Supply stays the same." in item.value for item in review.markdown)
+    assert question.question in [item.value for item in review.markdown]
 
 
 def test_glossary_has_course_terms_and_two_modes_work_together() -> None:

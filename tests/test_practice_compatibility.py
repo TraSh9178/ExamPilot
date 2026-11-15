@@ -141,9 +141,10 @@ def test_account_restore_keeps_new_tracking_records_and_grades(monkeypatch):
 def test_ai_error_preserves_written_reflection_and_shows_no_fake_feedback(monkeypatch):
     from services import practice_insights_ui
     from tests.test_practice_insights import start_app
+    from tests.test_practice_page import carry_to
     monkeypatch.setattr(practice_insights_ui,'generation_available',lambda:True)
     monkeypatch.setattr(practice_insights_ui,'check_explanation',lambda *args:{'ok':False,'message':'AI service unavailable.'})
-    app,_=start_app(graded=True)
+    app=carry_to(start_app(graded=True)[0])  # reflections are on Review answers
     app.text_area(key='explain_s_q0').set_value('This is my own explanation.')
     next(b for b in app.button if b.label=='Check explanation with AI').click().run()
     assert not app.exception

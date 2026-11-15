@@ -210,56 +210,73 @@ def evidence_line(saved):
     return ' · '.join(parts)
 
 
+def transfer_once(course, question, session, confirmed, practice_key):
+    """"Try a different structure" from this result only: a repeated click, when the new
+    session is already open, does not start another one."""
+    active = st.session_state.get(practice_key)
+    if active and active['session'].session_id == session.session_id and 'result' in active:
+        launch_transfer(course, question, session, confirmed, practice_key)
+
+
+def answer_evidence(course, session, question):
+    """The recorded confidence, hints and time of one answer, as one short caption."""
+    saved=ResponseInsight.model_validate(session_insights(course,session.session_id).get(question.id,{}))
+    if line := evidence_line(saved):
+        st.caption(line)
+
+
 def reflection_controls(course, session, question, review, confirmed, practice_key):
+    """Reason and own-words explanation for one answer, shown directly under a heading.
+
+    The one-line evidence (confidence, hints, time) is answer_evidence(), shown with the answer.
+    """
     sid=session.session_id
     rows=deepcopy(session_insights(course,sid))
     saved=ResponseInsight.model_validate(rows.get(question.id,{}))
-    if line := evidence_line(saved):
-        st.caption(line)
-    with st.expander(tr('Reflect and explain your answer')):
-        st.caption(tr('Write your reasoning in your own words. This reflection is after feedback and never changes your score.'))
-        with st.form(f'reflection_{sid}_{question.id}'):
-            reason=saved.mistake_reason
-            if not review['is_correct']:
-                # No pill selected (None) keeps the reason "not recorded".
-                reason=st.pills(tr('Why did you miss this question?'),[v for v in REASONS if v is not None],
-                    default=reason,format_func=lambda v:tr(REASONS[v]),
-                    key=f'reason_{sid}_{question.id}')
-            text=st.text_area(tr('Explain your answer'),value=saved.explanation,max_chars=4000,
-                key=f'explain_{sid}_{question.id}')
-            save=st.form_submit_button(tr('Save reflection'))
-            ai=st.form_submit_button(tr('Check explanation with AI'),disabled=not generation_available())
-        if not generation_available():
-            st.caption(tr('AI checking is not configured. You can still write and save your explanation.'))
-        else:
-            st.caption(tr('AI checking sends this explanation and question to the configured Claude service. Its feedback may be wrong; verify it against your material.'))
-        if save or ai:
-            row=saved.model_copy(update={'mistake_reason':reason,'explanation':text})
-            if text != saved.checked_explanation:
-                row.feedback=None
-                row.checked_explanation=None
-            if ai:
-                with st.spinner(tr('Checking your reasoning…')):
-                    response=check_explanation(question, text)
-                if response['ok']:
-                    from services.practice_insights import ExplanationFeedback
-                    row.feedback=ExplanationFeedback.model_validate(response['feedback'])
-                    row.checked_explanation=text
-                else:
-                    st.error(tr(response['message']))
-            rows[question.id]=row.model_dump(mode='json')
-            updated = save_rows(course,sid,rows)
-            if updated is not None:
-                st.success(tr('Saved.'))
-                saved=row
-        if saved.feedback is not None and saved.checked_explanation==saved.explanation:
-            st.markdown(tr('**AI reasoning feedback — not a grade**'))
-            st.write(tr(saved.feedback.verdict.replace('_',' ').capitalize()))
-            st.write(saved.feedback.reasoning)
-            st.write(saved.feedback.next_step)
+    st.subheader(tr('Reflect and explain your answer'))
+    st.caption(tr('Write your reasoning in your own words. This reflection is after feedback and never changes your score.'))
+    with st.form(f'reflection_{sid}_{question.id}'):
+        reason=saved.mistake_reason
+        if not review['is_correct']:
+            # No pill selected (None) keeps the reason "not recorded".
+            reason=st.pills(tr('Why did you miss this question?'),[v for v in REASONS if v is not None],
+                default=reason,format_func=lambda v:tr(REASONS[v]),
+                key=f'reason_{sid}_{question.id}')
+        text=st.text_area(tr('Explain your answer'),value=saved.explanation,max_chars=4000,
+            key=f'explain_{sid}_{question.id}')
+        save=st.form_submit_button(tr('Save reflection'))
+        ai=st.form_submit_button(tr('Check explanation with AI'),disabled=not generation_available())
+    if not generation_available():
+        st.caption(tr('AI checking is not configured. You can still write and save your explanation.'))
+    else:
+        st.caption(tr('AI checking sends this explanation and question to the configured Claude service. Its feedback may be wrong; verify it against your material.'))
+    if save or ai:
+        row=saved.model_copy(update={'mistake_reason':reason,'explanation':text})
+        if text != saved.checked_explanation:
+            row.feedback=None
+            row.checked_explanation=None
+        if ai:
+            with st.spinner(tr('Checking your reasoning…')):
+                response=check_explanation(question, text)
+            if response['ok']:
+                from services.practice_insights import ExplanationFeedback
+                row.feedback=ExplanationFeedback.model_validate(response['feedback'])
+                row.checked_explanation=text
+            else:
+                st.error(tr(response['message']))
+        rows[question.id]=row.model_dump(mode='json')
+        updated = save_rows(course,sid,rows)
+        if updated is not None:
+            st.success(tr('Saved.'))
+            saved=row
+    if saved.feedback is not None and saved.checked_explanation==saved.explanation:
+        st.markdown(tr('**AI reasoning feedback — not a grade**'))
+        st.write(tr(saved.feedback.verdict.replace('_',' ').capitalize()))
+        st.write(saved.feedback.reasoning)
+        st.write(saved.feedback.next_step)
     if not review['is_correct']:
         st.button(tr('Try a different structure'), key=f'transfer_{sid}_{question.id}',
-            on_click=launch_transfer, args=(course, question, session, confirmed, practice_key))
+            on_click=transfer_once, args=(course, question, session, confirmed, practice_key))
         if error := st.session_state.pop('transfer_launch_error', None):
             st.info(tr(error))
 

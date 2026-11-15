@@ -5,6 +5,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
+import streamlit as st
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.testing.v1 import AppTest
 from streamlit.testing.v1.element_tree import Block
@@ -17,7 +18,10 @@ from tests.test_learning_flow_ux import calculus
 from tests.test_paper_practice import FakeRadarChart, badges, page_markdown
 from tests.test_practice_clock import clock_html, find_block
 from tests.test_practice_insights import setup_course, start_app
-from tests.test_practice_page import keyed_button, make_practice_state, open_review, open_setup, submit_answers
+from tests.test_practice_page import (
+    HISTORY_PAGE_PATH, carry_to, history_rows, keyed_button, make_practice_state, open_review, open_setup,
+    submit_answers,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "pages" / "2_Practice_Center.py"
@@ -288,7 +292,8 @@ def test_submit_from_review_grades_every_question_and_stores_the_same_record(mod
     assert titles(app) == ["Practice"]
     assert app.button(key="practice_new_insights").label == "New practice"
     assert not [radio for radio in app.radio if (radio.key or "").startswith("practice_mode_")]
-    assert badges(app) == ["Q01", "Q02", "Q03"]  # the review of answers lists every question
+    # Each answer is on the Review answers page, opened from here.
+    assert not badges(app) and app.button(key="open_answer_review").label == "Review answers"
 
 
 def test_mock_exam_offers_no_hints_on_any_question():
@@ -488,7 +493,8 @@ def test_knowledge_point_is_pills_up_to_six_topics_and_a_selectbox_above(count, 
     course = calculus()
     scope = [topic.id for topic in course.topics][:count]
     names = {topic.id: topic.name for topic in course.topics}
-    app = setup_app(scope, course, {f"practice_mode_{course.course_id}": "Topic Practice"})
+    app = setup_app(scope, course)
+    app.radio(key=f"practice_mode_{course.course_id}").set_value("Topic Practice").run()
     assert not app.exception
     key = f"practice_topic_{course.course_id}"
     groups = [group for group in app.button_group if group.key == key]
@@ -500,7 +506,8 @@ def test_knowledge_point_is_pills_up_to_six_topics_and_a_selectbox_above(count, 
 
 
 def test_clicking_the_chosen_pill_off_keeps_the_choice():
-    app = setup_app(["t", "other"], extra={"practice_mode_insights": "Topic Practice"})
+    app = setup_app(["t", "other"])
+    app.radio(key="practice_mode_insights").set_value("Topic Practice").run()
     app.button_group(key="practice_topic_insights").set_value("other").run()
     # What the browser sends when the chosen pill is clicked again.
     app.session_state["practice_topic_insights"] = None
@@ -569,7 +576,8 @@ def test_pending_entry_from_another_page_opens_the_setup_screen(topic_id, notice
     assert draft["_draft_widgets"]["answer_s_q0"] == 1
 
 
-def test_resuming_lands_on_the_saved_question_with_the_review_step_closed():
+def test_resuming_lands_on_the_saved_question_with_the_review_step_closed(monkeypatch):
+    monkeypatch.setattr(st, "switch_page", lambda page: None)  # Practice history then opens Practice
     app = practice_app()
     app.radio(key="answer_s_q0").set_value(2).run()
     next_question(app)
@@ -579,11 +587,11 @@ def test_resuming_lands_on_the_saved_question_with_the_review_step_closed():
     app.session_state["practice_entry_insights"] = {"topic_id": None}
     app.run()
     app.button(key="practice_start_insights").click().run()
-    new_sid = app.session_state["active_practice_insights"]["session"].session_id
-    app.button(key=f"practice_change_settings_{new_sid}").click().run()
-    assert app.selectbox(key="draft_choice_insights").value == "s"
-    app.button(key="resume_draft_insights").click().run()
-    assert not app.exception
+    history = carry_to(app, HISTORY_PAGE_PATH)
+    assert history_rows(history) == [("1 · Topic practice · 3 questions · Unfinished", "Resume")]
+    history.button(key="practice_history_resume_s").click().run()
+    assert not history.exception
+    app = carry_to(history, PAGE)
     active = app.session_state["active_practice_insights"]
     assert active["session"].session_id == "s" and "worksheet_step" not in active
     assert badges(app) == ["Q02"] and app.radio(key="answer_s_q1").value == 3
@@ -593,10 +601,14 @@ def test_resuming_lands_on_the_saved_question_with_the_review_step_closed():
     assert app.radio(key="answer_s_q0").value == 2
 
 
-def test_reopening_a_saved_result_shows_the_result_screen():
+def test_reopening_a_saved_result_shows_the_result_screen(monkeypatch):
+    monkeypatch.setattr(st, "switch_page", lambda page: None)  # Practice history then opens Practice
     app, _ = start_app(graded=True)
     open_setup(app)
-    app.button(key="open_saved_result_insights").click().run()
+    history = carry_to(app, HISTORY_PAGE_PATH)
+    history.button(key="practice_history_open_s").click().run()
+    assert not history.exception
+    app = carry_to(history, PAGE)
     assert not app.exception
     assert "Your result" in subheaders(app) and titles(app) == ["Practice"]
     assert not [radio for radio in app.radio if (radio.key or "").startswith("practice_mode_")]
@@ -799,7 +811,8 @@ def test_layout_rules_for_the_title_row_the_floating_button_and_phones():
                       css, re.DOTALL).group(1)
     assert "min-width: 0;" in title
     clear = re.search(r'\.st-key-practice_main_full \[class\*="st-key-paper_actions_"\],\n'
-                      r'\[data-testid="stMain"\] \.st-key-practice_review_actions \{(.*?)\}', css, re.DOTALL).group(1)
+                      r'\[data-testid="stMain"\] \.st-key-practice_review_actions,\n(?:[^{]*,\n)*[^{]*\{(.*?)\}',
+                      css, re.DOTALL).group(1)
     assert "padding-right: 5rem;" in clear and "box-sizing: border-box;" in clear
     # Below 760px the side panel stacks under the question (the shared worksheet rule).
     academic = (ROOT / "assets" / "academic_ui.css").read_text(encoding="utf-8")

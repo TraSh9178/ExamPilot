@@ -10,16 +10,21 @@ from services.question_editor import available_questions
 from services.exam_engine import create_exam, grade_exam
 from services.guided_limits_ui import render_guided_review
 from services.hints import hint_state_key, hints_for
-from services.question_review import create_mistake_review, mistake_questions, question_sources
+from services.question_review import create_mistake_review, mistake_questions
 from services.practice_insights_ui import (
     start_focus_controls, answer_controls, checklist, capture_submission,
-    result_overview, reflection_controls,
+    result_overview,
 )
-from services.practice_insights import focus_question, session_insights
+from services.practice_insights import focus_question
+from services.practice_pages_ui import (
+    ANSWER_REVIEW_PAGE, HISTORY_PAGE, has_practice_history, history_visit_key, page_turn_key,
+    render_question_heading,
+)
 from services.auth_session import current_user
 from services import learning_radar
 from components.knowledge_graph import load_course_radar, render_topic_radar
-from services.learning_flow import install_practice, resume_draft, remember_widget, hydrate_widgets, open_lab
+from components.page_links import open_page_button
+from services.learning_flow import install_practice, remember_widget, hydrate_widgets, open_lab
 from services.ui_style import apply_app_styles
 
 try:
@@ -31,51 +36,36 @@ except ImportError:  # merged later
 ALL_MISSED_TOPICS = "__all_missed_topics__"
 # Up to this many confirmed topics, the knowledge point is a row of one-click pills.
 TOPIC_PILLS_LIMIT = 6
+DEFAULT_COUNT = 10
+MAX_COUNT = 50
 
 # The page shows one screen at a time:
-#   setup    - mode, knowledge point, number of questions, drafts and saved sessions;
+#   setup    - mode, knowledge point, number of questions;
 #   question - one question of the session in progress, nothing else;
 #   review   - the check before submitting (active["worksheet_step"] == "review");
-#   result   - the graded session.
+#   result   - the graded session, without the per-question answers.
 # practice_setup_<course> holds the id of the session for which the student asked
 # for the setup screen; any other session (a new one, a resumed one) ignores it.
+# Unfinished and graded sessions are listed on the Practice history page, and the
+# answers of a result on the Review answers page.
 
 
-def question_count(count):
-    return tr("1 question") if count == 1 else tr(f"{count} questions")
+def current_session(practice_key, session_id, *, graded):
+    """The open practice, if it is still the session a button was drawn for.
+
+    A late or repeated click can arrive after another session was opened; it is ignored.
+    """
+    active = st.session_state.get(practice_key)
+    if not active or active["session"].session_id != session_id or ("result" in active) != graded:
+        return None
+    return active
 
 
-def practice_label(records, sid, *, unfinished=False):
-    """Human-readable choices; stable session IDs remain internal widget values."""
-    record = records[sid]
-    number = list(records).index(sid) + 1
-    if "session" not in record:
-        return f"{number} · {tr('Saved practice')}"
-    mode = tr("Topic practice") if record["session"].mode == "topic" else tr("Mock exam")
-    label = f"{number} · {mode} · {question_count(len(record['questions']))}"
-    result = record.get("result")
-    if result is not None:
-        label += " · " + tr(f"{result['correct_count']}/{result['total_count']} correct")
-    elif unfinished:
-        label += " · " + tr("Unfinished")
-    return label
-
-
-def render_question_heading(number, text):
-    """Paper question card: a two-digit badge beside the question text."""
-    body = "<br>".join(escape(line, quote=False) for line in text.splitlines())
-    st.markdown(
-        f'<div class="paper-question"><span class="paper-question-badge">{escape(tr(f"Q{number:02}"))}</span>'
-        f'<div class="paper-question-text">{body}</div></div>',
-        unsafe_allow_html=True,
-    )
-
-
-def submit_practice(course, practice_key):
-    active = st.session_state[practice_key]
-    session, questions = active["session"], active["questions"]
-    if "result" in active:
+def submit_practice(course, practice_key, session_id):
+    active = current_session(practice_key, session_id, graded=False)
+    if active is None:
         return
+    session, questions = active["session"], active["questions"]
     hydrate_widgets(st.session_state, active)
     answers = {q.id: st.session_state.get(f"answer_{session.session_id}_{q.id}") for q in questions}
     try:
@@ -94,9 +84,12 @@ def submit_practice(course, practice_key):
 
 
 def begin_mistake_review(practice_key, course, session, questions, confirmed_ids, topic_id):
+    graded = current_session(practice_key, session.session_id, graded=True)
+    if graded is None:
+        return  # a second click: the review session is already open
     try:
         install_practice(st.session_state, course.course_id, create_mistake_review(
-            session, questions, st.session_state[practice_key]["result"]["attempts"],
+            session, questions, graded["result"]["attempts"],
             confirmed_ids, topic_id, approved_ids={q.id for q in available_questions(course)},
         ))
     except ValueError as error:
@@ -117,24 +110,80 @@ def return_to_session(course_id):
     st.session_state.pop(f"practice_setup_{course_id}", None)
 
 
-def start_practice(course, confirmed_topic_ids):
-    """Start button: a new session from the settings on screen.
+# The setup screen keeps the student's choice in a plain key, practice_choice_<course>
+# ({"mode", "topic_id", "count"}), updated by the widgets' on_change. Each run that draws
+# the screen assigns the three widget keys from it before the widgets, so the browser
+# always shows the value the page uses (Streamlit sends a value to the browser only when
+# the key is assigned in the run that draws the widget).
 
-    It reads the widgets' latest values (a changed count arrives with the click).
+def choice_key(course_id):
+    return f"practice_choice_{course_id}"
+
+
+def opening_choice(course_id, confirmed_topic_ids, active, pending_entry):
+    """What the setup screen shows when it opens, in this order of preference: a request
+    staged by another page, the open session's settings, the student's last choice, the
+    defaults."""
+    choice = {"mode": "mock", "topic_id": confirmed_topic_ids[0], "count": DEFAULT_COUNT}
+    settings = (active or {}).get("settings") or {}
+    staged_topic = (pending_entry or {}).get("topic_id")
+    sources = (  # lowest preference first; later ones win
+        st.session_state.get(choice_key(course_id)) or {},
+        {"mode": settings.get("mode"), "topic_id": settings.get("topic_id"), "count": settings.get("requested_count")},
+        {"mode": "topic", "topic_id": staged_topic} if staged_topic else {},
+    )
+    for source in sources:
+        if source.get("mode") in ("mock", "topic"):
+            choice["mode"] = source["mode"]
+        if source.get("topic_id") in confirmed_topic_ids:
+            choice["topic_id"] = source["topic_id"]
+        count = source.get("count")
+        if isinstance(count, int) and not isinstance(count, bool) and 1 <= count <= MAX_COUNT:
+            choice["count"] = count
+    return choice
+
+
+def remember_choice(course_id, field, confirmed_topic_ids):
+    """on_change of a setup widget: keep the new value as the student's choice."""
+    choice = st.session_state.setdefault(choice_key(course_id), {})
+    value = st.session_state.get(f"practice_{field}_{course_id}")
+    if field == "mode":
+        choice["mode"] = "mock" if value == tr("Mock Exam") else "topic"
+    elif field == "topic":
+        if value in confirmed_topic_ids:  # clicking the chosen pill again keeps it
+            choice["topic_id"] = value
+    elif isinstance(value, (int, float)) and not isinstance(value, bool):
+        choice["count"] = int(value)
+
+
+def shown_settings(course_id, confirmed_topic_ids):
+    """The settings Start uses: the widgets' latest values, which are what the screen shows.
+
+    The knowledge point counts only if it was on screen; otherwise it is the kept choice,
+    which is what the screen shows as soon as Topic Practice is chosen.
     """
     state = st.session_state
-    course_id = course.course_id
-    mode = "mock" if state.get(f"practice_mode_{course_id}") == tr("Mock Exam") else "topic"
+    choice = state.get(choice_key(course_id)) or {}
+    mode = "mock" if state.get(f"practice_mode_{course_id}", tr("Mock Exam")) == tr("Mock Exam") else "topic"
     topic_id = None
     if mode == "topic":
-        topic_id = state.get(f"practice_topic_{course_id}")
-        if topic_id not in confirmed_topic_ids:
-            # The chosen pill was clicked off again, or the mode changed with this click
-            # and the choice was not on screen yet: what the page would show.
-            topic_id = state.get(f"practice_topic_last_{course_id}")
-            if topic_id not in confirmed_topic_ids:
-                topic_id = confirmed_topic_ids[0]
-    requested_count = int(state.get(f"practice_count_{course_id}", 10))
+        shown = state.get(f"practice_topic_{course_id}") if state.get(f"practice_topic_drawn_{course_id}") else None
+        topic_id = next((value for value in (shown, choice.get("topic_id"))
+                         if value in confirmed_topic_ids), confirmed_topic_ids[0])
+    count = state.get(f"practice_count_{course_id}")
+    if not isinstance(count, (int, float)) or isinstance(count, bool):
+        count = choice.get("count", DEFAULT_COUNT)
+    return mode, topic_id, int(count)
+
+
+def start_practice(course, confirmed_topic_ids, session_id):
+    """Start button: a new session from the settings on screen."""
+    state = st.session_state
+    course_id = course.course_id
+    active = state.get(f"active_practice_{course_id}")
+    if (active["session"].session_id if active else None) != session_id:
+        return  # a second click: the new session is already open
+    mode, topic_id, requested_count = shown_settings(course_id, confirmed_topic_ids)
     try:
         exam = create_exam(
             package=course,
@@ -160,29 +209,10 @@ def start_practice(course, confirmed_topic_ids):
     state.pop(f"practice_setup_{course_id}", None)
 
 
-def open_saved_result(course_id):
-    history = st.session_state.get(f"practice_history_{course_id}", {})
-    record = history.get(st.session_state.get(f"saved_session_{course_id}"))
-    if record is None:
-        return
-    st.session_state[f"active_practice_{course_id}"] = {
-        "session": record["session"], "questions": record["questions"], "result": record["result"],
-        "warning": None, "settings": {},
-    }
-    st.session_state.pop(f"practice_setup_{course_id}", None)
-
-
-def resume_session(course_id, session_id):
-    """Resume an unfinished session on its question screen, where the student left it."""
-    resume_draft(st.session_state, course_id, session_id)
-    st.session_state[f"active_practice_{course_id}"].pop("worksheet_step", None)
-    st.session_state.pop(f"practice_setup_{course_id}", None)
-
-
-def move_question(practice_key, step):
+def move_question(practice_key, session_id, step):
     """Previous / Next: one question, never out of range (a late click changes nothing)."""
-    active = st.session_state.get(practice_key)
-    if not active or "result" in active:
+    active = current_session(practice_key, session_id, graded=False)
+    if active is None:
         return
     questions = active["questions"]
     current = max(0, min(active.get("worksheet_index", 0), len(questions) - 1))
@@ -200,21 +230,25 @@ def move_question(practice_key, step):
         timer["question_id"] = questions[target].id
 
 
-def open_review(practice_key):
-    active = st.session_state.get(practice_key)
-    if active and "result" not in active:
+def open_review(practice_key, session_id):
+    active = current_session(practice_key, session_id, graded=False)
+    if active is not None:
         active["worksheet_step"] = "review"
 
 
-def close_review(practice_key):
-    active = st.session_state.get(practice_key)
-    if active:
+def close_review(practice_key, session_id):
+    active = current_session(practice_key, session_id, graded=False)
+    if active is not None:
         active.pop("worksheet_step", None)
 
 
 def toggle_side_panel(course_id):
     key = f"practice_side_panel_{course_id}"
     st.session_state[key] = not st.session_state.get(key, True)
+
+
+def toggle_original_wording(state_key):
+    st.session_state[state_key] = not st.session_state.get(state_key, False)
 
 
 def follow_question(active, question_id):
@@ -234,33 +268,35 @@ def setup_heading():
 
 
 def choose_topic(course_id, confirmed_topic_ids, topic_names):
-    key = f"practice_topic_{course_id}"
-    if len(confirmed_topic_ids) > TOPIC_PILLS_LIMIT:
-        return st.selectbox(
-            tr("Knowledge point"),
-            options=confirmed_topic_ids,
-            format_func=lambda value: topic_names[value],
-            key=key,
-        )
-    # Clicking the chosen pill again would clear it; keep the last choice instead.
-    last_key = f"practice_topic_last_{course_id}"
-    chosen = st.session_state.get(key)
-    if chosen in confirmed_topic_ids:
-        st.session_state[last_key] = chosen
-    else:
-        last = st.session_state.get(last_key)
-        st.session_state[key] = last if last in confirmed_topic_ids else confirmed_topic_ids[0]
-    return st.pills(
+    """Knowledge point: one-click pills for a short scope, a selectbox for a long one."""
+    widget = st.selectbox if len(confirmed_topic_ids) > TOPIC_PILLS_LIMIT else st.pills
+    options = {"selection_mode": "single"} if widget is st.pills else {}
+    widget(
         tr("Knowledge point"),
         options=confirmed_topic_ids,
         format_func=lambda value: topic_names[value],
-        selection_mode="single",
-        key=key,
+        key=f"practice_topic_{course_id}",
+        on_change=remember_choice, args=(course_id, "topic", confirmed_topic_ids),
+        **options,
     )
 
 
-def render_setup_screen(course, confirmed_topic_ids, topic_names, active_practice, pending_entry):
+def render_setup_screen(course, confirmed_topic_ids, topic_names, active_practice, pending_entry, opening):
+    cid = course.course_id
     in_progress = active_practice is not None and "result" not in active_practice
+    choice = st.session_state.get(choice_key(cid))
+    if opening or not isinstance(choice, dict):
+        choice = st.session_state[choice_key(cid)] = opening_choice(
+            cid, confirmed_topic_ids, active_practice, pending_entry)
+    if choice.get("topic_id") not in confirmed_topic_ids:  # the scope changed since
+        choice["topic_id"] = confirmed_topic_ids[0]
+    # Assigned in the run that draws the widgets, so the browser shows what Start uses.
+    st.session_state[f"practice_mode_{cid}"] = tr("Topic Practice") if choice["mode"] == "topic" else tr("Mock Exam")
+    st.session_state[f"practice_count_{cid}"] = choice["count"]
+    st.session_state[f"practice_topic_drawn_{cid}"] = choice["mode"] == "topic"
+    if choice["mode"] == "topic":
+        st.session_state[f"practice_topic_{cid}"] = choice["topic_id"]
+
     setup_heading()
     if pending_entry is not None:
         target = pending_entry.get("topic_id")
@@ -280,26 +316,27 @@ def render_setup_screen(course, confirmed_topic_ids, topic_names, active_practic
             tr("Confirmed topics") + ": "
             + " · ".join(topic_names[value] for value in confirmed_topic_ids)
         )
-        mode_label = st.radio(
+        st.radio(
             tr("Practice mode"),
             options=[tr("Mock Exam"), tr("Topic Practice")],
-            key=f"practice_mode_{course.course_id}",
+            key=f"practice_mode_{cid}",
             horizontal=True,
             width="stretch",
+            on_change=remember_choice, args=(cid, "mode", confirmed_topic_ids),
         )
 
-        mode = "mock" if mode_label == tr("Mock Exam") else "topic"
-        if mode == "topic":
-            choose_topic(course.course_id, confirmed_topic_ids, topic_names)
+        if choice["mode"] == "topic":
+            choose_topic(cid, confirmed_topic_ids, topic_names)
 
+        # No default value: the key is always assigned above.
         st.number_input(
             tr("Number of questions"),
             min_value=1,
-            max_value=50,
-            value=10,
+            max_value=MAX_COUNT,
             step=1,
-            key=f"practice_count_{course.course_id}",
+            key=f"practice_count_{cid}",
             width=240,
+            on_change=remember_choice, args=(cid, "count", confirmed_topic_ids),
         )
 
         start_label = (
@@ -309,26 +346,19 @@ def render_setup_screen(course, confirmed_topic_ids, topic_names, active_practic
         )
         # A callback, so the next run already draws the new session's question screen.
         st.button(
-            tr(start_label), type="primary", key=f"practice_start_{course.course_id}",
-            on_click=start_practice, args=(course, confirmed_topic_ids),
+            tr(start_label), type="primary", key=f"practice_start_{cid}",
+            on_click=start_practice,
+            args=(course, confirmed_topic_ids, active_practice["session"].session_id if active_practice else None),
         )
         if st.session_state.pop("practice_create_error", None):
             st.error(tr("Could not create practice. Try another topic or check your exam scope in Study Plan."))
 
-    drafts = st.session_state.get(f"practice_drafts_{course.course_id}", {})
-    if drafts:
-        with st.expander(tr(f"Unfinished sessions ({len(drafts)})")):
-            draft_id = st.selectbox(tr("Unfinished session"), list(drafts), format_func=lambda sid: practice_label(drafts, sid, unfinished=True), key=f"draft_choice_{course.course_id}")
-            st.button(tr("Resume unfinished session"), key=f"resume_draft_{course.course_id}",
-                on_click=resume_session, args=(course.course_id, draft_id))
-
-    # Graded sessions saved for this course can be reopened.
-    history = st.session_state.get(f"practice_history_{course.course_id}", {})
-    if history:
-        with st.expander(tr("Review a saved session")):
-            st.selectbox(tr("Saved session"), list(history), format_func=lambda sid: practice_label(history, sid), key=f"saved_session_{course.course_id}")
-            st.button(tr("Open saved result"), key=f"open_saved_result_{course.course_id}",
-                on_click=open_saved_result, args=(course.course_id,))
+    # Unfinished and graded sessions are listed on a page of their own.
+    if has_practice_history(st.session_state, course.course_id):
+        open_page_button(
+            tr("Practice history"), HISTORY_PAGE, key="open_practice_history",
+            icon=":material/history:", align="right",
+        )
 
 
 def practice_title(session, question, topic_names):
@@ -374,7 +404,7 @@ def render_question_screen(course, active, topic_names):
                 ):
                     st.button(
                         tr("Review and submit"), icon=":material/fact_check:", width="stretch",
-                        key=f"worksheet_review_{sid}", on_click=open_review, args=(practice_key,),
+                        key=f"worksheet_review_{sid}", on_click=open_review, args=(practice_key, sid),
                     )
                     st.button(
                         tr("Change settings"), icon=":material/tune:", width="stretch",
@@ -417,11 +447,7 @@ def render_question_screen(course, active, topic_names):
 
             # The key names the last move and alternates a/b, so the stylesheet replays the
             # page-turn only when the question changes; any other rerun renders "none".
-            move = active.pop("worksheet_move", None)
-            turn_key = (
-                f"practice_turn_{move}_{'ab'[active.get('worksheet_turns', 0) % 2]}_{sid}"
-                if move in ("next", "prev") else f"practice_turn_none_{sid}"
-            )
+            turn_key = page_turn_key(active.pop("worksheet_move", None), active.get("worksheet_turns", 0), sid)
             display = display_question(course.course_id, question, st.session_state)
             hints = hints_for(question) if session.mode == "topic" else []
             state_key = hint_state_key(sid, question.id)
@@ -430,10 +456,21 @@ def render_question_screen(course, active, topic_names):
                 render_question_heading(index + 1, display.question)
                 if display.simplified:
                     st.caption(tr("Simplified wording"))
-                    with st.expander(tr("Show original wording")):
-                        st.write(question.question)
-                        for option in question.options:
-                            st.write(option)
+                    # Revealed in place by one quiet button; not on the page until asked for.
+                    original_key = f"practice_original_shown_{sid}_{question.id}"
+                    original_shown = st.session_state.get(original_key, False)
+                    with st.container(horizontal=True, key=f"original_wording_row_{question.id}"):
+                        st.button(
+                            tr("Hide original wording") if original_shown else tr("Show original wording"),
+                            icon=":material/visibility_off:" if original_shown else ":material/visibility:",
+                            type="tertiary", key=f"original_wording_toggle_{sid}_{question.id}",
+                            on_click=toggle_original_wording, args=(original_key,),
+                        )
+                    if original_shown:
+                        with st.container(key=f"original_text_{question.id}"):
+                            st.write(question.question)
+                            for option in question.options:
+                                st.write(option)
 
                 st.radio(
                     tr("Choose an answer"),
@@ -460,7 +497,7 @@ def render_question_screen(course, active, topic_names):
             ):
                 st.button(
                     tr("Previous"), icon=":material/arrow_back:", disabled=index == 0,
-                    key=f"worksheet_previous_{sid}", on_click=move_question, args=(practice_key, -1),
+                    key=f"worksheet_previous_{sid}", on_click=move_question, args=(practice_key, sid, -1),
                 )
                 if shown < len(hints) and st.button(
                     tr("Hint") if shown == 0 else tr("Next hint"), icon=":material/lightbulb:",
@@ -481,12 +518,12 @@ def render_question_screen(course, active, topic_names):
                 if index == len(questions) - 1:
                     st.button(
                         tr("Finish"), icon=":material/flag:", type="primary",
-                        key=f"worksheet_finish_{sid}", on_click=open_review, args=(practice_key,),
+                        key=f"worksheet_finish_{sid}", on_click=open_review, args=(practice_key, sid),
                     )
                 else:
                     st.button(
                         tr("Next"), icon=":material/arrow_forward:", icon_position="right", type="primary",
-                        key=f"worksheet_next_{sid}", on_click=move_question, args=(practice_key, 1),
+                        key=f"worksheet_next_{sid}", on_click=move_question, args=(practice_key, sid, 1),
                     )
 
     if margin is not None:
@@ -526,11 +563,11 @@ def render_review_step(course, active):
     ):
         st.button(
             tr("Back to questions"), icon=":material/arrow_back:",
-            key=f"worksheet_back_{sid}", on_click=close_review, args=(practice_key,),
+            key=f"worksheet_back_{sid}", on_click=close_review, args=(practice_key, sid),
         )
         st.button(
             tr("Submit answers"), type="primary", key=f"practice_submit_{sid}",
-            on_click=submit_practice, args=(course, practice_key),
+            on_click=submit_practice, args=(course, practice_key, sid),
         )
     if st.session_state.pop("practice_submit_error", None):
         st.error(tr("Could not grade this practice. Please try again."))
@@ -564,8 +601,9 @@ def render_result_screen(course, active_practice, confirmed_topic_ids, topic_nam
             st.caption(tr("Questions"))
             st.markdown(f"**{len(questions)}**")
 
-    if active_practice["warning"]:
-        st.warning(tr(active_practice["warning"]))
+    if active_practice.get("warning"):
+        # A note about the session, as on the question screen; not a warning box.
+        st.caption(tr(active_practice["warning"]))
 
     result = active_practice["result"]
     render_last_save_status()
@@ -583,116 +621,63 @@ def render_result_screen(course, active_practice, confirmed_topic_ids, topic_nam
         with score_columns[1].container(border=True):
             st.metric(tr("Accuracy"), f"{result['accuracy']:.2f}%")
 
-    summary_tab, answers_tab = st.tabs([tr("Summary & next steps"), tr("Review answers")])
-    with summary_tab:
-        missed_ids = {
-            attempt.question_id for attempt in result["attempts"] if not attempt.is_correct
-        }
-        next_question = next((q for q in questions if q.id in missed_ids), questions[0])
-        with st.container(border=True, key="flight_next_topic"):
-            st.caption(tr("Take the next step"))
-            st.markdown(f"**{escape(topic_names.get(next_question.topic_id, tr('Topic')))}**")
-            if next_question.topic_id in topic_names and st.button(
-                tr("Open this topic in Knowledge Map"), key=f"flight_map_{session.session_id}",
-                icon=":material/hub:",
-            ):
-                st.session_state[f"graph_pending_focus_{course.course_id}"] = next_question.topic_id
-                st.switch_page("pages/4_Knowledge_Graph.py")
-            if course.course_id == "calculus-i-demo" and next_question.topic_id in {"calc_limits", "calc_derivatives"}:
-                if st.button(tr("Explore this topic in Concept Lab"), key=f"flight_lab_{session.session_id}"):
-                    open_lab(st.session_state, course.course_id, next_question.topic_id)
-                    st.switch_page("pages/6_Concept_Lab.py")
-        guided_review_available = render_guided_review(course, session, questions, result)
-        result_overview(course, session, questions, result)
+    # Each question's answer, explanation and reflection: on a page of their own.
+    open_page_button(
+        tr("Review answers"), ANSWER_REVIEW_PAGE, key="open_answer_review",
+        icon=":material/fact_check:", align="right",
+    )
 
-    questions_by_id = {
-        question.id: question for question in questions
+    # Next steps, shown directly.
+    missed_ids = {
+        attempt.question_id for attempt in result["attempts"] if not attempt.is_correct
     }
-
-    with summary_tab:
-        with st.container(border=True, key="practice_mistake_review"):
-            try:
-                missed = mistake_questions(session, questions, result["attempts"])
-            except ValueError:
-                missed = []
-                st.warning(tr("This result could not be prepared for mistake review."))
-            if missed:
-                st.markdown(tr("**Review missed questions**"))
-                st.caption(
-                    tr("1 missed question to practise; your score stays the same.") if len(missed) == 1
-                    else tr(f"{len(missed)} missed questions to practise; your score stays the same.")
-                )
-                missed_topics = list(dict.fromkeys(q.topic_id for q in missed if q.topic_id in confirmed_topic_ids))
-                review_choice = st.pills(
-                    tr("Review topic"), [ALL_MISSED_TOPICS, *missed_topics], default=ALL_MISSED_TOPICS,
-                    format_func=lambda value: tr("All missed topics") if value == ALL_MISSED_TOPICS else topic_names[value],
-                    key=f"mistake_topic_{course.course_id}_{session.session_id}",
-                )
-                # No pill, or the "All missed topics" pill, keeps every missed topic.
-                review_topic = None if review_choice in (None, ALL_MISSED_TOPICS) else review_choice
-                st.button(
-                    tr("Practise missed questions"), type="secondary" if guided_review_available else "primary",
-                    key=f"review_mistakes_{session.session_id}",
-                    on_click=begin_mistake_review,
-                    args=(practice_key, course, session, questions, confirmed_topic_ids, review_topic),
-                )
-                if error := st.session_state.pop("practice_launch_error", None):
-                    st.error(tr(error))
-            else:
-                st.caption(tr("No missed questions to review in this session."))
-
-    with answers_tab:
-        for question_number, review in enumerate(
-            result["question_results"], start=1
+    next_question = next((q for q in questions if q.id in missed_ids), questions[0])
+    with st.container(border=True, key="flight_next_topic"):
+        st.caption(tr("Take the next step"))
+        st.markdown(f"**{escape(topic_names.get(next_question.topic_id, tr('Topic')))}**")
+        if next_question.topic_id in topic_names and st.button(
+            tr("Open this topic in Knowledge Map"), key=f"flight_map_{session.session_id}",
+            icon=":material/hub:",
         ):
-            question = questions_by_id[review["question_id"]]
-            display = display_question(course.course_id, question, st.session_state)
+            st.session_state[f"graph_pending_focus_{course.course_id}"] = next_question.topic_id
+            st.switch_page("pages/4_Knowledge_Graph.py")
+        if course.course_id == "calculus-i-demo" and next_question.topic_id in {"calc_limits", "calc_derivatives"}:
+            if st.button(tr("Explore this topic in Concept Lab"), key=f"flight_lab_{session.session_id}"):
+                open_lab(st.session_state, course.course_id, next_question.topic_id)
+                st.switch_page("pages/6_Concept_Lab.py")
+    guided_review_available = render_guided_review(course, session, questions, result)
+    result_overview(course, session, questions, result)
 
-            with st.container(
-                border=True,
-                key=f"practice_review_{question.id}",
-            ):
-                render_question_heading(question_number, display.question)
-                if display.simplified:
-                    st.caption(tr("Simplified wording"))
-                    with st.expander(tr("Show original wording")):
-                        st.write(question.question)
-                        for option in question.options:
-                            st.write(option)
-
-                selected_index = review["selected_index"]
-                correct_answer = display.options[
-                    review["correct_index"]
-                ]
-
-                if selected_index is None:
-                    st.warning(tr("Unanswered"))
-                    st.success(tr(f"✓ Correct answer: {correct_answer}"))
-                else:
-                    selected_answer = display.options[selected_index]
-                    if review["is_correct"]:
-                        st.success(tr(f"✓ Your answer: {selected_answer}"))
-                    else:
-                        st.error(tr(f"✕ Your answer: {selected_answer}"))
-                        st.success(tr(f"✓ Correct answer: {correct_answer}"))
-
-                if session.mode == "topic" and (hints := hints_for(question)):
-                    shown = session_insights(course, session.session_id).get(question.id, {}).get("hints_used")
-                    if shown is not None:
-                        st.caption(tr(f"Hints used: {shown} of {len(hints)}"))
-
-                with st.container(border=True):
-                    st.subheader(tr("Explanation"))
-                    st.write(display.explanation)
-                reflection_controls(course, session, question, review, confirmed_topic_ids, practice_key)
-                if question.source_pages:
-                    st.caption(tr("Cited pages: ") + ", ".join(map(str, question.source_pages)))
-                    sources = question_sources(question, st.session_state.get(f"course_document_{course.course_id}"))
-                    if sources:
-                        with st.expander(tr("Check source material")):
-                            for page, text in sources:
-                                st.caption(tr(f"Page / slide {page}"))
-                                st.text(text, width="stretch")
+    with st.container(border=True, key="practice_mistake_review"):
+        try:
+            missed = mistake_questions(session, questions, result["attempts"])
+        except ValueError:
+            missed = []
+            st.warning(tr("This result could not be prepared for mistake review."))
+        if missed:
+            st.markdown(tr("**Review missed questions**"))
+            st.caption(
+                tr("1 missed question to practise; your score stays the same.") if len(missed) == 1
+                else tr(f"{len(missed)} missed questions to practise; your score stays the same.")
+            )
+            missed_topics = list(dict.fromkeys(q.topic_id for q in missed if q.topic_id in confirmed_topic_ids))
+            review_choice = st.pills(
+                tr("Review topic"), [ALL_MISSED_TOPICS, *missed_topics], default=ALL_MISSED_TOPICS,
+                format_func=lambda value: tr("All missed topics") if value == ALL_MISSED_TOPICS else topic_names[value],
+                key=f"mistake_topic_{course.course_id}_{session.session_id}",
+            )
+            # No pill, or the "All missed topics" pill, keeps every missed topic.
+            review_topic = None if review_choice in (None, ALL_MISSED_TOPICS) else review_choice
+            st.button(
+                tr("Practise missed questions"), type="secondary" if guided_review_available else "primary",
+                key=f"review_mistakes_{session.session_id}",
+                on_click=begin_mistake_review,
+                args=(practice_key, course, session, questions, confirmed_topic_ids, review_topic),
+            )
+            if error := st.session_state.pop("practice_launch_error", None):
+                st.error(tr(error))
+        else:
+            st.caption(tr("No missed questions to review in this session."))
 
 
 # ---- Page ---------------------------------------------------------------------------
@@ -735,12 +720,15 @@ pending_entry = st.session_state.get(f"practice_entry_{course.course_id}")
 st.session_state.pop("priority_ready", None)
 
 # app.py sets this flag when the student arrives from another page: the page then opens
-# the session (or its result) again rather than a setup screen asked for earlier.
+# the session (or its result) again rather than a setup screen asked for earlier. The
+# exception is the way back from Practice history, which is opened from the setup screen.
 arrived = st.session_state.pop(f"rehydrate_practice_{course.course_id}", False)
+back_from_history = st.session_state.pop(history_visit_key(course.course_id), False)
 setup_request_key = f"practice_setup_{course.course_id}"
 setup_request = st.session_state.get(setup_request_key)
 if setup_request is not None and (
-    arrived or active_practice is None or setup_request != active_practice["session"].session_id
+    (arrived and not back_from_history)
+    or active_practice is None or setup_request != active_practice["session"].session_id
 ):
     st.session_state.pop(setup_request_key, None)
     setup_request = None
@@ -751,10 +739,23 @@ if in_progress:
     hydrate_widgets(st.session_state, active_practice, force=arrived)
 
 if active_practice is None or pending_entry is not None or setup_request is not None:
-    render_setup_screen(course, confirmed_topic_ids, topic_names, active_practice, pending_entry)
+    screen = "setup"
 elif not in_progress:
-    render_result_screen(course, active_practice, confirmed_topic_ids, topic_names)
+    screen = "result"
 elif active_practice.get("worksheet_step") == "review":
+    screen = "review"
+else:
+    screen = "question"
+# The setup screen "opens" when it was not on screen in this page's last run.
+screen_key = f"practice_screen_{course.course_id}"
+opening = arrived or st.session_state.get(screen_key) != screen
+st.session_state[screen_key] = screen
+
+if screen == "setup":
+    render_setup_screen(course, confirmed_topic_ids, topic_names, active_practice, pending_entry, opening)
+elif screen == "result":
+    render_result_screen(course, active_practice, confirmed_topic_ids, topic_names)
+elif screen == "review":
     render_review_step(course, active_practice)
 else:
     render_question_screen(course, active_practice, topic_names)

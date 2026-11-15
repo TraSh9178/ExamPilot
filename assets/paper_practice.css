@@ -202,11 +202,43 @@
 }
 
 /* Without the side panel the question takes the full width. Keep the right end
-   of the buttons row clear of the floating Pilot button in the lower-right corner. */
+   of the buttons row clear of the floating Pilot button in the lower-right corner;
+   the same for the rows of Practice history and the buttons of Review answers. */
 [data-testid="stMain"] .st-key-practice_main_full [class*="st-key-paper_actions_"],
-[data-testid="stMain"] .st-key-practice_review_actions {
+[data-testid="stMain"] .st-key-practice_review_actions,
+[data-testid="stMain"] .st-key-review_nav,
+[data-testid="stMain"] [class*="st-key-practice_history_row_"] {
   box-sizing: border-box;
   padding-right: 5rem;
+}
+
+/* Original wording of a simplified question: one quiet button, the text below it. */
+[data-testid="stMain"] [class*="st-key-original_wording_row_"] button :is(p, [data-testid="stIconMaterial"]) {
+  color: var(--ink-muted, #6B7280);
+  font-size: .9rem;
+}
+[data-testid="stMain"] [class*="st-key-original_wording_row_"] button:not(:disabled):hover :is(p, [data-testid="stIconMaterial"]) {
+  color: var(--accent-rust-text, #9A5426);
+}
+[data-testid="stMain"] [class*="st-key-original_text_"] {
+  padding-left: .85rem;
+  border-left: 3px solid var(--paper-line, #EEE7DF);
+}
+
+/* Practice history: one row per session, its label and one button; on a phone the
+   button moves under the label instead of pushing the row wider. */
+[data-testid="stMain"] [class*="st-key-practice_history_row_"] {
+  padding-block: .35rem;
+  border-bottom: 1px solid var(--paper-line, #EEE7DF);
+  row-gap: .35rem;
+}
+[data-testid="stMain"] [class*="st-key-practice_history_row_"] > [data-testid="stElementContainer"]:has([data-testid="stMarkdown"]) {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+[data-testid="stMain"] [class*="st-key-practice_history_row_"] [data-testid="stMarkdownContainer"] p {
+  margin-bottom: 0;
+  overflow-wrap: anywhere;
 }
 
 /* Page turn when the question changes. The card container's key names the last

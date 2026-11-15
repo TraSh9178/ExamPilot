@@ -591,6 +591,19 @@ _TRANSLATIONS.update({
     "Your self-check: ": "你的自评：", "Start again": "重新开始",
 })
 
+# practice pages
+_TRANSLATIONS.update({
+    "Back to Practice": "返回练习",
+    "Back to result": "返回成绩",
+    "Unfinished sessions": "未完成的场次",
+    "Finished sessions": "已完成的场次",
+    "Open result": "查看成绩",
+    "No practice sessions yet. Finished and unfinished sessions will appear here.": "还没有练习记录。完成和未完成的练习都会显示在这里。",
+    "No result to review yet. Finish a practice session first.": "还没有可以查看的成绩。请先完成一次练习。",
+    "Original wording": "原始表述",
+    "Hide original wording": "收起原始表述",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
