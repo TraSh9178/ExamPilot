@@ -17,6 +17,7 @@ class Relationship(BaseModel):
 
 
 class Question(BaseModel):
+    practice_structure: str | None = Field(default=None, min_length=1, max_length=80)
     cognitive_dimension: Literal["computation", "conceptual"] | None = None
     version_of: str | None = None
     id: str

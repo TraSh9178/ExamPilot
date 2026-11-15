@@ -44,6 +44,8 @@ def _state(session_state: MutableMapping[str, Any], user_id: str) -> dict:
             "unsaved_exams": set(),
             "course_messages": {},
             "last_save": None,
+            "failed_course_ids": set(),
+            "listing_failed": False,
         }
         session_state[STATE_KEY] = state
     return state
@@ -151,12 +153,15 @@ def _restore_one(
     """Restore one course; return an error text, or None on success."""
     restored = postgres_store.load_course_history(user_id, course_id)
     if not restored.success or restored.package is None:
+        state.setdefault("failed_course_ids", set()).add(course_id)
         reason = restored.message if not restored.success else "Course was not found."
         return f"{label}: {reason}"
     try:
         _apply_restored_course(session_state, state, restored)
     except (KeyError, ValueError):
+        state.setdefault("failed_course_ids", set()).add(course_id)
         return f"{label}: Stored exam data could not be matched to its questions."
+    state.setdefault("failed_course_ids", set()).discard(course_id)
     return None
 
 
@@ -170,10 +175,12 @@ def restore_all(session_state: MutableMapping[str, Any]) -> SyncOutcome | None:
 
     listing = postgres_store.list_saved_courses(user_id)
     if not listing.success:
+        state["listing_failed"] = True
         state["restore_errors"] = [listing.message]
         state["restore_message"] = ""
         return SyncOutcome(False, listing.message)
 
+    state["listing_failed"] = False
     if not listing.courses:
         state["restore_errors"] = []
         state["restore_message"] = "No saved study records for this account yet."
@@ -218,14 +225,19 @@ def _with_history_questions(
     for record in history.values():
         for question in record["questions"]:
             if question.id in by_id and by_id[question.id] != question:
-                raise ValueError("A regenerated question reuses a historical question ID. "
-                                 "Save was stopped to protect previous exam answers.")
+                annotations = {"cognitive_dimension", "hints", "practice_structure"}
+                if by_id[question.id].model_dump(exclude=annotations) != question.model_dump(exclude=annotations):
+                    raise ValueError("A regenerated question reuses a historical question ID. "
+                                     "Save was stopped to protect previous exam answers.")
+                # Keep the historical snapshot; optional new labels cannot relabel old answers.
+                by_id[question.id] = question
             if question.id not in known:
                 known.add(question.id)
                 missing.append(question)
-    if not missing:
+    preserved = [by_id[q.id] for q in course.questions]
+    if not missing and preserved == course.questions:
         return course
-    return course.model_copy(update={"questions": [*course.questions, *missing]})
+    return course.model_copy(update={"questions": [*preserved, *missing]})
 
 
 def save_course_to_account(
@@ -240,6 +252,11 @@ def save_course_to_account(
     except ValueError as exc:
         state["unsaved_courses"].add(course.course_id)
         outcome = SyncOutcome(False, str(exc))
+        state["last_save"] = outcome
+        return outcome
+    if state.get("listing_failed") or course.course_id in state.get("failed_course_ids", set()):
+        state["unsaved_courses"].add(course.course_id)
+        outcome = SyncOutcome(False, "Restore this account's saved records successfully before saving this course. Local work is preserved.")
         state["last_save"] = outcome
         return outcome
     result = postgres_store.save_course(user_id, package)
@@ -263,6 +280,8 @@ def _save_account_snapshot(
     keys = {(course.course_id, session.session_id) for session, _ in results}
     try:
         package = capture_learning_state(_with_history_questions(session_state, course), session_state)
+        if state.get("listing_failed") or course.course_id in state.get("failed_course_ids", set()):
+            raise ValueError("Restore this account's saved records successfully before saving this course. Local work is preserved.")
         result = postgres_store.save_course_history(user_id, package, results)
         outcome = SyncOutcome(result.success, result.message)
     except ValueError as exc:

@@ -16,6 +16,7 @@ from services.course_state import (
 from services.document_service import extract_document
 from services.ai_service import generate_topics, generation_available
 from services.course_icons import course_icon_svg
+from services.demo_updates import demo_update
 from services.ui_style import apply_app_styles
 
 DEMO_COURSES = (
@@ -398,6 +399,17 @@ else:
                             f"{len(course.topics)} topics · "
                             f"{len(course.questions)} practice questions"
                         )
+                    if is_demo:
+                        updated_demo, added_count = demo_update(course)
+                        if added_count:
+                            st.caption(f"Demo update available: {added_count} new questions. Existing answers and saved questions are preserved.")
+                            if st.button("Add new demo questions", key=f"update_demo_{course.course_id}", width="stretch"):
+                                save_course(st.session_state, updated_demo)
+                                outcome = save_course_to_account(st.session_state, updated_demo)
+                                if outcome is not None and not outcome.success:
+                                    st.warning("Update kept in this session; account save failed. " + outcome.message)
+                                else:
+                                    st.rerun()
                     if stage == "topics_only":
                         st.caption("Next: review topics and choose your exam scope.")
                     action_columns = st.columns([1, 1])

@@ -190,7 +190,7 @@ def test_progress_for_old_untagged_history_does_not_infer_abilities():
     app.run()
     assert not app.exception
     assert '6 latest question-family response(s) excluded' in ' '.join(c.value for c in app.caption)
-    assert not app.dataframe
+    assert not any("Dimension" in frame.value.columns for frame in app.dataframe)
     assert next(m for m in app.metric if m.label=='Computation').value=='—'
 
 

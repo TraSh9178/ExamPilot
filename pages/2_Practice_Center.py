@@ -8,7 +8,22 @@ from services.question_editor import available_questions
 from services.exam_engine import create_exam, grade_exam
 from services.hints import hint_state_key, hints_for
 from services.question_review import create_mistake_review, mistake_questions, question_sources
+from services.practice_insights_ui import (
+    start_focus_controls, answer_controls, checklist, capture_submission,
+    result_overview, reflection_controls,
+)
+from services.practice_insights import session_insights
 from services.ui_style import apply_app_styles
+
+def begin_mistake_review(practice_key, course, session, questions, confirmed_ids, topic_id):
+    try:
+        st.session_state[practice_key] = create_mistake_review(
+            session, questions, st.session_state[practice_key]["result"]["attempts"],
+            confirmed_ids, topic_id, approved_ids={q.id for q in available_questions(course)},
+        )
+    except ValueError as error:
+        st.session_state["practice_launch_error"] = str(error)
+
 
 apply_app_styles()
 
@@ -49,6 +64,7 @@ if unavailable_count:
 
 practice_key = f"active_practice_{course.course_id}"
 active_practice = st.session_state.get(practice_key)
+st.session_state.pop("priority_ready", None)
 
 with st.expander(
     "Change settings" if active_practice else "Practice settings",
@@ -151,6 +167,7 @@ if active_practice is not None:
 
     if not submitted:
         st.subheader("Questions")
+        start_focus_controls(active_practice)
 
         for question_number, question in enumerate(questions, start=1):
             display = display_question(course.course_id, question, st.session_state)
@@ -178,6 +195,8 @@ if active_practice is not None:
                     key=f"answer_{session.session_id}_{question.id}",
                 )
 
+                answer_controls(active_practice, question)
+
                 if session.mode == "topic" and (hints := hints_for(question)):
                     state_key = hint_state_key(session.session_id, question.id)
                     shown = st.session_state.get(state_key, 0)
@@ -190,6 +209,7 @@ if active_practice is not None:
                         st.session_state[state_key] = shown + 1
                         st.rerun()
 
+        checklist(active_practice)
         if st.button("Submit answers", type="primary"):
             selected_answers = {
                 question.id: st.session_state.get(
@@ -207,6 +227,7 @@ if active_practice is not None:
             except ValueError as error:
                 st.error(f"Could not grade practice: {error}")
             else:
+                course = capture_submission(course, active_practice)
                 active_practice["result"] = result
                 st.session_state[practice_key] = active_practice
 
@@ -247,6 +268,8 @@ if active_practice is not None:
             with score_columns[1].container(border=True):
                 st.metric("Accuracy", f"{result['accuracy']:.2f}%")
 
+        result_overview(course, session, questions, result)
+
         questions_by_id = {
             question.id: question for question in questions
         }
@@ -266,16 +289,13 @@ if active_practice is not None:
                     format_func=lambda value: "All missed topics" if value is None else topic_names[value],
                     key=f"mistake_topic_{course.course_id}_{session.session_id}",
                 )
-                if st.button("Practise missed questions", type="primary", key=f"review_mistakes_{session.session_id}"):
-                    try:
-                        st.session_state[practice_key] = create_mistake_review(
-                            session, questions, result["attempts"], confirmed_topic_ids, review_topic,
-                            approved_ids={q.id for q in available_questions(course)},
-                        )
-                    except ValueError as error:
-                        st.error(str(error))
-                    else:
-                        st.rerun()
+                st.button(
+                    "Practise missed questions", type="primary", key=f"review_mistakes_{session.session_id}",
+                    on_click=begin_mistake_review,
+                    args=(practice_key, course, session, questions, confirmed_topic_ids, review_topic),
+                )
+                if error := st.session_state.pop("practice_launch_error", None):
+                    st.error(error)
             else:
                 st.caption("No missed questions to review in this session.")
 
@@ -315,14 +335,14 @@ if active_practice is not None:
                         st.success(f"✓ Correct answer: {correct_answer}")
 
                 if session.mode == "topic" and (hints := hints_for(question)):
-                    shown = st.session_state.get(
-                        hint_state_key(session.session_id, question.id), 0
-                    )
-                    st.caption(f"Hints used: {shown} of {len(hints)}")
+                    shown = session_insights(course, session.session_id).get(question.id, {}).get("hints_used")
+                    if shown is not None:
+                        st.caption(f"Hints used: {shown} of {len(hints)}")
 
                 with st.container(border=True):
                     st.subheader("Explanation")
                     st.write(display.explanation)
+                reflection_controls(course, session, question, review, confirmed_topic_ids, practice_key)
                 if question.source_pages:
                     st.caption("Cited pages: " + ", ".join(map(str, question.source_pages)))
                     sources = question_sources(question, st.session_state.get(f"course_document_{course.course_id}"))
@@ -341,3 +361,14 @@ history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})
 
 st.caption(f"Saved practice sessions: {len(history)}")
+if history:
+    with st.expander("Review a saved session"):
+        saved_sid = st.selectbox("Saved session", list(history), key=f"saved_session_{course.course_id}")
+        if st.button("Open saved result", key=f"open_saved_result_{course.course_id}"):
+            record = history[saved_sid]
+            saved_session = record["session"]
+            st.session_state[practice_key] = {
+                "session": saved_session, "questions": record["questions"], "result": record["result"],
+                "warning": None, "settings": {},
+            }
+            st.rerun()
