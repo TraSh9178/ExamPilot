@@ -527,3 +527,11 @@ def test_controls_are_told_their_starting_value_when_step_two_first_appears(topi
     app.button(key=f"lab_{topic}_approach").click().run()
     for key in STARTING_VALUES[topic]:
         assert _control(app, key).proto.set_value
+
+
+def test_corner_conclusion_waits_until_the_student_has_predicted():
+    # The line answers the step-1 question, so step 1 must not show it.
+    line = "The two slopes disagree: no derivative at 0."
+    assert line not in [info.value for info in _lab().info]
+    for step in (2, 3):
+        assert line in [info.value for info in _lab(lab_corner_step=step).info]

@@ -293,4 +293,6 @@ with corner_tab:
         a, b = st.columns(2)
         a.metric(tr('Left secant slope'), f'{left:.0f}')
         b.metric(tr('Right secant slope'), f'{right:.0f}')
-        st.info(tr('The two slopes disagree: no derivative at 0.'))
+        # This line answers the step-1 prediction, so it waits until the student has predicted.
+        if step > 1:
+            st.info(tr('The two slopes disagree: no derivative at 0.'))
