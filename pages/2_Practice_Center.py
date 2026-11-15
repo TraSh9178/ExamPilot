@@ -251,6 +251,21 @@ def toggle_original_wording(state_key):
     st.session_state[state_key] = not st.session_state.get(state_key, False)
 
 
+def tell_browser(*keys):
+    """Assign each widget key again in this run, before its widget is drawn.
+
+    The browser is told a widget's value only when its key was assigned in the
+    run that draws the widget. A value restored in an earlier run (a question
+    that was off screen, a resumed session) is used by the script while the
+    browser shows an empty widget, and the next click then saves that empty
+    value over the student's answer. Writing the current value back changes
+    nothing in the session and makes the browser agree with it.
+    """
+    for key in keys:
+        if key in st.session_state:
+            st.session_state[key] = st.session_state[key]
+
+
 def follow_question(active, question_id):
     """The focus timer follows the question on screen; a paused timer stays paused."""
     timer = active.get("focus_timer")
@@ -375,6 +390,7 @@ def render_question_screen(course, active, topic_names):
     index = max(0, min(active.get("worksheet_index", 0), len(questions) - 1))
     question = questions[index]
     follow_question(active, question.id)
+    tell_browser(f"answer_{sid}_{question.id}", f"confidence_{sid}_{question.id}")
 
     radar_on = learning_radar.radar_enabled(course.course_id)
     user = current_user(st.session_state) if radar_on else None

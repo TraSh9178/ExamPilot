@@ -824,3 +824,29 @@ def test_layout_rules_for_the_title_row_the_floating_button_and_phones():
     app = practice_app("topic")
     assert "paper_actions_q0" not in block_keys(app, find_block(app, "practice_title_row"))
     assert find_block(app, "practice_main_full") is None
+
+
+# ---- What the browser is told when a question comes back on screen ------------------
+
+@pytest.mark.parametrize("mode", ["topic", "mock"])
+@pytest.mark.parametrize("reruns", [0, 1, 2, 3])
+def test_the_browser_is_told_the_answer_when_a_question_comes_back_on_screen(mode, reruns):
+    # A browser shows a widget's own default unless the run that draws it also
+    # assigns its key, and the next click then saves "no answer" over the
+    # student's answer. Whether an earlier run had already restored the value
+    # depends on how many reruns happened in between, so each count is checked.
+    app = practice_app(mode)
+    app.radio(key="answer_s_q0").set_value(2).run()
+    app.button_group(key="confidence_s_q0").set_value("unsure").run()
+    next_question(app)
+    for _ in range(reruns):
+        app.run()
+    previous_question(app)
+    answer = app.radio(key="answer_s_q0")
+    confidence = app.button_group(key="confidence_s_q0")
+    assert answer.value == 2 and answer.proto.set_value
+    assert confidence.value == "unsure" and confidence.proto.set_value
+    # And it stays that way on the next run, with nothing clicked.
+    app.run()
+    assert app.radio(key="answer_s_q0").value == 2
+    assert app.button_group(key="confidence_s_q0").value == "unsure"
