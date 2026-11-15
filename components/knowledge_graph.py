@@ -248,7 +248,10 @@ def render_topic_details(
     st.badge(tr(_MASTERY_LABELS[status]), color=_MASTERY_BADGE_COLORS[status])
 
 
-RADAR_CACHE_SECONDS = 15
+# Every refresh opens new database connections, so other students' flags are
+# re-read at most once a minute. The user's own flag or unflag still shows at
+# once, because it clears the cache through forget_course_radar.
+RADAR_CACHE_SECONDS = 60
 
 
 def radar_cache_key(course_id: str) -> str:

@@ -1198,7 +1198,7 @@ def test_no_flag_button_without_signed_in_user(monkeypatch):
     assert radar.calls["get_user_flags"] == []
 
 
-def test_radar_is_reused_for_fifteen_seconds(monkeypatch):
+def test_radar_is_reused_until_the_cache_expires(monkeypatch):
     radar = RadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
 
     app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
@@ -1210,7 +1210,7 @@ def test_radar_is_reused_for_fifteen_seconds(monkeypatch):
     assert len(radar.calls["get_user_flags"]) == 1
 
     snapshot = dict(app.session_state[CACHE_KEY])
-    snapshot["fetched_at"] -= 16
+    snapshot["fetched_at"] -= knowledge_graph.RADAR_CACHE_SECONDS + 1
     app.session_state[CACHE_KEY] = snapshot
     app.run()
 
