@@ -134,8 +134,11 @@ def test_submission_persists_confidence_and_hint_snapshots_without_changing_grad
     app,course=start_app()
     app.radio(key='answer_s_q0').set_value(0).run()
     app.selectbox(key='confidence_s_q0').set_value('guessed').run()
+    app.button(key="worksheet_next_s").click().run()
     app.radio(key='answer_s_q1').set_value(1).run()
     app.selectbox(key='confidence_s_q1').set_value('unsure').run()
+    app.button(key="worksheet_previous_s").click().run()
+    assert app.radio(key="answer_s_q0").value == 0
     assert 'Review before submit' in [h.value for h in app.subheader]
     next(b for b in app.button if b.label=='Submit answers').click().run()
     assert not app.exception

@@ -1,5 +1,6 @@
 from services.i18n import tr
 from html import escape
+import time
 
 import streamlit as st
 
@@ -14,7 +15,10 @@ from services.practice_insights_ui import (
     start_focus_controls, answer_controls, checklist, capture_submission,
     result_overview, reflection_controls,
 )
-from services.practice_insights import session_insights
+from services.practice_insights import focus_question, session_insights
+from services.auth_session import current_user
+from services import learning_radar
+from components.knowledge_graph import load_course_radar, render_topic_radar
 from services.learning_flow import install_practice, resume_draft, remember_widget, hydrate_widgets, open_lab
 from services.ui_style import apply_app_styles
 
@@ -39,6 +43,7 @@ def submit_practice(course, practice_key):
     session, questions = active["session"], active["questions"]
     if "result" in active:
         return
+    hydrate_widgets(st.session_state, active)
     answers = {q.id: st.session_state.get(f"answer_{session.session_id}_{q.id}") for q in questions}
     try:
         result = grade_exam(session, questions, answers)
@@ -221,59 +226,123 @@ if active_practice is not None:
     submitted = "result" in active_practice
 
     if not submitted:
-        st.subheader(tr("Questions"))
         hydrate_widgets(st.session_state, active_practice, force=st.session_state.pop(f"rehydrate_practice_{course.course_id}", False))
-        with st.container(key="flight_practice_progress"):
-            answered = sum(
-                st.session_state.get(f"answer_{session.session_id}_{question.id}") is not None
-                for question in questions
-            )
-            st.progress(answered / len(questions))
-            st.caption(tr("Answered") + f" · {answered} / {len(questions)}")
-        start_focus_controls(active_practice)
+        question_index = min(active_practice.get("worksheet_index", 0), len(questions) - 1)
+        selected_question = questions[question_index]
+        answered = sum(
+            st.session_state.get(f"answer_{session.session_id}_{question.id}") is not None
+            for question in questions
+        )
+        if session.mode == "topic":
+            paper, margin = st.columns([3, 1], gap="large")
+            visible_questions = [(question_index + 1, selected_question)]
+        else:
+            paper = st.container()
+            margin = None
+            visible_questions = list(enumerate(questions, start=1))
+        with paper, st.container(key="flight_worksheet"):
+            with st.container(key="flight_practice_progress"):
+                st.caption(tr("Question") + f" {question_index + 1:02} / {len(questions):02}" if margin is not None else tr("Questions"))
+                if margin is not None:
+                    stops = min(len(questions), 12)
+                    current_stop = question_index * (stops - 1) // max(1, len(questions) - 1)
+                    markers = "".join(
+                        '<span class="flight-waypoint is-current">✈</span>' if step == current_stop
+                        else '<span class="flight-waypoint"></span>'
+                        for step in range(stops)
+                    )
+                    st.markdown(
+                        f'<div class="flight-waypoints" aria-hidden="true">{markers}</div>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.progress(answered / len(questions))
+                st.caption(tr("Answered") + f" · {answered} / {len(questions)}")
+            with st.expander(tr("Focus controls")):
+                start_focus_controls(active_practice)
 
-        for question_number, question in enumerate(questions, start=1):
-            display = display_question(course.course_id, question, st.session_state)
-            with st.container(
-                border=True,
-                key=f"practice_question_{question.id}",
-            ):
-                st.caption(tr(f"QUESTION {question_number} OF {len(questions)}"))
-                st.markdown(f"### {display.question}")
-                if display.simplified:
-                    st.caption(tr("Simplified wording"))
-                    with st.expander(tr("Show original wording")):
-                        st.write(question.question)
-                        for option in question.options:
-                            st.write(option)
+            for question_number, question in visible_questions:
+                display = display_question(course.course_id, question, st.session_state)
+                with st.container(
+                    border=session.mode == "mock",
+                    key=f"practice_question_{question.id}",
+                ):
+                    st.caption(tr(f"QUESTION {question_number} OF {len(questions)}"))
+                    st.markdown(f"### {display.question}")
+                    if display.simplified:
+                        st.caption(tr("Simplified wording"))
+                        with st.expander(tr("Show original wording")):
+                            st.write(question.question)
+                            for option in question.options:
+                                st.write(option)
 
-                st.radio(
-                    tr("Choose an answer"),
-                    options=list(range(len(question.options))),
-                    format_func=lambda index, options=display.options: (
-                        options[index]
-                    ),
-                    index=None,
-                    width="stretch",
-                    key=f"answer_{session.session_id}_{question.id}",
-                    on_change=remember_widget,
-                    args=(st.session_state, course.course_id, session.session_id, f"answer_{session.session_id}_{question.id}"),
-                )
+                    st.radio(
+                        tr("Choose an answer"),
+                        options=list(range(len(question.options))),
+                        format_func=lambda index, options=display.options: (
+                            options[index]
+                        ),
+                        index=None,
+                        width="stretch",
+                        key=f"answer_{session.session_id}_{question.id}",
+                        on_change=remember_widget,
+                        args=(st.session_state, course.course_id, session.session_id, f"answer_{session.session_id}_{question.id}"),
+                    )
 
-                answer_controls(active_practice, question, course.course_id)
+                    answer_controls(active_practice, question, course.course_id)
 
-                if session.mode == "topic" and (hints := hints_for(question)):
-                    state_key = hint_state_key(session.session_id, question.id)
-                    shown = st.session_state.get(state_key, 0)
-                    for number, hint in enumerate(hints[:shown], start=1):
-                        st.info(tr(f"Hint {number} of {len(hints)}: {display_text(hint, st.session_state)}"))
-                    if shown < len(hints) and st.button(
-                        tr("Show a hint") if shown == 0 else tr("Show next hint"),
-                        key=f"hint_button_{session.session_id}_{question.id}",
-                    ):
-                        st.session_state[state_key] = shown + 1
-                        remember_widget(st.session_state, course.course_id, session.session_id, state_key)
-                        st.rerun()
+                    if session.mode == "topic" and (hints := hints_for(question)):
+                        state_key = hint_state_key(session.session_id, question.id)
+                        shown = st.session_state.get(state_key, 0)
+                        for number, hint in enumerate(hints[:shown], start=1):
+                            st.info(tr(f"Hint {number} of {len(hints)}: {display_text(hint, st.session_state)}"))
+                        if shown < len(hints) and st.button(
+                            tr("Show a hint") if shown == 0 else tr("Show next hint"),
+                            key=f"hint_button_{session.session_id}_{question.id}",
+                        ):
+                            st.session_state[state_key] = shown + 1
+                            remember_widget(st.session_state, course.course_id, session.session_id, state_key)
+                            st.rerun()
+
+            if margin is not None and len(questions) > 1:
+                previous, next_button = st.columns(2)
+                movement = 0
+                if previous.button(
+                    tr("Previous"), icon=":material/arrow_back:", disabled=question_index == 0,
+                    key=f"worksheet_previous_{session.session_id}",
+                ):
+                    movement = -1
+                if next_button.button(
+                    tr("Next"), icon=":material/arrow_forward:", disabled=question_index == len(questions) - 1,
+                    key=f"worksheet_next_{session.session_id}",
+                ):
+                    movement = 1
+                if movement:
+                    new_index = question_index + movement
+                    active_practice["worksheet_index"] = new_index
+                    timer = active_practice.get("focus_timer", {})
+                    if timer.get("since") is not None:
+                        focus_question(active_practice, questions[new_index].id, time.monotonic())
+                    elif timer:
+                        timer["question_id"] = questions[new_index].id
+                    st.rerun()
+
+        if margin is not None:
+            with margin, st.container(key="flight_worksheet_margin"):
+                if learning_radar.radar_enabled(course.course_id):
+                    st.subheader(tr("Learning Radar"))
+                    user = current_user(st.session_state)
+                    radar, _ = load_course_radar(st.session_state, course.course_id, user.user_id if user else None)
+                    render_topic_radar(radar.topics.get(selected_question.topic_id))
+                    if st.button(tr("Explore this topic"), key=f"worksheet_radar_{session.session_id}"):
+                        st.session_state[f"graph_pending_focus_{course.course_id}"] = selected_question.topic_id
+                        st.switch_page("pages/4_Knowledge_Graph.py")
+                    st.divider()
+                topic = next((topic for topic in course.topics if topic.id == selected_question.topic_id), None)
+                if topic is not None:
+                    st.subheader(tr("Quick Notes"))
+                    st.caption(topic.name)
+                    st.write(display_text(topic.summary, st.session_state))
 
         checklist(active_practice)
         st.button(tr("Submit answers"), type="primary", on_click=submit_practice, args=(course, practice_key))

@@ -97,8 +97,8 @@ if st.session_state.get("_learning_page_path") != navigation.url_path:
         st.session_state.pop(f"scope_initialised_{selected_course.course_id}", None)
     st.session_state["_learning_page_path"] = navigation.url_path
 with st.container(key="flight_header"):
-    brand, home, practice, review, account = st.columns(
-        [1.65, 0.85, 0.95, 1.2, 0.95], gap="small", vertical_alignment="center"
+    brand, home, practice, review, analytics, account = st.columns(
+        [1.65, 0.85, 0.95, 1.25, 1.05, 0.95], gap="small", vertical_alignment="center"
     )
     with brand:
         st.markdown(
@@ -112,7 +112,7 @@ with st.container(key="flight_header"):
     with review:
         review_pages = {
             page.url_path: page
-            for page in (pages[1], pages[3], pages[4], pages[5], pages[6])
+            for page in (pages[1], pages[4], pages[5], pages[6])
             if page.url_path != navigation.url_path
         }
         destination = st.selectbox(
@@ -123,6 +123,8 @@ with st.container(key="flight_header"):
         )
         if destination is not None:
             st.switch_page(review_pages[destination])
+    with analytics:
+        st.page_link(pages[3], label=tr("Analytics"), icon=":material/monitoring:", width="stretch")
     with account, st.popover(tr("Account"), icon=":material/account_circle:", width="stretch"):
         render_account_controls(account_page)
         with st.expander(tr("Accessibility settings")):
