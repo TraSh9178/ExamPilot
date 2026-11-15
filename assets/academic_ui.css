@@ -411,3 +411,80 @@ div.st-key-create_course_button button > div > span { justify-content: flex-star
   border-color: transparent;
   min-height: 44px;
 }
+
+/* A worksheet uses a broad answer column and a quiet paper margin. */
+[data-testid="stMain"] .st-key-flight_worksheet { padding: .6rem .55rem 1rem; }
+[data-testid="stMain"] .st-key-flight_worksheet [class*="st-key-practice_question_"] {
+  max-width: none;
+  background: transparent !important;
+}
+.st-key-flight_worksheet [data-testid="stRadio"] label { border-bottom: 1px solid #e3dbcc; }
+.st-key-flight_worksheet [data-testid="stRadio"] label:has(input:checked) {
+  background: #edf1f2;
+  border-color: #a2b4be;
+}
+.st-key-flight_worksheet_margin {
+  border-left: 1px solid #ded8c9;
+  padding: 1rem 0 1rem clamp(.75rem,2vw,1.7rem);
+  min-width: 0;
+}
+[data-testid="stMain"] .st-key-flight_worksheet_margin h3 { font-family: var(--flight-title); }
+.st-key-flight_practice_progress {
+  border-block: 1px solid #e3dbcc;
+  padding-block: .4rem;
+}
+.st-key-flight_practice_progress [role="progressbar"] > div {
+  background-color: #a66a44;
+}
+[data-testid="stAppViewContainer"]:has(.st-key-flight_auth_intro) [data-testid="stMainBlockContainer"] {
+  max-width: 40rem;
+  padding-top: 1.75rem;
+}
+.st-key-flight_auth_intro { padding: .5rem .3rem; }
+@media (max-width: 760px) {
+  [data-testid="stHorizontalBlock"]:has(.st-key-flight_worksheet_margin) {
+    flex-direction: column;
+  }
+  [data-testid="stHorizontalBlock"]:has(.st-key-flight_worksheet_margin) > [data-testid="stColumn"] {
+    flex: 0 1 auto !important;
+    width: 100% !important;
+  }
+  .st-key-flight_worksheet_margin {
+    border-left: 0;
+    border-top: 1px solid #ded8c9;
+    padding: .75rem 0;
+  }
+}
+
+.flight-waypoints {
+  display: flex;
+  position: relative;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 2.35rem;
+  max-width: 38rem;
+  isolation: isolate;
+}
+.flight-waypoints::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 50% .4rem auto;
+  border-top: 1px dashed #aaa284;
+}
+.flight-waypoint {
+  display: grid;
+  place-items: center;
+  width: .56rem;
+  height: .56rem;
+  border: 1px solid #a49a7e;
+  border-radius: 50%;
+  background: var(--flight-paper);
+}
+.flight-waypoint.is-current {
+  width: 2.25rem;
+  height: 2.25rem;
+  color: #985831;
+  border-color: #d7ad8e;
+  font-size: 1.25rem;
+}
