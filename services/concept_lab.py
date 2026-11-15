@@ -57,3 +57,11 @@ def tangent_line(x0: float) -> tuple[float, float]:
     slope = cubic_derivative(x0)
     intercept = cubic(x0) - slope * x0
     return slope, intercept
+
+
+def corner_slopes(distance: float) -> tuple[float, float]:
+    """One-sided secant slopes of |x| at zero, for a positive finite distance."""
+    import math
+    if not math.isfinite(distance) or distance <= 0:
+        raise ValueError("Distance must be positive and finite.")
+    return abs(-distance) / -distance, abs(distance) / distance
