@@ -7,7 +7,7 @@ import streamlit as st
 
 from services.auth_service import login_user, register_user
 from services.auth_session import start_authenticated_session
-from services.i18n import LANGUAGE_KEY, tr
+from services.i18n import LANGUAGE_KEY, tr, render_language_control
 from services.ui_style import apply_app_styles
 
 
@@ -18,7 +18,7 @@ def render_auth_page() -> None:
             '<div class="flight-brand"><span aria-hidden="true">✈</span> ExamPilot</div>',
             unsafe_allow_html=True,
         )
-        st.toggle("中文界面 / Chinese interface", key=LANGUAGE_KEY)
+        render_language_control()
 
     with st.container(key="flight_auth_intro"):
         st.title(tr("Make your next study session count."))

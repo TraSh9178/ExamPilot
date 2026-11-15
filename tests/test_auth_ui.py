@@ -8,7 +8,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from services import auth_ui
-from services.i18n import LANGUAGE_KEY
+from services.i18n import LANGUAGE_KEY, LANGUAGE_WIDGET_KEY
 from services.auth_service import AuthResult, AuthUser
 from tests.auth_helpers import TEST_USER, signed_in_app
 
@@ -68,7 +68,7 @@ def test_login_language_switch_translates_interface_without_database_calls(monke
     monkeypatch.setattr(auth_ui, "login_user", login)
     monkeypatch.setattr(auth_ui, "register_user", register)
     app = AppTest.from_file(str(APP_PATH)).run()
-    next(item for item in app.get("toggle") if item.key == LANGUAGE_KEY).set_value(True).run()
+    next(item for item in app.get("toggle") if item.key == LANGUAGE_WIDGET_KEY).set_value(True).run()
 
     assert not app.exception
     assert [tab.label for tab in app.tabs] == ["登录", "创建账户"]
@@ -85,7 +85,7 @@ def test_chinese_choice_continues_to_dashboard_after_login(monkeypatch) -> None:
         Mock(return_value=AuthResult(success=True, user=TEST_USER, message="Signed in.")),
     )
     app = AppTest.from_file(str(APP_PATH)).run()
-    next(item for item in app.get("toggle") if item.key == LANGUAGE_KEY).set_value(True).run()
+    next(item for item in app.get("toggle") if item.key == LANGUAGE_WIDGET_KEY).set_value(True).run()
     app.text_input(key="login_username").set_value(TEST_USER.username)
     app.text_input(key="login_password").set_value(PASSWORD)
     next(button for button in app.button if button.label == "登录").click().run()

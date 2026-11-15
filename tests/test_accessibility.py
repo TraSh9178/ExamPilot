@@ -87,7 +87,7 @@ def test_accessibility_controls_have_expected_labels_and_keys() -> None:
     assert "Accessibility" in [element.value for element in app.subheader]
     assert [(item.label, item.key) for item in app.get("toggle")] == [
         ("Simplified English", SIMPLIFY_KEY),
-        ("中文界面 / Chinese interface", BILINGUAL_KEY),
+        ("中文界面 / Chinese interface", "_ui_chinese_toggle"),
     ]
 
 
