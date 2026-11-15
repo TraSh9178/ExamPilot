@@ -7,6 +7,12 @@ import re
 LANGUAGE_KEY = "a11y_bilingual_zh"
 
 _TRANSLATIONS = {
+    "Home": "首页", "Review & tools": "复习与工具", "Account": "账户",
+    "Start with one question, or open a course you already study.": "先试做一道题，或打开已经在学的课程。",
+    "Try one practice question after signing in, then follow the next step from your result.": "登录后试做一道题，再根据结果继续学习。",
+    "Review your last practice": "复习上次练习", "Take the next step": "下一步",
+    "Open this topic in Knowledge Map": "在知识图谱查看此主题",
+    "Explore this topic in Concept Lab": "在概念实验室探索此主题",
     "Your study space": "你的学习空间", "Choose a course or continue your next study session.": "选择课程，继续你的学习。",
     "Study totals": "学习数据", "CONTINUE LEARNING": "继续学习", "View latest result": "查看最近成绩",
     "Calculus I demo · Limits": "微积分 I 演示 · 极限", "Try one question": "先做一道题",

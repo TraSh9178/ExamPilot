@@ -13,28 +13,17 @@ from services.ui_style import apply_app_styles
 
 def render_auth_page() -> None:
     apply_app_styles()
-    st.toggle("中文界面 / Chinese interface", key=LANGUAGE_KEY)
-    st.markdown(
-        """
-
-        <style>
-        [data-testid="stMainBlockContainer"] { max-width: 1120px; }
-        [class*="st-key-auth_forms"] { margin-top: 1.5rem; }
-        [data-testid="stFormSubmitButton"] > button {
-            min-height: 3rem;
-            border-radius: 0.75rem;
-            font-weight: 650;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    with st.container(key="flight_auth_header"):
+        st.markdown(
+            '<div class="flight-brand"><span aria-hidden="true">✈</span> ExamPilot</div>',
+            unsafe_allow_html=True,
+        )
+        st.toggle("中文界面 / Chinese interface", key=LANGUAGE_KEY)
 
     intro, forms = st.columns([1.1, 1], gap="large")
-    with intro:
-        st.markdown("### 🎓 ExamPilot")
+    with intro, st.container(key="flight_auth_intro"):
         st.title(tr("Make your next study session count."))
-        st.write(tr("Turn your course materials into a focused study plan and exam practice."))
+        st.write(tr("Try one practice question after signing in, then follow the next step from your result."))
         art_path = Path(__file__).resolve().parents[1] / "assets" / "campus-illustration.svg"
         campus_art = base64.b64encode(art_path.read_bytes()).decode("ascii")
         st.markdown(

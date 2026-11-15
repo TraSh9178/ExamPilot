@@ -2,14 +2,13 @@ from services.i18n import tr
 import streamlit as st
 
 from services.account_sync import (
-    has_unresolved_conflicts,
     render_sidebar_status,
     restore_after_login,
 )
 from services.auth_session import current_user
 
 from services.auth_ui import render_auth_page
-from services.account_ui import render_account_page, render_account_sidebar
+from services.account_ui import render_account_page, render_account_controls
 from services.accessibility import render_accessibility_controls
 from services.ui_style import apply_app_styles
 from services.tutor_assistant_ui import clear_tutor_browser_state, render_tutor_assistant
@@ -18,7 +17,7 @@ st.set_page_config(
     page_title="ExamPilot",
     page_icon="📚",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 user = current_user(st.session_state)
@@ -80,7 +79,7 @@ pages = [
     ),
 ]
 
-navigation = st.navigation([*pages, account_page])
+navigation = st.navigation([*pages, account_page], position="hidden")
 # Page widgets are cleaned up during navigation; rehydrate a course's saved
 # scope once when entering its study page, not on every form interaction.
 if st.session_state.get("_learning_page_path") != navigation.url_path:
@@ -97,11 +96,33 @@ if st.session_state.get("_learning_page_path") != navigation.url_path:
     if selected_course is not None:
         st.session_state.pop(f"scope_initialised_{selected_course.course_id}", None)
     st.session_state["_learning_page_path"] = navigation.url_path
-render_account_sidebar(account_page)
-with st.sidebar:
+with st.container(key="flight_header"):
+    brand, home, practice, review, account = st.columns(
+        [1.65, 0.85, 0.95, 1.2, 0.95], gap="small", vertical_alignment="center"
+    )
+    with brand:
+        st.markdown(
+            '<div class="flight-brand"><span aria-hidden="true">✈</span> ExamPilot</div>',
+            unsafe_allow_html=True,
+        )
+    with home:
+        st.page_link(pages[0], label=tr("Home"), icon=":material/home:", width="stretch")
+    with practice:
+        st.page_link(pages[2], label=tr("Practice"), icon=":material/edit_note:", width="stretch")
+    with review, st.popover(tr("Review & tools"), width="stretch"):
+        for page in (pages[1], pages[3], pages[4], pages[5], pages[6]):
+            st.page_link(page, width="stretch")
+    with account, st.popover(tr("Account"), icon=":material/account_circle:", width="stretch"):
+        render_account_controls(account_page)
+        with st.expander(tr("Accessibility settings")):
+            render_accessibility_controls()
+
+if selected_course := st.session_state.get("current_course"):
+    with st.container(key="flight_course_context"):
+        st.caption(f"{selected_course.course_name}  /  {navigation.title}")
+
+with st.container(key="flight_sync_status"):
     render_sidebar_status()
-    with st.expander(tr("Accessibility settings")):
-        render_accessibility_controls()
 
 # Reserve room for the floating entry at the bottom of narrow study pages.
 st.markdown(

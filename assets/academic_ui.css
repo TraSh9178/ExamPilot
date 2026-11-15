@@ -311,3 +311,85 @@ div.st-key-create_course_button button > div > span { justify-content: flex-star
     flex: 0 1 auto !important;
   }
 }
+
+/* Shared study sheet: paper surfaces, ink headings and muted flight accents. */
+:root {
+  --exam-blue: #3c6483;
+  --exam-blue-dark: #2c506b;
+  --exam-ink: #24354a;
+  --exam-muted: #586475;
+  --exam-border: #ded8c9;
+  --exam-panel: #fffcf6;
+  --flight-paper: #f8f4ea;
+  --flight-note: #f4ead7;
+  --flight-title: Georgia, "Times New Roman", serif;
+}
+[data-testid="stAppViewContainer"],
+[data-testid="stHeader"] {
+  background: var(--flight-paper);
+}
+[data-testid="stAppViewContainer"] [data-testid="stMainBlockContainer"] {
+  max-width: 84rem;
+}
+[data-testid="stAppViewContainer"]:has(.st-key-flight_header) [data-testid="stMainBlockContainer"] {
+  padding-top: 2rem;
+}
+[data-testid="stApp"] :is([data-testid="stSidebar"], [data-testid="stExpandSidebarButton"]) {
+  display: none;
+}
+.st-key-flight_header, .st-key-flight_auth_header {
+  border-bottom: 1px solid var(--exam-border);
+  padding-block: .45rem .7rem;
+}
+.flight-brand {
+  font: 700 clamp(1.22rem, 2.4vw, 1.7rem)/1.25 var(--flight-title);
+  color: #173458;
+  white-space: nowrap;
+}
+.flight-brand span { color: #9a6236; margin-right: .35rem; }
+.st-key-flight_header :is([data-testid="stPageLink"] a, [data-testid="stPopoverButton"]) {
+  background: transparent;
+  border-color: transparent;
+  min-height: 44px;
+  color: var(--exam-ink);
+}
+.st-key-flight_header [data-testid="stPageLink"] a[aria-current="page"] {
+  background: var(--flight-note);
+  color: #704820;
+  border-radius: .5rem;
+}
+.st-key-flight_course_context { color: var(--exam-muted); padding-top: .15rem; }
+[data-testid="stMain"] :is(h1,h2) {
+  font-family: var(--flight-title);
+  color: #173458;
+  letter-spacing: -.024em;
+}
+[data-testid="stMain"] h1 { font-weight: 500; }
+.st-key-auth_forms,
+.st-key-dashboard_demo_start,
+.st-key-dashboard_continue,
+.st-key-flight_next_topic,
+[class*="st-key-practice_question_"] {
+  background: var(--exam-panel) !important;
+  border-color: var(--exam-border) !important;
+  box-shadow: none !important;
+}
+[data-testid="stMain"] .st-key-dashboard_demo_start :is(h3,p) {
+  color: var(--exam-ink);
+}
+.st-key-flight_next_topic, .st-key-guided_limits_review {
+  border-left: 3px solid #a3734e !important;
+}
+.st-key-flight_practice_progress [role="progressbar"] {
+  height: .38rem;
+}
+.st-key-flight_auth_intro img { opacity: .64; }
+[data-testid="stMain"] :is([data-testid="stButton"] button, [data-testid="stFormSubmitButton"] button) {
+  min-height: 44px;
+}
+@media (max-width: 760px) {
+  [data-testid="stAppViewContainer"] [data-testid="stMainBlockContainer"] { padding-inline: 1rem; }
+  .st-key-flight_header [data-testid="stHorizontalBlock"] { flex-wrap: wrap; gap: .3rem; }
+  .st-key-flight_header [data-testid="stColumn"] { flex: 1 0 42% !important; width: auto !important; }
+  .st-key-flight_header [data-testid="stColumn"]:first-child { flex-basis: 100% !important; }
+}
