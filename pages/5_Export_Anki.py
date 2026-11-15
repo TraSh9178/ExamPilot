@@ -26,13 +26,10 @@ def _topic_tag(topic_id: str) -> str:
 apply_app_styles()
 
 st.title(tr("Export to Anki"))
-st.caption(
-    tr("Review course knowledge cards here or download a UTF-8 TSV file "
-    "for Anki text import.")
-)
+st.caption(tr("Review course knowledge cards here or download them for Anki."))
 
 with st.expander(tr("Import instructions and limitations")):
-    st.write(tr("Download the TSV, then use Anki Desktop → File → Import and map Front, Back and Tags. AnkiWeb sync is not supported; Anki Desktop import has not been verified."))
+    st.write(tr("Download the file, then in Anki on your computer choose File → Import and match Front, Back and Tags. Cards are not sent to AnkiWeb automatically."))
 
 course = st.session_state.get("current_course")
 
@@ -87,8 +84,8 @@ if export_scope == tr("Weak Topics"):
             sessions=sessions,
             questions=list(questions_by_id.values()),
         )
-    except ValueError as error:
-        st.error(tr(f"Could not calculate mastery: {error}"))
+    except ValueError:
+        st.error(tr("Couldn't find your weak topics from this practice history."))
         st.stop()
 
     topic_ids = get_weak_topic_ids(stats, mode)
@@ -116,7 +113,7 @@ with st.container(border=True, key="anki_export_summary"):
     summary_column, download_column = st.columns([1.4, 1], vertical_alignment="center")
     with summary_column:
         st.markdown(tr("**Your review deck**"))
-        st.caption(tr(f"{len(cards)} cards · {export_scope} · UTF-8 TSV"))
+        st.caption(tr(f"{len(cards)} cards · {export_scope}"))
     with download_column:
         st.download_button(
             tr("Download Anki TSV"),

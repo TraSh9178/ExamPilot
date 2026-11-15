@@ -5,6 +5,7 @@ from components.knowledge_graph import load_course_radar, radar_count_text
 from models.schemas import StudyPackage
 from services import learning_radar
 from services.account_sync import (
+    SAVE_FAILED_MESSAGE,
     render_save_restore_controls,
     save_course_to_account,
 )
@@ -96,8 +97,6 @@ def render_most_flagged_topics(course, confirmed_key: str) -> None:
                     )
         if radar.has_sample:
             st.caption(tr("Includes sample data"))
-        if not radar.live:
-            st.caption(tr("Live flags are unavailable right now."))
 
 
 if not course.topics:
@@ -112,7 +111,8 @@ else:
 
 with st.container(border=True, key="study_scope_panel"):
     st.subheader(tr("Choose your exam scope"))
-    selected_topic_ids = st.multiselect(
+    # One click per topic; the value stays a list of topic IDs.
+    selected_topic_ids = st.pills(
         tr("Knowledge points"),
         options=[topic.id for topic in course.topics],
         format_func=lambda topic_id: next(
@@ -120,6 +120,7 @@ with st.container(border=True, key="study_scope_panel"):
             for topic in course.topics
             if topic.id == topic_id
         ),
+        selection_mode="multi",
         key=scope_key,
     )
     st.caption(
@@ -133,7 +134,7 @@ with st.container(border=True, key="study_scope_panel"):
         if not selected_topic_ids:
             st.error(tr("Select at least one topic."))
         elif len(selected_topic_ids) != len(set(selected_topic_ids)):
-            st.error(tr("Duplicate topic IDs are not allowed."))
+            st.error(tr("Each topic can be selected only once."))
         elif not set(selected_topic_ids).issubset(valid_topic_ids):
             st.error(tr("The selection contains an invalid topic."))
         else:
@@ -179,10 +180,7 @@ if confirmed_topic_ids:
 
             ai_available = generation_available()
             if not ai_available:
-                st.info(
-                    tr("AI question generation is not available on this server "
-                    "because ANTHROPIC_API_KEY is not configured.")
-                )
+                st.info(tr("AI generation is unavailable right now."))
 
             if st.button(
                 tr("Generate questions"),
@@ -211,9 +209,9 @@ if confirmed_topic_ids:
                         updated_course = StudyPackage.model_validate(
                             generated["package"]
                         )
-                    except ValueError as error:
+                    except ValueError:
                         st.error(
-                            tr(f"Could not load generated questions: {error}")
+                            tr("Couldn't use the generated questions. Try generating them again.")
                         )
                     else:
                         st.session_state[
@@ -224,11 +222,7 @@ if confirmed_topic_ids:
                             st.session_state, updated_course
                         )
                         if sync_outcome is not None and not sync_outcome.success:
-                            st.warning(
-                                tr("Questions kept in this session but not saved "
-                                f"to your account: {sync_outcome.message} "
-                                "Use Save below to retry.")
-                            )
+                            st.warning(tr(SAVE_FAILED_MESSAGE))
 
                         # Previous practice used the old question set.
                         st.session_state.pop(
@@ -243,7 +237,8 @@ if confirmed_topic_ids:
     )
 
     st.caption(
-        tr(f"Available questions in confirmed scope: {available_count}")
+        tr(f"{available_count} question ready" if available_count == 1
+           else f"{available_count} questions ready")
     )
 
     if available_count:
@@ -273,7 +268,10 @@ if learning_radar.radar_enabled(course.course_id):
 
 pending_count = sum(status_for(course, q.id) == "pending" for q in course.questions)
 if pending_count:
-    st.caption(f"{pending_count} questions await review before they can be practised.")
+    st.caption(tr(
+        f"{pending_count} new question needs your check" if pending_count == 1
+        else f"{pending_count} new questions need your check"
+    ))
     if st.button(tr("Review pending questions"), key=f"open_question_review_{course.course_id}"):
         st.session_state[f"question_review_open_{course.course_id}"] = True
 with st.expander(tr("Course tools"), expanded=st.session_state.get(f"question_review_open_{course.course_id}", False)):
@@ -282,29 +280,41 @@ with st.expander(tr("Course tools"), expanded=st.session_state.get(f"question_re
         editable = sorted([q for q in course.questions if status_for(course, q.id) != "superseded"], key=lambda q: status_for(course, q.id) != "pending")
         if editable:
             by_id = {q.id: q for q in editable}
+            # Plain review labels; questions with no review decision get none.
+            status_labels = {"pending": "Needs check", "approved": "Approved", "flagged": "Flagged"}
+
+            def review_label(qid):
+                text = by_id[qid].question[:100]
+                status = status_labels.get(status_for(course, qid))
+                return f"{tr(status)} · {text}" if status else text
+
             question_id = st.selectbox(
                 tr("Question to review"), list(by_id),
-                format_func=lambda qid: f"[{status_for(course, qid)}] {by_id[qid].question[:100]}",
+                format_func=review_label,
                 key=f"editor_question_{course.course_id}",
             )
             original = by_id[question_id]
-            st.caption(tr("Approve only after checking the answer and explanation. Editing creates a new version; past results stay unchanged. Legacy means no review decision was recorded."))
+            st.caption(tr("Check the answer and explanation before approving; edits never change past results."))
             with st.form(f"question_review_{course.course_id}_{question_id}"):
                 prompt = st.text_area(tr("Question text"), value=original.question)
                 options = [st.text_input(f"Option {chr(65 + index)}", value=value) for index, value in enumerate(original.options)]
-                correct = st.selectbox(tr("Correct answer"), list(range(4)), index=original.correct_index, format_func=lambda i: chr(65+i))
+                correct = st.radio(tr("Correct answer"), list(range(4)), index=original.correct_index, format_func=lambda i: chr(65+i), horizontal=True)
                 explanation = st.text_area(tr("Explanation"), value=original.explanation)
                 with st.expander(tr("Question classification (advanced)")):
-                    dimensions = [None, "computation", "conceptual"]
-                    dimension = st.selectbox(
+                    # "untagged" stands in for None so every radio option is a real value.
+                    dimension_labels = {
+                        "untagged": "Untagged", "computation": "Computation",
+                        "conceptual": "Conceptual understanding",
+                    }
+                    dimensions = list(dimension_labels)
+                    dimension_choice = st.radio(
                         tr("Learning DNA evidence type"), dimensions,
-                        index=dimensions.index(original.cognitive_dimension),
-                        format_func=lambda value: {
-                            None: "Untagged", "computation": "Computation",
-                            "conceptual": "Conceptual understanding",
-                        }[value],
-                        help="Choose what this question tests. Leave uncertain or mixed questions untagged; this label is not a student ability score.",
+                        index=dimensions.index(original.cognitive_dimension or "untagged"),
+                        format_func=lambda value: tr(dimension_labels[value]),
+                        horizontal=True,
+                        help=tr("Choose what this question tests. Leave uncertain or mixed questions untagged; this label is not a student ability score."),
                     )
+                    dimension = None if dimension_choice == "untagged" else dimension_choice
                     structure = st.text_input(
                         tr("Practice structure label"), value=original.practice_structure or "", max_chars=80,
                         help="A task type such as tangent_equation or derivative_at_point. Use the same label for the same task structure; leave uncertain questions blank.",
@@ -321,7 +331,7 @@ with st.expander(tr("Course tools"), expanded=st.session_state.get(f"question_re
                     save_course(st.session_state, revised)
                     outcome = save_course_to_account(st.session_state, revised)
                     if outcome is not None and not outcome.success:
-                        st.warning(tr("Review kept locally but not saved to your account. Use Save to retry. ") + tr(outcome.message))
+                        st.warning(tr(SAVE_FAILED_MESSAGE))
                     else:
                         st.session_state[f"question_review_notice_{course.course_id}"] = "Question review saved."
                         st.rerun()
@@ -355,7 +365,7 @@ with st.expander(tr("Course tools"), expanded=st.session_state.get(f"question_re
                 staged.pop(f"course_document_{course.course_id}", None)
                 outcome = save_course_to_account(staged, updated)
                 if outcome is not None and not outcome.success:
-                    st.error(tr("Material was not deleted from your account. ") + tr(outcome.message))
+                    st.error(tr("Couldn't delete the material from your account. Nothing was changed."))
                 else:
                     save_course(st.session_state, updated)
                     st.session_state.pop(f"course_document_{course.course_id}", None)

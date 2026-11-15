@@ -9,7 +9,7 @@ from models.schemas import StudyPackage
 ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD_PATH = ROOT / "pages" / "0_Dashboard.py"
 STUDY_PLAN_PATH = ROOT / "pages" / "1_Study_Hub.py"
-UNAVAILABLE_TEXT = "ANTHROPIC_API_KEY is not configured"
+UNAVAILABLE_TEXT = "AI generation is unavailable right now."
 
 
 def dashboard_with_extracted_text(monkeypatch) -> AppTest:
@@ -51,6 +51,7 @@ def test_dashboard_disables_topic_generation_without_api_key(monkeypatch):
 
     assert generate_topics_button(app).disabled
     assert any(UNAVAILABLE_TEXT in item.value for item in app.info)
+    assert not any("ANTHROPIC_API_KEY" in item.value for item in app.info)
 
 
 def test_dashboard_enables_topic_generation_with_api_key(monkeypatch):
@@ -70,6 +71,7 @@ def test_study_plan_disables_question_generation_without_api_key(monkeypatch):
     assert not app.exception
     assert app.button(key="generate_questions_course-1").disabled
     assert any(UNAVAILABLE_TEXT in item.value for item in app.info)
+    assert not any("ANTHROPIC_API_KEY" in item.value for item in app.info)
 
 
 def test_study_plan_enables_question_generation_with_api_key(monkeypatch):

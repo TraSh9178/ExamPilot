@@ -317,6 +317,28 @@ _TRANSLATIONS = {
     "See computation and conceptual understanding separately, with the answers behind each pattern.": "分别查看计算与概念理解，以及各项判断依据的答案。",
     "These are question-based observations, not a validated cognitive diagnosis. Multiple-choice answers do not demonstrate that you can explain an idea in your own words.": "这些是基于题目的观察，并非经过验证的认知诊断；选择题无法证明你能用自己的话解释概念。",
     "Answer more different questions in both dimensions before comparing them.": "在两个维度上多做不同题目，再进行比较。",
+    # paper UI: pages
+    "Couldn't save to your account. Your work is kept on this device for now.": "未能保存到账户，你的内容暂时保留在此设备上。",
+    "Couldn't restore from your account. Your work on this device is unchanged.": "未能从账户恢复，此设备上的内容没有改变。",
+    "Nothing saved for this course yet.": "此课程还没有保存的内容。",
+    "Some practice on this device differs from your saved records and is not counted. Logging out will remove it.": "此设备上有部分练习与已保存记录不一致，暂不计入统计；退出登录后将被删除。",
+    "Log in to back up this course.": "登录后可备份此课程。",
+    "Back up this course to your account.": "将此课程备份到你的账户。",
+    "Only the extracted text is saved with your course, not the original file.": "课程只保存提取的文字，不保存原始文件。",
+    "Couldn't use the generated topics. Try generating them again.": "无法使用生成的知识点，请重新生成。",
+    "Couldn't use the generated questions. Try generating them again.": "无法使用生成的题目，请重新生成。",
+    "AI generation is unavailable right now.": "AI 生成功能暂时不可用。",
+    "AI generation is unavailable right now. Try again later.": "AI 生成功能暂时不可用，请稍后重试。",
+    "Each topic can be selected only once.": "每个知识点只能选择一次。",
+    "Needs check": "待检查", "Approved": "已批准", "Flagged": "已标记",
+    "Check the answer and explanation before approving; edits never change past results.": "批准前请检查答案与解析；编辑不会改变以往成绩。",
+    "Couldn't delete the material from your account. Nothing was changed.": "未能从账户删除资料，内容没有任何改变。",
+    "Review course knowledge cards here or download them for Anki.": "在此查看课程知识卡片，或下载后导入 Anki。",
+    "Download the file, then in Anki on your computer choose File → Import and match Front, Back and Tags. Cards are not sent to AnkiWeb automatically.": "下载文件后，在电脑上的 Anki 中选择 文件 → 导入，并将字段对应到 Front、Back 和 Tags。卡片不会自动同步到 AnkiWeb。",
+    "Uses your latest answer to each question. Fewer than 3 different questions shows as insufficient evidence.": "按每道题的最近一次回答计算；不同题目少于 3 道时显示为证据不足。",
+    "Learning DNA couldn't read this practice history.": "学习画像无法读取这段练习历史。",
+    "Couldn't calculate your progress from this practice history.": "无法根据这段练习历史计算学习进度。",
+    "Couldn't find your weak topics from this practice history.": "无法根据这段练习历史找出薄弱知识点。",
 }
 
 _TRANSLATIONS.update(
@@ -460,6 +482,12 @@ _DYNAMIC = [
     (r"^(\d+) correct answer\(s\) were marked Guessed\. Revisit them before treating them as secure knowledge\.$", r"有 \1 道答对的题被标记为猜测；请复习后再认为自己已掌握。"),
     (r"^(\d+) answer\(s\) used in-app hints\.$", r"\1 道题使用了应用内提示。"),
     (r"^Hint use was not recorded for (\d+) answer\(s\)\.$", r"\1 道题没有记录提示使用情况。"),
+    # paper UI: pages
+    (r"^(\d+) item\(s\) not saved yet\. Use Save in Study Plan to retry\.$", r"还有 \1 项未保存；请在学习计划中点击保存重试。"),
+    (r"^(\d+) questions? ready$", r"\1 道题可以练习"),
+    (r"^(\d+) new questions? needs? your check$", r"有 \1 道新题需要你检查"),
+    (r"^(\d+) cards · (.*)$", r"\1 张卡片 · \2"),
+    (r"^An error occurred while .+\. Try again later\.$", r"处理请求时出错，请稍后重试。"),
 ]
 
 

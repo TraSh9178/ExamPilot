@@ -12,14 +12,12 @@ def render_learning_dna(course, attempts, sessions, questions, mode):
     with st.expander(tr("How to read this profile")):
         st.caption(tr("These are question-based observations, not a validated cognitive diagnosis. Multiple-choice answers do not demonstrate that you can explain an idea in your own words."))
     try:
-        profile, excluded = evidence_profile(attempts, sessions, questions, mode)
-    except ValueError as error:
-        st.warning(tr(f"Learning DNA could not read this history: {error}"))
+        profile, _excluded = evidence_profile(attempts, sessions, questions, mode)
+    except ValueError:
+        st.warning(tr("Learning DNA couldn't read this practice history."))
         return
-    st.caption(tr("Each question family counts once, using its latest response in this mode. Fewer than 3 different questions means insufficient evidence. Untagged and unanswered responses are excluded."))
+    st.caption(tr("Uses your latest answer to each question. Fewer than 3 different questions shows as insufficient evidence."))
     by_key = {(p.topic_id, p.dimension): p for p in profile}
-    if excluded:
-        st.caption(tr(f"{excluded} latest question-family response(s) excluded because they are untagged or unanswered."))
     for topic in course.topics:
         with st.container(border=True, key=f"learning_dna_{topic.id}"):
             st.markdown(f"**{topic.name}**")
@@ -44,5 +42,3 @@ def render_learning_dna(course, attempts, sessions, questions, mode):
             if evidence:
                 with st.expander(tr("View evidence") + f": {topic.name}"):
                     st.dataframe(evidence, hide_index=True, width="stretch")
-    with st.expander(tr("Question labels and saved history")):
-        st.caption(tr("Tag a question's evidence type under Study Plan → Course tools → Review and edit questions. Saved questions and graded history restore with your course; editing a tag creates a new question version and preserves earlier evidence."))

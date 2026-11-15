@@ -99,7 +99,7 @@ def test_review_form_is_collapsed_until_requested():
     assert not app.exception
     panel=next(e for e in app.expander if e.label=='Review and edit questions')
     assert not panel.proto.expanded
-    assert len(app.multiselect)==1
+    assert app.button_group(key='scope_selection_calculus-i-demo') and not app.multiselect
     assert not app.checkbox
     app.button(key='open_question_review_calculus-i-demo').click().run()
     assert not app.exception
