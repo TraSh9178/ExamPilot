@@ -8,6 +8,7 @@ from services.concept_lab import (
     cubic, cubic_derivative, limit_example, limit_table, secant_slope, tangent_line,
 )
 from services.ui_style import apply_app_styles
+from services.learning_flow import stage_practice
 
 
 def practice_topic(topic_id: str) -> None:
@@ -23,8 +24,7 @@ def practice_topic(topic_id: str) -> None:
         st.info("Confirm this topic in Study Plan first.")
         st.page_link("pages/1_Study_Hub.py", label="Go to Study Plan")
         return
-    st.session_state[f"practice_mode_{course.course_id}"] = "Topic Practice"
-    st.session_state[f"practice_topic_{course.course_id}"] = topic_id
+    stage_practice(st.session_state, course, topic_id)
     st.switch_page("pages/2_Practice_Center.py")
 
 
@@ -33,7 +33,11 @@ apply_app_styles()
 st.title("Concept Lab")
 st.caption("Move the sliders and watch the idea happen.")
 
-limits_tab, derivatives_tab = st.tabs(["Limits", "Derivatives"])
+requested_topic = st.session_state.get("concept_lab_topic_calculus-i-demo", "calc_limits")
+limits_tab, derivatives_tab = st.tabs(
+    ["Limits", "Derivatives"],
+    default="Derivatives" if requested_topic == "calc_derivatives" else "Limits",
+)
 
 with limits_tab:
     st.subheader("Limits: approaching x = 2")
@@ -115,19 +119,20 @@ with limits_tab:
         f"{selected['right_value']:.3f}",
     )
 
-    st.dataframe(
-        pd.DataFrame(limit_table(distances)).rename(
-            columns={
-                "distance": "Distance",
-                "left_x": "Left x",
-                "left_value": "f(Left x)",
-                "right_x": "Right x",
-                "right_value": "f(Right x)",
-            }
-        ),
-        hide_index=True,
-        width="stretch",
-    )
+    with st.expander("Compare values from both sides"):
+        st.dataframe(
+            pd.DataFrame(limit_table(distances)).rename(
+                columns={
+                    "distance": "Distance",
+                    "left_x": "Left x",
+                    "left_value": "f(Left x)",
+                    "right_x": "Right x",
+                    "right_value": "f(Right x)",
+                }
+            ),
+            hide_index=True,
+            width="stretch",
+        )
     st.info("f(2) is undefined, but f(x) gets as close to 4 as we like.")
 
     practice_topic("calc_limits")

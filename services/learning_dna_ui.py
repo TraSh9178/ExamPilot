@@ -7,7 +7,8 @@ from services.learning_dna import DIMENSIONS, comparison, evidence_profile
 def render_learning_dna(course, attempts, sessions, questions, mode):
     st.subheader("Learning DNA")
     st.caption("See computation and conceptual understanding separately, with the answers behind each pattern.")
-    st.caption("These are question-based observations, not a validated cognitive diagnosis. Multiple-choice answers do not demonstrate that you can explain an idea in your own words.")
+    with st.expander("How to read this profile"):
+        st.caption("These are question-based observations, not a validated cognitive diagnosis. Multiple-choice answers do not demonstrate that you can explain an idea in your own words.")
     try:
         profile, excluded = evidence_profile(attempts, sessions, questions, mode)
     except ValueError as error:
@@ -42,4 +43,5 @@ def render_learning_dna(course, attempts, sessions, questions, mode):
             if evidence:
                 with st.expander(f"View evidence: {topic.name}"):
                     st.dataframe(evidence, hide_index=True, width="stretch")
-    st.caption("Tag a question's evidence type under Study Plan → Review and edit questions. Saved questions and graded history restore with your course; editing a tag creates a new question version and preserves earlier evidence.")
+    with st.expander("Question labels and saved history"):
+        st.caption("Tag a question's evidence type under Study Plan → Review and edit questions. Saved questions and graded history restore with your course; editing a tag creates a new question version and preserves earlier evidence.")

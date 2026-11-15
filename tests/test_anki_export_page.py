@@ -128,7 +128,7 @@ def test_weak_topics_filter_uses_selected_mode_only(monkeypatch):
     )
     assert len(exported_rows) == 3
     assert all(row[2].endswith(f"topic_{first_topic}") for row in exported_rows)
-    assert len(app.expander) == 3
+    assert len([item for item in app.expander if item.label == "Show answer and explanation"]) == 3
 
     app.radio[1].set_value("Topic Practice").run()
     assert not app.exception
@@ -140,7 +140,7 @@ def test_weak_topics_filter_uses_selected_mode_only(monkeypatch):
     )
     assert len(exported_rows) == 3
     assert all(row[2].endswith(f"topic_{second_topic}") for row in exported_rows)
-    assert len(app.expander) == 3
+    assert len([item for item in app.expander if item.label == "Show answer and explanation"]) == 3
 
 
 def test_course_history_and_filter_state_are_isolated(monkeypatch):
@@ -277,7 +277,7 @@ def test_all_exported_cards_are_available_on_page_for_study():
     assert card_questions == [
         question.question for question in course.questions
     ]
-    assert len(app.expander) == len(course.questions)
+    assert len([item for item in app.expander if item.label == "Show answer and explanation"]) == len(course.questions)
     assert len(app.success) == len(course.questions)
     assert app.success[0].value.startswith("A. ")
     assert app.text[0].value.startswith("A. ")

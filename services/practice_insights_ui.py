@@ -10,6 +10,7 @@ from services.hints import hint_state_key
 from services.course_state import save_course
 from services.account_sync import save_course_with_history
 from services.ai_service import generation_available, check_explanation
+from services.learning_flow import remember_widget, install_practice
 
 
 def save_rows(course, sid, rows):
@@ -30,7 +31,8 @@ def start_focus_controls(active):
     if 'focus_timer' not in active:
         focus_question(active, active['questions'][0].id, now)
     settle_focus(active, now)
-    st.caption('Focus time is an estimate for the selected question, capped at 120 seconds between interactions. Pause when taking a break; it does not measure attention.')
+    with st.expander('About focus time'):
+        st.caption('Focus time is an estimate for the selected question, capped at 120 seconds between interactions. Pause when taking a break; it does not measure attention.')
     timer = active['focus_timer']
     if st.button('Resume focus timer' if timer['since'] is None else 'Pause focus timer', key=f"focus_pause_{active['session'].session_id}"):
         if timer['since'] is None:
@@ -41,7 +43,7 @@ def start_focus_controls(active):
         st.rerun()
 
 
-def answer_controls(active, question):
+def answer_controls(active, question, course_id):
     sid = active['session'].session_id
     if st.button('Work on this question', key=f'focus_{sid}_{question.id}'):
         focus_question(active, question.id, time.monotonic())
@@ -49,7 +51,8 @@ def answer_controls(active, question):
     if active.get('focus_timer', {}).get('question_id') == question.id:
         st.caption('Selected for focus-time tracking')
     st.selectbox('How confident are you?', list(CONFIDENCE),
-        format_func=lambda value: CONFIDENCE[value], key=f'confidence_{sid}_{question.id}')
+        format_func=lambda value: CONFIDENCE[value], key=f'confidence_{sid}_{question.id}',
+        on_change=remember_widget, args=(st.session_state, course_id, sid, f'confidence_{sid}_{question.id}'))
 
 
 def checklist(active):
@@ -104,11 +107,12 @@ def result_overview(course, session, questions, result):
         st.caption(f"Hint use was not recorded for {len(data['unknown_hints'])} answer(s).")
     if data['topic_seconds']:
         names={t.id:t.name for t in course.topics}
-        st.markdown('**Tracked focus time by topic**')
-        st.dataframe([{'Topic':names.get(t,t),'Tracked seconds':round(seconds,1)}
-            for t,seconds in sorted(data['topic_seconds'].items(),key=lambda p:-p[1])],hide_index=True,width='stretch')
-        slowest=max(questions,key=lambda q:rows.get(q.id,{}).get('focus_seconds') or 0)
-        st.caption('Longest tracked question: ' + slowest.question)
+        with st.expander('Time breakdown'):
+            st.markdown('**Tracked focus time by topic**')
+            st.dataframe([{'Topic':names.get(t,t),'Tracked seconds':round(seconds,1)}
+                for t,seconds in sorted(data['topic_seconds'].items(),key=lambda p:-p[1])],hide_index=True,width='stretch')
+            slowest=max(questions,key=lambda q:rows.get(q.id,{}).get('focus_seconds') or 0)
+            st.caption('Longest tracked question: ' + slowest.question)
     else:
         st.caption('No focus-time measurements were recorded for this session.')
     render_priorities(course, data['priorities'])
@@ -116,9 +120,9 @@ def result_overview(course, session, questions, result):
 
 def launch_priority(course, priorities):
     try:
-        st.session_state[f"active_practice_{course.course_id}"] = priority_session(
+        install_practice(st.session_state, course.course_id, priority_session(
             course, priorities, st.session_state.get(f"confirmed_scope_{course.course_id}", []),
-        )
+        ))
     except ValueError as error:
         st.session_state["priority_launch_error"] = str(error)
     else:
@@ -127,12 +131,14 @@ def launch_priority(course, priorities):
 
 def render_priorities(course, priorities):
     st.markdown('**Smart review list**')
-    st.caption('Priority uses incorrect/unanswered responses, confidence, hints and relative tracked time. It is a transparent practice suggestion, not a diagnosis.')
     if priorities:
-        names={t.id:t.name for t in course.topics}
-        st.dataframe([{'Rank':i,'Topic':names.get(r['topic_id'],r['topic_id']),
-                       'Question':r['question'],'Why review':', '.join(r['reasons'])}
-                      for i,r in enumerate(priorities,1)],hide_index=True,width='stretch')
+        st.caption(f"{len(priorities)} questions could benefit from another look.")
+        with st.expander("Why this review order"):
+            st.caption('Priority uses incorrect/unanswered responses, confidence, hints and relative tracked time. It is a transparent practice suggestion, not a diagnosis.')
+            names={t.id:t.name for t in course.topics}
+            st.dataframe([{'Rank':i,'Topic':names.get(r['topic_id'],r['topic_id']),
+                           'Question':r['question'],'Why review':', '.join(r['reasons'])}
+                          for i,r in enumerate(priorities,1)],hide_index=True,width='stretch')
         st.button('Practise review priorities', key=f'priorities_{course.course_id}',
             on_click=launch_priority, args=(course, priorities))
         if error := st.session_state.pop('priority_launch_error', None):
@@ -146,7 +152,7 @@ def render_priorities(course, priorities):
 
 def launch_transfer(course, question, session, confirmed, practice_key):
     try:
-        st.session_state[practice_key] = transfer_session(course, question, session, confirmed)
+        install_practice(st.session_state, course.course_id, transfer_session(course, question, session, confirmed))
     except ValueError as error:
         st.session_state['transfer_launch_error'] = str(error)
 
@@ -234,10 +240,11 @@ def render_history_insights(course, history, mode):
             seconds=session_insights(course,sid).get(q.id,{}).get('focus_seconds')
             if seconds is not None:total_seconds[q.topic_id]=total_seconds.get(q.topic_id,0.0)+seconds
     if total_seconds:
-        st.subheader('Tracked focus time by topic')
-        st.caption('Totals across recorded sessions in this mode; missing time is not treated as zero.')
-        st.dataframe([{'Topic':names.get(t,t),'Tracked seconds':round(seconds,1)}
-            for t,seconds in sorted(total_seconds.items(),key=lambda p:-p[1])],hide_index=True,width='stretch')
+        with st.expander('Time by topic'):
+            st.subheader('Tracked focus time by topic')
+            st.caption('Totals across recorded sessions in this mode; missing time is not treated as zero.')
+            st.dataframe([{'Topic':names.get(t,t),'Tracked seconds':round(seconds,1)}
+                for t,seconds in sorted(total_seconds.items(),key=lambda p:-p[1])],hide_index=True,width='stretch')
     qs=[value[0] for value in latest.values()]
     attempts=[value[1] for value in latest.values()]
     rows={q.id:r for q,a,r in latest.values()}

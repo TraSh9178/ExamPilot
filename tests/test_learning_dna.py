@@ -127,12 +127,12 @@ def test_progress_exposes_learning_dna_evidence(with_history):
     assert 'not a validated cognitive diagnosis' in captions
     if with_history:
         assert 'Computation answers are more consistent' in ' '.join(m.value for m in app.markdown)
-        assert len(app.dataframe[0].value)==6
+        assert len(next(frame.value for frame in app.dataframe if 'Dimension' in frame.value.columns))==6
     else:
         assert 'Insufficient evidence' in captions
     app.radio(key='performance_mode_test-dna').set_value('Mock Exam').run()
     assert not app.exception
-    assert not app.dataframe
+    assert not any("Dimension" in frame.value.columns for frame in app.dataframe)
 
 
 def test_review_ui_can_tag_an_untagged_question_without_rewriting_history():

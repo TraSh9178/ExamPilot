@@ -82,12 +82,22 @@ navigation = st.navigation([*pages, account_page])
 if st.session_state.get("_learning_page_path") != navigation.url_path:
     selected_course = st.session_state.get("current_course")
     if selected_course is not None:
+        if navigation.url_path == "Practice_Center":
+            st.session_state[f"rehydrate_practice_{selected_course.course_id}"] = True
+        active = st.session_state.get(f"active_practice_{selected_course.course_id}")
+        if active and "result" not in active and active.get("focus_timer"):
+            import time
+            from services.practice_insights import settle_focus
+            settle_focus(active, time.monotonic())
+            active["focus_timer"]["since"] = None
+    if selected_course is not None:
         st.session_state.pop(f"scope_initialised_{selected_course.course_id}", None)
     st.session_state["_learning_page_path"] = navigation.url_path
 render_account_sidebar(account_page)
 with st.sidebar:
     render_sidebar_status()
-    render_accessibility_controls()
+    with st.expander("Accessibility settings"):
+        render_accessibility_controls()
 
 # Reserve room for the floating entry at the bottom of narrow study pages.
 st.markdown(

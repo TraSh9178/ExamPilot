@@ -31,6 +31,7 @@ from services.relationship_suggestions import (
     suggestions_key,
 )
 from services.ui_style import apply_app_styles
+from services.learning_flow import open_lab, stage_practice
 
 apply_app_styles()
 
@@ -192,11 +193,12 @@ with graph_column:
 
     if radar is not None:
         with st.container(border=True, key="learning_radar_panel"):
-            render_radar_panel(
-                radar,
-                learning_radar.top_hard_topics(radar, limit=len(course.topics)),
-                topic_names,
-            )
+            with st.expander("Learning Radar · community signals"):
+                render_radar_panel(
+                    radar,
+                    learning_radar.top_hard_topics(radar, limit=len(course.topics)),
+                    topic_names,
+                )
 
     if not course.relationships:
         st.info("This course has no topic relationships yet.")
@@ -334,6 +336,19 @@ with details_column:
             if not any(links.values()):
                 st.caption("No connections recorded for this topic.")
             st.caption("These are course-provided relationships, not a diagnosis of your understanding.")
+            for linked_id in links["prerequisites"]:
+                if st.button("Review " + topic_names[linked_id], key=f"graph_prerequisite_{course.course_id}_{linked_id}"):
+                    st.session_state[pending_key] = linked_id
+                    st.rerun()
+            if st.button("Practise this topic", key=f"graph_practice_{course.course_id}_{selected_node_id}", type="primary"):
+                try:
+                    stage_practice(st.session_state, course, selected_node_id)
+                except ValueError as error:
+                    st.info(str(error))
+                    st.page_link("pages/1_Study_Hub.py", label="Confirm scope in Study Plan")
+                else:
+                    st.switch_page("pages/2_Practice_Center.py")
+
             if radar is not None:
                 st.divider()
                 st.markdown("**Learning Radar**")
@@ -386,6 +401,7 @@ with details_column:
                         key=f"radar_concept_lab_{course.course_id}_{selected_node_id}",
                         icon=":material/science:",
                     ):
+                        open_lab(st.session_state, course.course_id, selected_node_id)
                         st.switch_page("pages/6_Concept_Lab.py")
 
     with st.container(border=True, key="knowledge_graph_legend"):
