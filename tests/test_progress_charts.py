@@ -413,7 +413,8 @@ def test_chart_numbers_come_from_the_existing_calculations(mode_label, mode):
         status = get_mastery_status(item)
         assert row["chip"] == STATUS_WORDS[status]
         different = f"{item.unique_attempted} different question{'s' if item.unique_attempted != 1 else ''}"
-        answers = f"{item.attempted} answer{'s' if item.attempted != 1 else ''}"
+        # Every attempt counts here, as on the page this one replaced ("X correct out of Y answers").
+        answers = f"{item.correct} correct out of {item.attempted} answer{'s' if item.attempted != 1 else ''}"
         if status in {"unattempted", "insufficient_evidence"}:
             assert row["fill"] is None and row["style"] == "empty"
             assert row["value"] == (different if item.attempted else "0 answers")
@@ -465,11 +466,12 @@ def test_chart_numbers_come_from_the_existing_calculations(mode_label, mode):
 def test_known_mastery_numbers_for_the_fixture():
     course, history = chart_course_and_history()
     rows = bar_rows(chart(progress_app(course, history, mode="Mock Exam"), "mastery"))
-    # Rates: r1 wrong, then right in m2; Limits: 1 of 3 latest answers right; Series: one answer.
+    # Rates: r1 wrong, then right in m2 (5 of its 6 answers right); Limits: 1 of 3 answers right;
+    # Series: one answer, right.
     assert [(row["chip"], row["value"], row["detail"], row["style"]) for row in rows] == [
-        ("Mastered", "100%", "5 different questions · 6 answers", "mastered"),
-        ("Weak", "33%", "3 different questions · 3 answers", "weak"),
-        ("Insufficient evidence", "1 different question", "1 answer", "empty"),
+        ("Mastered", "100%", "5 different questions · 5 correct out of 6 answers", "mastered"),
+        ("Weak", "33%", "3 different questions · 1 correct out of 3 answers", "weak"),
+        ("Insufficient evidence", "1 different question", "1 correct out of 1 answer", "empty"),
     ]
     time = bar_rows(chart(progress_app(course, history, mode="Mock Exam"), "time"))
     assert [(row["label"], row["value"]) for row in time] == [

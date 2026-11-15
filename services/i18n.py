@@ -681,6 +681,7 @@ _DYNAMIC = [
     # progress charts
     (r"^(\d+) different questions?$", r"\1 道不同题目"),
     (r"^(\d+) answers?$", r"\1 次作答"),
+    (r"^(\d+) correct out of (\d+) answers?$", r"\2 次作答中答对 \1 次"),
     (r"^Session (\d+): (\d+)%$", r"第 \1 次练习：\2%"),
     (r"^Latest session: (\d+)%$", r"最近一次练习：\1%"),
     (r"^(\d+) min (\d+) s$", r"\1 分 \2 秒"),

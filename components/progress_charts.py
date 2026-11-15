@@ -93,8 +93,12 @@ def questions_text(count: int, tr: Translate = _same) -> str:
     return tr(f"{count} different question" if count == 1 else f"{count} different questions")
 
 
-def answers_text(count: int, tr: Translate = _same) -> str:
-    return tr(f"{count} answer" if count == 1 else f"{count} answers")
+def answers_text(count: int, tr: Translate = _same, correct: int | None = None) -> str:
+    """How many answers, and with ``correct`` how many of them were right (every attempt counts)."""
+    noun = "answer" if count == 1 else "answers"
+    if correct is None or not count:
+        return tr(f"{count} {noun}")
+    return tr(f"{correct} correct out of {count} {noun}")
 
 
 def duration_text(seconds: float, tr: Translate = _same) -> str:
@@ -133,14 +137,14 @@ def mastery_rows(topics: Iterable[Any], stats_by_topic: Mapping[str, Any], tr: T
         if style == "empty":
             if attempted:
                 rows.append(BarRow(topic.name, None, style, chip, questions_text(different, tr),
-                                   answers_text(attempted, tr)))
+                                   answers_text(attempted, tr, stats.correct)))
             else:
                 rows.append(BarRow(topic.name, None, style, chip, answers_text(0, tr)))
             continue
         accuracy = stats.evidence_accuracy if stats.unique_attempted is not None else stats.accuracy
         rows.append(BarRow(
             topic.name, accuracy, style, chip, percent_text(accuracy),
-            f"{questions_text(different, tr)} · {answers_text(attempted, tr)}",
+            f"{questions_text(different, tr)} · {answers_text(attempted, tr, stats.correct)}",
         ))
     return rows
 
