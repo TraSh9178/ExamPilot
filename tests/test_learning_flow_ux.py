@@ -74,7 +74,9 @@ def test_draft_widgets_survive_registered_page_navigation():
     assert not app.exception
     assert app.radio(key='answer_session-1_question-1').value==0
     assert app.button_group(key='confidence_session-1_question-1').value=='guessed'
-    assert app.session_state['active_practice_course-1']['focus_timer']['since'] is None
+    # Leaving stopped the clock; coming back starts it again (not a student's own pause).
+    timer=app.session_state['active_practice_course-1']['focus_timer']
+    assert timer['since'] is not None and 'away' not in timer
 
 
 def test_lab_default_matches_requested_topic():
