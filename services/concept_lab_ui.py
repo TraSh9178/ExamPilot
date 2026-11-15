@@ -153,10 +153,10 @@ def prediction(topic):
     """
     prompt, choices = PREDICTIONS[topic]
     with st.container(border=True, key=f'lab_{topic}_prediction_choices'):
-        selected = st.radio(tr(prompt), choices, index=None, format_func={choice: tr(choice) for choice in choices}.get, horizontal=True,
+        selected = st.radio(tr(prompt), choices, index=None, format_func={choice: tr(choice) for choice in choices}.get, horizontal=False,
                             key=f'lab_{topic}_prediction', on_change=keep_value, args=(f'lab_{topic}_prediction',))
     with st.container(key=f'lab_{topic}_prediction_actions'):
-        if st.button(tr('Check my prediction'), key=f'lab_{topic}_check', type='primary'):
+        if st.button(tr('Check my prediction'), key=f'lab_{topic}_check', type='primary', width='stretch'):
             st.session_state[f'lab_{topic}_checked'] = selected
     checked = st.session_state.get(f'lab_{topic}_checked')
     if checked is not None and checked == selected:

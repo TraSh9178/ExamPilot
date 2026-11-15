@@ -200,6 +200,10 @@ def test_next_explore_appears_only_after_a_prediction_is_checked(topic):
     app = _lab()
     assert not any(button.key == f"lab_{topic}_next_explore" for button in app.button)
 
+    radio = app.radio(key=f"lab_{topic}_prediction")
+    assert radio.proto.horizontal is False
+    assert app.button(key=f"lab_{topic}_check").proto.type == "primary"
+
     # Checking with no choice only asks for one.
     app.button(key=f"lab_{topic}_check").click().run()
     assert "Choose a prediction first." in [item.value for item in app.info]
@@ -544,20 +548,17 @@ def test_corner_conclusion_waits_until_the_student_has_predicted():
         assert title in [s.value for s in later.subheader]
 
 
-def _same_click_twice(topic):
-    import streamlit as st
-    from services.concept_lab_ui import _set_answer_shown
-
-    _set_answer_shown(topic, True)
-    _set_answer_shown(topic, True)
-    st.write(str(st.session_state[f"lab_{topic}_answer_shown"]))
-
-
 @pytest.mark.parametrize("topic", TOPICS)
 def test_a_double_click_on_show_answer_leaves_the_answer_shown(topic):
     # The button carries the state it asks for, so the same click arriving twice
     # (the second half of a double click landing after the rerun started) changes nothing.
-    twice = AppTest.from_function(_same_click_twice, kwargs={"topic": topic}).run()
+    twice = AppTest.from_string(
+        "import streamlit as st\n"
+        "from services.concept_lab_ui import _set_answer_shown\n"
+        f"_set_answer_shown({topic!r}, True)\n"
+        f"_set_answer_shown({topic!r}, True)\n"
+        f"st.write(str(st.session_state['lab_{topic}_answer_shown']))\n"
+    ).run()
     assert not twice.exception and twice.markdown[0].value == "True"
 
     app = _lab(**{f"lab_{topic}_step": 3})
