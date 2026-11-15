@@ -110,7 +110,11 @@ with st.container(key="flight_header"):
     with practice:
         st.page_link(pages[2], label=tr("Practice"), icon=":material/edit_note:", width="stretch")
     with review:
-        review_pages = {page.url_path: page for page in (pages[1], pages[3], pages[4], pages[5], pages[6])}
+        review_pages = {
+            page.url_path: page
+            for page in (pages[1], pages[3], pages[4], pages[5], pages[6])
+            if page.url_path != navigation.url_path
+        }
         destination = st.selectbox(
             tr("Review & tools"), list(review_pages), index=None,
             format_func=lambda path: review_pages[path].title,

@@ -224,4 +224,6 @@ def test_top_review_menu_opens_destination_with_a_clear_selection():
     menu = app.selectbox(key="flight_review_destination_")
     menu.set_value("Study_Hub").run()
     assert not app.exception
-    assert app.selectbox(key="flight_review_destination_Study_Hub").value is None
+    new_menu = app.selectbox(key="flight_review_destination_Study_Hub")
+    assert new_menu.value is None
+    assert "Study Plan" not in new_menu.options
