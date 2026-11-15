@@ -38,8 +38,8 @@ def paper_stylesheets() -> list[Path]:
 @lru_cache(maxsize=None)
 def illustration_data_uri(name: str) -> str:
     """Embed a watercolour from assets/illustrations; Streamlit serves no asset folder."""
-    data = (ILLUSTRATIONS / f"{name}.png").read_bytes()
-    return "data:image/png;base64," + base64.b64encode(data).decode("ascii")
+    data = (ILLUSTRATIONS / f"{name}.webp").read_bytes()
+    return "data:image/webp;base64," + base64.b64encode(data).decode("ascii")
 
 
 @lru_cache(maxsize=1)

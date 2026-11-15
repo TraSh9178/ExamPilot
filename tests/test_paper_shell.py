@@ -183,9 +183,9 @@ def test_injected_styles_include_paper_shell_and_landscape_illustrations():
     assert styles.index(academic) < styles.index(shell)
     for name in ("landscape-left", "landscape-right", "home-foliage"):
         encoded = base64.b64encode(
-            (ASSETS / "illustrations" / f"{name}.png").read_bytes()
+            (ASSETS / "illustrations" / f"{name}.webp").read_bytes()
         ).decode("ascii")
-        assert f'--paper-{name}: url("data:image/png;base64,{encoded}");' in styles
+        assert f'--paper-{name}: url("data:image/webp;base64,{encoded}");' in styles
     assert "var(--paper-landscape-left" in shell
     assert "var(--paper-landscape-right" in shell
     assert "var(--paper-home-foliage" in shell

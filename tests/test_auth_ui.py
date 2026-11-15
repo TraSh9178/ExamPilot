@@ -73,9 +73,9 @@ def test_sign_in_page_shows_headline_campus_watercolour_then_account_card(monkey
 
     assert_auth_gate(app)
     assert [title.value for title in app.title] == ["Make your next study session count."]
-    campus = (APP_PATH.parent / "assets" / "illustrations" / "campus-watercolor.png").read_bytes()
+    campus = (APP_PATH.parent / "assets" / "illustrations" / "campus-watercolor.webp").read_bytes()
     art = next(item.value for item in app.markdown if 'class="auth-campus"' in item.value)
-    assert f'src="data:image/png;base64,{base64.b64encode(campus).decode("ascii")}"' in art
+    assert f'src="data:image/webp;base64,{base64.b64encode(campus).decode("ascii")}"' in art
     assert 'alt="Illustration of a university campus"' in art
     assert not any("campus-illustration" in item.value for item in app.markdown)
     # Headline and picture come first, then the Log in / Create account card.
