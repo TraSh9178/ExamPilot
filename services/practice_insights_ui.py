@@ -262,8 +262,14 @@ def reflection_controls(course, session, question, review, confirmed, practice_k
             st.info(tr(error))
 
 
-def render_history_insights(course, history, mode):
+def render_history_insights(course, history, mode, example=False):
+    """Time by topic and the next review on the Progress page, shown without a click.
+
+    With ``example`` the history is sample data: the time chart says so and the
+    per-question review list (which would start practice) is left out.
+    """
     if not history: return
+    from components.progress_charts import render_bar_chart, time_rows
     ordered=list(course.learning_state.get('session_order',[]))
     ordered.extend(sid for sid in history if sid not in ordered)
     latest={}
@@ -285,14 +291,32 @@ def render_history_insights(course, history, mode):
             seconds=session_insights(course,sid).get(q.id,{}).get('focus_seconds')
             if seconds is not None:total_seconds[q.topic_id]=total_seconds.get(q.topic_id,0.0)+seconds
     if total_seconds:
-        with st.expander(tr('Time by topic')):
-            st.subheader(tr('Tracked focus time by topic'))
+        title=f"{tr('Example')} · {tr('Time by topic')}" if example else tr('Time by topic')
+        with st.container(border=True,key='progress_time'):
+            st.subheader(title)
+            render_bar_chart(title,time_rows(total_seconds,names,tr('Topic'),tr),kind='time')
             st.caption(tr('Totals across recorded sessions in this mode; missing time is not treated as zero.'))
-            st.dataframe([{tr('Topic'):names.get(t,tr('Topic')),tr('Tracked seconds'):round(seconds,1)}
-                for t,seconds in sorted(total_seconds.items(),key=lambda p:-p[1])],hide_index=True,width='stretch')
+    if example: return
     qs=[value[0] for value in latest.values()]
     attempts=[value[1] for value in latest.values()]
     rows={q.id:r for q,a,r in latest.values()}
     data=analytics(qs,attempts,rows)
+    priorities=data['priorities']
     st.subheader(tr('Your next review'))
-    render_priorities(course,data['priorities'])
+    # The review list as render_priorities shows it, with its reasons in view.
+    st.markdown(tr('**Smart review list**'))
+    if not priorities:
+        st.caption(tr('No review priorities from the available evidence yet.'))
+        return
+    st.caption(tr('1 question could benefit from another look.') if len(priorities) == 1
+               else tr(f"{len(priorities)} questions could benefit from another look."))
+    st.caption(tr('Priority uses incorrect/unanswered responses, confidence, hints and relative tracked time. It is a transparent practice suggestion, not a diagnosis.'))
+    st.dataframe([{tr('Rank'):i,tr('Topic'):names.get(r['topic_id'],tr('Topic')),
+                   tr('Question'):r['question'],tr('Why review'):', '.join(tr(reason) for reason in r['reasons'])}
+                  for i,r in enumerate(priorities,1)],hide_index=True,width='stretch')
+    st.button(tr('Practise review priorities'), key=f'priorities_{course.course_id}',
+        on_click=launch_priority, args=(course, priorities))
+    if error := st.session_state.pop('priority_launch_error', None):
+        st.info(tr(error))
+    if st.session_state.pop('priority_ready', False):
+        st.switch_page('pages/2_Practice_Center.py')

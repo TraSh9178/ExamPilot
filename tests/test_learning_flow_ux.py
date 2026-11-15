@@ -110,16 +110,20 @@ def test_review_form_is_collapsed_and_the_page_does_not_prompt_for_it():
     assert app.selectbox(key='editor_question_calculus-i-demo').options
 
 
-def test_progress_groups_evidence_and_details_into_secondary_tabs():
+def test_progress_shows_every_section_on_one_page_without_tabs():
     app=AppTest.from_file(str(ROOT/'pages/3_Performance.py'))
     app.session_state['current_course']=calculus()
     app.run()
     assert not app.exception
-    assert [t.label for t in app.tabs]==['Overview','Learning DNA','Practice details']
-    assert app.get('tab_container')[0].proto.tab_container.default_tab_index==0
+    assert not app.tabs and not app.get('tab_container')
+    headings=[s.value for s in app.subheader]
+    assert headings[1:]==['Example · Mastery by topic','Example · Accuracy by session',
+                          'Example · Learning DNA','Example · Time by topic']
+    # The Dashboard still records which part to open; it no longer selects anything.
     app.session_state['progress_tab_calculus-i-demo']='Learning DNA'
     app.run()
-    assert app.get('tab_container')[0].proto.tab_container.default_tab_index==1
+    assert not app.exception
+    assert not app.tabs and [s.value for s in app.subheader]==headings
 
 
 def test_dashboard_prioritizes_course_over_secondary_features():

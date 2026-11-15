@@ -32,7 +32,9 @@ def test_chinese_progress_keeps_original_course_data() -> None:
     assert not app.exception
     assert app.title[0].value == "学习进度"
     assert any(item.label == "正确率" for item in app.metric)
-    assert any(item.value == "掌握度" for item in app.get("caption"))
+    # The demo course shows the example report until its first graded session.
+    assert "示例 · 各知识点掌握情况" in [item.value for item in app.subheader]
+    assert any("Supply and Demand" in item.value and "已掌握" in item.value for item in app.markdown)
     assert app.session_state["current_course"].course_id == course.course_id
 
 
