@@ -1,15 +1,9 @@
-"""Flashcards: review one card at a time; the Anki export sits at the bottom."""
-import csv
-import re
+"""Flashcards: review one card at a time; the Anki export opens on its own page."""
 from html import escape
-from io import StringIO
 
 import streamlit as st
 
-from services.anki_export_service import (
-    export_anki_tsv,
-    get_weak_topic_ids,
-)
+from components.page_links import open_page_button
 from services.flashcards import (
     DECK_LABELS,
     Flashcard,
@@ -17,17 +11,10 @@ from services.flashcards import (
     build_decks,
     default_deck,
     option_letter,
-    practice_topic_stats,
 )
 from services.i18n import tr
 from services.question_editor import available_questions
 from services.ui_style import apply_app_styles
-
-
-def _safe_filename(course_name: str) -> str:
-    token = re.sub(r"[^A-Za-z0-9_-]+", "_", course_name.strip())
-    token = token.strip("_-").lower()[:80]
-    return f"anki_{token or 'course'}.tsv"
 
 
 def _text(text: str) -> str:
@@ -108,56 +95,6 @@ def _render_idea(card: Flashcard, side: str) -> None:
         f'<div class="flashcard-recap">{_text(card.topic_name)}</div>'
         f'<div class="flashcard-summary">{_text(card.summary)}</div>',
         unsafe_allow_html=True,
-    )
-
-
-def _render_export(course, history) -> None:
-    """The Anki download, unchanged in content; its messages stay in here."""
-    st.write(tr("Download the file, then in Anki on your computer choose File → Import and match Front, Back and Tags. Cards are not sent to AnkiWeb automatically."))
-    export_scope = st.radio(
-        tr("Questions to export"),
-        options=[tr("All Questions"), tr("Weak Topics")],
-        key=f"anki_export_scope_{course.course_id}",
-        horizontal=True,
-        width="stretch",
-    )
-
-    topic_ids = None
-    if export_scope == tr("Weak Topics"):
-        mode_label = st.radio(
-            tr("Practice mode"),
-            options=[tr("Mock Exam"), tr("Topic Practice")],
-            key=f"anki_export_mode_{course.course_id}",
-            horizontal=True,
-            width="stretch",
-        )
-        mode = "mock" if mode_label == tr("Mock Exam") else "topic"
-        try:
-            stats = practice_topic_stats(course, history)
-        except ValueError:
-            st.error(tr("Couldn't find your weak topics from this practice history."))
-            return
-        topic_ids = get_weak_topic_ids(stats, mode)
-        if not topic_ids:
-            st.info(tr("No weak or developing topics in this practice mode."))
-            return
-        if not any(question.topic_id in topic_ids for question in course.questions):
-            st.info(tr("No questions match the weak or developing topics."))
-            return
-
-    content = export_anki_tsv(course, topic_ids=topic_ids)
-    if not content:
-        st.info(tr("No questions match the selected export."))
-        return
-
-    rows = list(csv.reader(StringIO(content), delimiter="\t"))
-    st.caption(tr(f"{len(rows)} cards · {export_scope}"))
-    st.download_button(
-        tr("Download Anki TSV"),
-        data=content.encode("utf-8"),
-        file_name=_safe_filename(course.course_name),
-        mime="text/tab-separated-values; charset=utf-8",
-        icon=":material/download:",
     )
 
 
@@ -275,5 +212,11 @@ with st.container(
         args=(state_key, 1, len(cards)),
     )
 
-with st.expander(tr("Export to Anki")):
-    _render_export(course, history)
+# The Anki download is secondary: a small button on the right edge opens it.
+open_page_button(
+    tr("Export to Anki"),
+    "pages/11_Anki_Export.py",
+    key=f"flashcards_open_export_{course.course_id}",
+    icon=":material/download:",
+    align="right",
+)

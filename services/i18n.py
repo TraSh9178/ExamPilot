@@ -519,6 +519,11 @@ _TRANSLATIONS.update({
     "Answers behind Learning DNA": "学习画像的依据",
 })
 
+# anki export page
+_TRANSLATIONS.update({
+    "Back to Flashcards": "返回复习卡片",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
