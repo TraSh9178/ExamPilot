@@ -313,6 +313,46 @@ _TRANSLATIONS = {
     "Answer more different questions in both dimensions before comparing them.": "在两个维度上多做不同题目，再进行比较。",
 }
 
+_TRANSLATIONS.update(
+{"Move closer to x = 2 from both sides. Compare the two values as the distance shrinks.": "从两侧靠近 x = 2，观察距离缩小时两侧函数值如何变化。",
+ 'Predict, move the controls, then explain what changed.': '先预测，再操作，最后解释观察到的变化。',
+ '**1 · Predict**': '**1 · 先预测**',
+ '**2 · Explore**': '**2 · 动手实验**',
+ '**3 · Explain**': '**3 · 解释现象**',
+ 'As x approaches 2, what do the nearby function values approach?': '当 x 趋近 2 时，附近的函数值趋近多少？',
+ 'As h approaches 0, what should the secant slope approach?': '当 h 趋近 0 时，割线斜率会趋近什么？',
+ 'Undefined because f(2) is undefined': '因为 f(2) 未定义，所以无法趋近任何值',
+ 'The tangent slope at x₀': 'x₀ 处的切线斜率',
+ 'Always zero': '始终为 0',
+ 'The function value f(x₀)': '函数值 f(x₀)',
+ 'Check my prediction': '检查预测',
+ 'Your prediction matches the experiment. Try to explain why.': '预测与实验一致。试着解释原因。',
+ 'Try the experiment below, then compare your prediction again.': '操作下面的实验，再对照你的预测。',
+ 'Choose a prediction first.': '请先选择一个预测。',
+ 'Move one step closer': '再靠近一步',
+ 'Reset experiment': '重置实验',
+ 'Approach from': '趋近方向',
+ 'Right': '右侧',
+ 'Left': '左侧',
+ 'Zoom around x₀': '放大 x₀ 附近',
+ 'Slope gap: ': '斜率差：',
+ 'Why can a missing point still have a limit?': '为什么缺少一个点，极限仍可能存在？',
+ 'The limit describes nearby values, not the value at the missing point. Both sides approach 4 even though f(2) is undefined.': '极限描述附近的函数值。虽然 '
+                                                                                                                                'f(2) '
+                                                                                                                                '未定义，两侧的函数值都趋近 '
+                                                                                                                                '4。',
+ 'Why does the secant approach the tangent?': '为什么割线会趋近切线？',
+ 'The secant measures change over an interval. Shrinking that interval from either side gives the instantaneous slope at x₀. The slope gap measures how far the two slopes are apart.': '割线衡量一段区间上的变化。从任意一侧缩小区间，就会趋近 '
+                                                                                                                                                                                        'x₀ '
+                                                                                                                                                                                        '处的瞬时斜率。斜率差表示两者相差多少。',
+ 'Blue: function · Green dashed: secant · Red: tangent. Hover over the two points to inspect their coordinates.': '蓝色：函数曲线 '
+                                                                                                                  '· '
+                                                                                                                  '绿色虚线：割线 '
+                                                                                                                  '· '
+                                                                                                                  '红色：切线。将鼠标移到两点上可查看坐标。'}
+)
+
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
