@@ -93,21 +93,26 @@ def test_lab_default_matches_requested_topic():
     assert app.get('tab_container')[0].proto.tab_container.default_tab_index==1
 
 
-def test_review_form_is_collapsed_and_the_page_does_not_prompt_for_it():
+def test_review_form_is_off_the_study_plan_and_the_page_does_not_prompt_for_it():
     course=calculus()
     app=AppTest.from_file(str(ROOT/'pages/1_Study_Hub.py'))
     app.session_state['current_course']=course
     app.run()
     assert not app.exception
-    panel=next(e for e in app.expander if e.label=='Review and edit questions')
-    assert not panel.proto.expanded
+    assert not any(e.label=='Review and edit questions' for e in app.expander)
+    assert not any((s.key or '').startswith('editor_question_') for s in app.selectbox)
     assert app.button_group(key='scope_selection_calculus-i-demo') and not app.multiselect
     assert not app.checkbox
     # Reviewing questions is maintenance: no count, no button asking for it.
     assert not [b for b in app.button if b.key=='open_question_review_calculus-i-demo']
     assert not any('need your check' in c.value or 'needs your check' in c.value for c in app.caption)
-    # The tool itself is still there, inside Course tools.
-    assert app.selectbox(key='editor_question_calculus-i-demo').options
+    # The tool itself is on the Course tools page, behind a small button.
+    assert app.button(key='open_course_tools').label=='Course tools'
+    tools=AppTest.from_file(str(ROOT/'pages/9_Course_Tools.py'))
+    tools.session_state['current_course']=course
+    tools.run()
+    assert not tools.exception
+    assert tools.selectbox(key='editor_question_calculus-i-demo').options
 
 
 def test_progress_groups_evidence_and_details_into_secondary_tabs():
@@ -225,12 +230,16 @@ def test_practice_result_opens_the_same_topic_in_concept_lab():
     assert app.session_state[f"active_practice_{course.course_id}"]["session"] == session
 
 def test_sidebar_lists_every_study_page_and_opens_each_one(monkeypatch):
+    from services.page_registry import existing_focus_pages
     from tests.test_paper_shell import expected_sidebar_titles, sidebar_navigation
 
     visible, hidden, position = sidebar_navigation(monkeypatch)
     assert position == "sidebar"
     assert [page.title for page in visible] == expected_sidebar_titles()
-    assert [page.url_path for page in hidden] == ["account"]
+    # Account and the focus pages opened from buttons stay out of the list.
+    assert [page.url_path for page in hidden] == [
+        "account", *[url_path for _, _, url_path in existing_focus_pages()],
+    ]
 
     # Opening a page from the list leaves no top review menu behind.
     app = signed_in_app(ROOT / "app.py").run()

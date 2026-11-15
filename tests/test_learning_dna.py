@@ -138,7 +138,8 @@ def test_progress_exposes_learning_dna_evidence(with_history):
 def test_review_ui_can_tag_an_untagged_question_without_rewriting_history():
     course,_=course_and_history()
     course.questions[0].cognitive_dimension=None
-    app=AppTest.from_file(str(ROOT/'pages/1_Study_Hub.py'))
+    # Question review lives on the Course tools page.
+    app=AppTest.from_file(str(ROOT/'pages/9_Course_Tools.py'))
     app.session_state['current_course']=course
     app.run()
     assert not app.exception

@@ -2,15 +2,12 @@ from services.i18n import tr
 import streamlit as st
 
 from components.knowledge_graph import load_course_radar, radar_count_text, radar_display_order
+from components.page_links import open_page_button
 from models.schemas import StudyPackage
 from services import learning_radar
-from services.account_sync import (
-    SAVE_FAILED_MESSAGE,
-    render_save_restore_controls,
-    save_course_to_account,
-)
+from services.account_sync import SAVE_FAILED_MESSAGE, save_course_to_account
 from services.auth_session import current_user
-from services.question_editor import available_questions, review_question, status_for
+from services.question_editor import available_questions, status_for
 from services.course_state import save_course
 from services.ai_service import generate_questions, generation_available
 from services.ui_style import apply_app_styles
@@ -107,12 +104,12 @@ def render_most_flagged_topics(course, confirmed_key: str) -> None:
 if not course.topics:
     st.info(tr("This course has no topics yet."))
 else:
-    with st.expander(tr("Topic summaries")):
-        for topic in course.topics:
-            st.markdown(f"**{topic.name}**")
-            st.write(topic.summary)
-            if topic.source_pages:
-                st.caption(tr("Source pages: ") + ", ".join(map(str, topic.source_pages)))
+    # The summaries have a page of their own; a small button on the left opens it.
+    open_page_button(
+        tr("Topic summaries"), "pages/10_Topic_Summaries.py",
+        key="open_topic_summaries",
+        icon=":material/menu_book:", align="left",
+    )
 
 with st.container(border=True, key="study_scope_panel"):
     st.subheader(tr("Choose your exam scope"))
@@ -263,7 +260,7 @@ if confirmed_topic_ids:
                 st.session_state.pop(f"practice_entry_{course.course_id}", None)
             st.switch_page("pages/2_Practice_Center.py")
     elif any(status_for(course, q.id) == "pending" for q in course.questions):
-        st.info(tr("Review and approve your generated questions below before starting practice."))
+        st.info(tr("Review and approve your generated questions in Course tools before starting practice."))
     elif document is not None:
         st.info(
             tr("Generate questions for the confirmed scope "
@@ -278,107 +275,10 @@ else:
 if learning_radar.radar_enabled(course.course_id):
     render_most_flagged_topics(course, confirmed_key)
 
-# Question review is course maintenance, not a study step: the page does not
-# prompt for it. The tool stays under Course tools for whoever needs it.
-with st.expander(tr("Course tools"), expanded=st.session_state.get(f"question_review_open_{course.course_id}", False)):
-    st.caption(tr("Manage questions, account backups and source material when needed."))
-    with st.expander(tr("Review and edit questions"), expanded=st.session_state.get(f"question_review_open_{course.course_id}", False)):
-        editable = sorted([q for q in course.questions if status_for(course, q.id) != "superseded"], key=lambda q: status_for(course, q.id) != "pending")
-        if editable:
-            by_id = {q.id: q for q in editable}
-            # Plain review labels; questions with no review decision get none.
-            status_labels = {"pending": "Needs check", "approved": "Approved", "flagged": "Flagged"}
-
-            def review_label(qid):
-                text = by_id[qid].question[:100]
-                status = status_labels.get(status_for(course, qid))
-                return f"{tr(status)} · {text}" if status else text
-
-            question_id = st.selectbox(
-                tr("Question to review"), list(by_id),
-                format_func=review_label,
-                key=f"editor_question_{course.course_id}",
-            )
-            original = by_id[question_id]
-            st.caption(tr("Check the answer and explanation before approving; edits never change past results."))
-            with st.form(f"question_review_{course.course_id}_{question_id}"):
-                prompt = st.text_area(tr("Question text"), value=original.question)
-                options = [st.text_input(f"Option {chr(65 + index)}", value=value) for index, value in enumerate(original.options)]
-                correct = st.radio(tr("Correct answer"), list(range(4)), index=original.correct_index, format_func=lambda i: chr(65+i), horizontal=True)
-                explanation = st.text_area(tr("Explanation"), value=original.explanation)
-                with st.expander(tr("Question classification (advanced)")):
-                    # "untagged" stands in for None so every radio option is a real value.
-                    dimension_labels = {
-                        "untagged": "Untagged", "computation": "Computation",
-                        "conceptual": "Conceptual understanding",
-                    }
-                    dimensions = list(dimension_labels)
-                    dimension_choice = st.radio(
-                        tr("Learning DNA evidence type"), dimensions,
-                        index=dimensions.index(original.cognitive_dimension or "untagged"),
-                        format_func=lambda value: tr(dimension_labels[value]),
-                        horizontal=True,
-                        help=tr("Choose what this question tests. Leave uncertain or mixed questions untagged; this label is not a student ability score."),
-                    )
-                    dimension = None if dimension_choice == "untagged" else dimension_choice
-                    structure = st.text_input(
-                        tr("Practice structure label"), value=original.practice_structure or "", max_chars=80,
-                        help="A task type such as tangent_equation or derivative_at_point. Use the same label for the same task structure; leave uncertain questions blank.",
-                    )
-                decision = st.radio(tr("Review decision"), ["Approve", "Flag as problematic"], horizontal=True)
-                apply_review = st.form_submit_button(tr("Save review"), type="primary")
-            if apply_review:
-                try:
-                    revised = review_question(course, question_id, "approved" if decision == "Approve" else "flagged",
-                                              {"question": prompt, "options": options, "correct_index": correct, "explanation": explanation, "cognitive_dimension": dimension, "practice_structure": structure.strip() or None})
-                except ValueError as error:
-                    st.error(tr(str(error)))
-                else:
-                    save_course(st.session_state, revised)
-                    outcome = save_course_to_account(st.session_state, revised)
-                    if outcome is not None and not outcome.success:
-                        st.warning(tr(SAVE_FAILED_MESSAGE))
-                    else:
-                        st.session_state[f"question_review_notice_{course.course_id}"] = "Question review saved."
-                        st.rerun()
-        else:
-            st.caption(tr("No questions available for review."))
-    notice = st.session_state.pop(f"question_review_notice_{course.course_id}", None)
-    if notice:
-        st.success(tr(notice))
-
-    with st.expander(tr("Account backup and recovery")):
-        render_save_restore_controls(course)
-
-
-    with st.expander(tr("Source material")):
-        material = st.session_state.get(f"course_document_{course.course_id}")
-        if material:
-            st.caption(material.get("filename", "Course material"))
-            st.caption(tr("The text from your material is saved with this course. The original uploaded file is not stored."))
-            with st.expander(tr("Read saved text")):
-                st.text(material.get("text", ""))
-            with st.form(f"material_delete_form_{course.course_id}"):
-                confirm_delete = st.checkbox(tr("Delete this course's saved material"), key=f"confirm_material_delete_{course.course_id}")
-                submitted_delete = st.form_submit_button(tr("Delete saved material"), key=f"delete_material_{course.course_id}")
-            if submitted_delete and not confirm_delete:
-                st.warning(tr("Select the confirmation checkbox before deleting material."))
-            if submitted_delete and confirm_delete:
-                metadata = dict(course.learning_state)
-                metadata["document"] = None
-                updated = course.model_copy(update={"learning_state": metadata})
-                staged = dict(st.session_state)
-                staged.pop(f"course_document_{course.course_id}", None)
-                outcome = save_course_to_account(staged, updated)
-                if outcome is not None and not outcome.success:
-                    st.error(tr("Couldn't delete the material from your account. Nothing was changed."))
-                else:
-                    save_course(st.session_state, updated)
-                    st.session_state.pop(f"course_document_{course.course_id}", None)
-                    st.session_state[f"material_delete_notice_{course.course_id}"] = True
-                    st.rerun()
-        else:
-            st.caption(tr("No saved material for this course."))
-
-if st.session_state.pop(f"material_delete_notice_{course.course_id}", False):
-    st.success(tr("Saved material deleted."))
+# Question review, backups and source material are course maintenance, not a
+# study step: a small button on the right opens them on a page of their own.
+open_page_button(
+    tr("Course tools"), "pages/9_Course_Tools.py",
+    key="open_course_tools",
+    icon=":material/build:", align="right",
+)

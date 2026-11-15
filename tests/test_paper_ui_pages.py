@@ -68,8 +68,15 @@ def test_exam_scope_is_one_click_pills_with_topic_ids():
     assert "confirmed_scope_c1" not in app.session_state
 
 
+def course_tools(course: StudyPackage, tool: str | None = None, chinese: bool = False) -> AppTest:
+    """The Course tools page, where question review and backups now live."""
+    from tests.test_course_tools_page import course_tools_page
+
+    return course_tools_page(course, tool, chinese=chinese).run()
+
+
 def test_review_form_uses_horizontal_radios_and_keeps_question_dropdown():
-    app = study_plan(make_reviewed_course())
+    app = course_tools(make_reviewed_course())
 
     assert not app.exception
     assert app.selectbox(key="editor_question_c1").label == "Question to review"
@@ -88,7 +95,7 @@ def test_review_form_uses_horizontal_radios_and_keeps_question_dropdown():
 
 
 def test_review_list_shows_plain_status_words_instead_of_internal_codes():
-    app = study_plan(make_reviewed_course())
+    app = course_tools(make_reviewed_course())
 
     assert not app.exception
     options = app.selectbox(key="editor_question_c1").options
@@ -99,16 +106,22 @@ def test_review_list_shows_plain_status_words_instead_of_internal_codes():
         "Approved · Question 4?",
     ]
     assert not any("[" in option for option in options)
+    assert (
+        "Check the answer and explanation before approving; edits never change past results."
+        in [item.value for item in app.caption]
+    )
+
+
+def test_study_plan_counts_ready_questions_without_prompting_a_review():
+    app = study_plan(make_reviewed_course())
+
+    assert not app.exception
     captions = [item.value for item in app.caption]
     # The page no longer prompts the student to review pending questions.
     assert not any("needs your check" in text or "need your check" in text for text in captions)
     assert "Review pending questions" not in [button.label for button in app.button]
     assert "2 questions ready" in captions
     assert not any("legacy" in text.lower() for text in captions)
-    assert (
-        "Check the answer and explanation before approving; edits never change past results."
-        in captions
-    )
 
 
 def test_review_texts_are_translated():
@@ -118,11 +131,14 @@ def test_review_texts_are_translated():
     captions = [item.value for item in app.caption]
     assert not any("需要你检查" in text for text in captions)
     assert "2 道题可以练习" in captions
-    assert app.selectbox(key="editor_question_c1").options[0] == "待检查 · Question 1?"
+
+    tools = course_tools(make_reviewed_course(), chinese=True)
+    assert not tools.exception
+    assert tools.selectbox(key="editor_question_c1").options[0] == "待检查 · Question 1?"
 
 
 def test_saving_a_review_still_maps_the_untagged_choice_to_none():
-    app = study_plan(make_reviewed_course())
+    app = course_tools(make_reviewed_course())
     next(item for item in app.radio if item.label == "Correct answer").set_value(2)
     next(b for b in app.button if b.label == "Save review").click().run()
 
@@ -133,7 +149,7 @@ def test_saving_a_review_still_maps_the_untagged_choice_to_none():
 
 
 def test_anonymous_course_tools_do_not_mention_the_database():
-    app = study_plan(make_reviewed_course())
+    app = course_tools(make_reviewed_course(), "backup")
 
     assert not app.exception
     captions = [item.value for item in app.caption]

@@ -519,6 +519,17 @@ _TRANSLATIONS.update({
     "Answers behind Learning DNA": "学习画像的依据",
 })
 
+# course tools page
+_TRANSLATIONS.update({
+    "Back to Study Plan": "返回学习计划",
+    "Choose a tool": "选择工具",
+    "Question review saved.": "题目审核已保存。",
+    "Course material": "课程资料",
+    "Review and approve your generated questions in Course tools before starting practice.": "开始练习前请在课程工具中检查并批准生成的题目。",
+    "Question, explanation and four distinct options are required.": "题干、解析和四个互不相同的选项都必须填写。",
+    "This question duplicates a different question family.": "这道题与另一道已有题目重复。",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),

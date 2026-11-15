@@ -319,10 +319,8 @@ def test_panel_sits_between_start_practice_and_question_review(monkeypatch):
         lambda node: node.type == "button" and node.label == "Start practice"
     )
     panel = index_of(lambda node: _block_key(node) == PANEL_KEY)
-    review = index_of(
-        lambda node: node.type == "expander"
-        and node.label == "Course tools"
-    )
+    # Question review now sits behind the small Course tools button.
+    review = index_of(lambda node: _block_key(node) == "page_link_open_course_tools")
     assert scope < start < panel < review
 
 
