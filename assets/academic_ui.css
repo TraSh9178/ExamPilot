@@ -393,3 +393,21 @@ div.st-key-create_course_button button > div > span { justify-content: flex-star
   .st-key-flight_header [data-testid="stColumn"] { flex: 1 0 42% !important; width: auto !important; }
   .st-key-flight_header [data-testid="stColumn"]:first-child { flex-basis: 100% !important; }
 }
+
+/* The demo button's label may inherit Streamlit's primary foreground. */
+[data-testid="stMain"] .st-key-dashboard_demo_start button[data-testid="stBaseButton-primary"] {
+  color: #192f4d !important;
+  background: #f4d59d !important;
+  border-color: #f4d59d !important;
+}
+[data-testid="stMain"] .st-key-dashboard_demo_start button[data-testid="stBaseButton-primary"] * {
+  color: inherit !important;
+}
+[data-testid="stMain"] .st-key-dashboard_demo_start button[data-testid="stBaseButton-primary"]:hover {
+  background: #ebc786 !important;
+}
+.st-key-flight_header [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+  background: transparent;
+  border-color: transparent;
+  min-height: 44px;
+}

@@ -78,12 +78,17 @@ export default function(component) {
     const size = 64;
     if (!state.hasMoved || state.x === null || state.y === null) {
       state.x = view.left + view.width - size - 24;
-      // Mobile course actions occupy the lower part of the Dashboard. Start
-      // below the app header instead; an intentional drag still goes anywhere.
-      state.y = view.width <= 480 ? view.top + 76 : view.top + view.height - size - 24;
+      state.y = view.top + view.height - size - 24;
     }
+    const header = view.width <= 760
+      ? document.querySelector('.st-key-flight_header')?.getBoundingClientRect()
+      : null;
+    const upper = header && header.bottom > view.top
+      ? Math.max(view.top + margin, header.bottom + margin)
+      : view.top + margin;
+    const lower = view.top + view.height - size - margin;
     state.x = clamp(state.x, view.left + margin, view.left + view.width - size - margin);
-    state.y = clamp(state.y, view.top + margin, view.top + view.height - size - margin);
+    state.y = clamp(state.y, Math.min(upper, lower), lower);
     bubble.style.left = `${state.x}px`;
     bubble.style.top = `${state.y}px`;
     const panelWidth = Math.min(388, Math.max(200, view.width - 2 * margin));
@@ -313,6 +318,9 @@ export default function(component) {
     state.validation = '';
     setTriggerValue('clear', { request_id: crypto.randomUUID(), session_id: data.session_id, course_id: courseId });
   });
+  on(document, 'scroll', () => {
+    if (viewport().width <= 760) position();
+  }, { capture: true, passive: true });
   on(window, 'resize', position);
   if (window.visualViewport) {
     on(window.visualViewport, 'resize', position);
