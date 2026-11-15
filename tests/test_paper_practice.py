@@ -26,17 +26,22 @@ PAGE = ROOT / "pages" / "2_Practice_Center.py"
 RAW_DB_ERROR = "connection to db.internal:5432 failed: FATAL password authentication failed"
 
 
+def page_markdown(app):
+    """Markdown on the page, without the stylesheet the app injects as markdown."""
+    return [m.value for m in app.markdown if not m.value.lstrip().startswith("<style")]
+
+
 def texts(app):
     """Every visible text value on the page, for checks that wording is gone."""
-    values = []
-    for kind in ("markdown", "caption", "info", "warning", "error", "success", "subheader"):
+    values = page_markdown(app)
+    for kind in ("caption", "info", "warning", "error", "success", "subheader"):
         values += [item.value for item in app.get(kind)]
     values += [item.label for item in app.expander]
     return values
 
 
 def badges(app):
-    return re.findall(r'class="paper-question-badge">([^<]+)<', " ".join(m.value for m in app.markdown))
+    return re.findall(r'class="paper-question-badge">([^<]+)<', " ".join(page_markdown(app)))
 
 
 def mock_app(graded=False):
@@ -84,7 +89,7 @@ def test_question_text_is_escaped_and_keeps_line_breaks():
     question = app.session_state["active_practice_insights"]["questions"][0]
     question.question = "What is printed?\nif x < 3:\n    print('<b>')"
     app.run()
-    card = next(m.value for m in app.markdown if "paper-question-badge" in m.value)
+    card = next(value for value in page_markdown(app) if "paper-question-badge" in value)
     assert "if x &lt; 3:<br>    print('&lt;b&gt;')" in card
     assert "<b>" not in card
 
@@ -196,7 +201,7 @@ def test_margin_chart_and_stuck_popover_use_the_radar_component(monkeypatch):
     assert [p.proto.popover.label for p in popovers] == ["Learning Radar"]
     assert "fake stuck buttons" in [c.value for c in popovers[0].caption]
     # The chart sits above the existing count, and the Explore button stays below.
-    markdown = [m.value for m in app.markdown]
+    markdown = page_markdown(app)
     count_text = radar_count_text(cached.topics.get(first.topic_id))
     assert markdown.index("fake spider chart") == markdown.index(count_text) - 1
     assert any(b.key == f"worksheet_radar_{sid}" for b in app.button)
@@ -317,7 +322,7 @@ def test_unknown_topic_name_falls_back_to_the_word_topic():
     assert not app.exception
     shown = texts(app) + [str(frame.value.to_dict()) for frame in app.dataframe]
     assert not any("ghost-topic-id" in value for value in shown)
-    assert any("**Topic**" == m.value for m in app.markdown)
+    assert any("**Topic**" == value for value in page_markdown(app))
 
 
 def test_transfer_without_a_match_says_no_similar_question_yet():
