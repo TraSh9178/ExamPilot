@@ -100,7 +100,7 @@ if st.session_state.get("_learning_page_path") != navigation.url_path:
 render_account_sidebar(account_page)
 with st.sidebar:
     render_sidebar_status()
-    with st.expander("Accessibility settings"):
+    with st.expander(tr("Accessibility settings")):
         render_accessibility_controls()
 
 # Reserve room for the floating entry at the bottom of narrow study pages.

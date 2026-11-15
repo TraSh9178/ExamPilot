@@ -57,7 +57,7 @@ _TRANSLATIONS = {
     "Review course knowledge cards here or download a UTF-8 TSV file for Anki text import.": "在此预览课程卡片，或下载 UTF-8 TSV 文件导入 Anki。",
     "Download the TSV, then use Anki Desktop → File → Import and map Front, Back and Tags. AnkiWeb sync is not supported; Anki Desktop import has not been verified.": "下载 TSV 后，在 Anki 桌面版通过 文件 → 导入，将 Front、Back、Tags 对应到字段。暂不支持 AnkiWeb 同步；桌面版导入尚未验证。",
     "Dashboard": "主页", "Study Plan": "学习计划", "Practice": "练习", "Progress": "学习进度",
-    "Accessibility": "无障碍设置", "Simplified English": "简化英文",
+    "Accessibility": "无障碍设置", "Accessibility settings": "无障碍设置", "Simplified English": "简化英文",
     "Interface language only; uploaded material and AI-generated answers retain their original language.": "此开关仅切换界面语言；上传资料和 AI 生成的答案保持原文。",
     "YOUR STUDY SPACE": "你的学习空间", "Your next study session": "下一次学习",
     "starts here.": "从这里开始。", "Turn course materials into focused exam practice.": "将课程资料转化为有重点的考试练习。",
