@@ -112,11 +112,11 @@ def test_demo_course_shows_chart_ranking_and_topic_pills(monkeypatch):
     )
     assert "radar-label-focus" not in svg
     assert "**Most flagged topics**" in _markdown(app)
-    assert (
-        "1. **Price Elasticity of Demand** — 7 students are stuck here\n"
-        "2. **Supply and Demand** — 4 students are stuck here\n"
-        "3. **Price Controls** — 3 students are stuck here"
-    ) in _markdown(app)
+    ranking = next(item.proto.body for item in app.get("html") if "radar-ranking-scroll" in item.proto.body)
+    assert 'radar-ranking-scroll' in ranking
+    assert ranking.count('class="radar-ranked-row"') == 3
+    assert ranking.index('Price Elasticity') < ranking.index('Supply and Demand') < ranking.index('Price Controls')
+    assert 'tabindex="0"' in ranking
     assert [limit for _, limit in radar.calls["top_hard_topics"]] == [3]
     pills = app.button_group(key=f"learning_radar_topic_{ECON_ID}")
     assert pills.options == ["Supply and Demand", "Price Elasticity of Demand", "Price Controls"]

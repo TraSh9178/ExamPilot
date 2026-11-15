@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # (file under the project root, English title, URL path). A page is registered
 # only once its file exists, so each one can be added separately.
 FOCUS_PAGES = (
+    ("pages/14_Topic_Details.py", "Detailed explanation & examples", "Topic_Details"),
     ("pages/8_Practice_History.py", "Practice history", "Practice_History"),
     ("pages/9_Course_Tools.py", "Course tools", "Course_Tools"),
     ("pages/10_Topic_Summaries.py", "Topic summaries", "Topic_Summaries"),

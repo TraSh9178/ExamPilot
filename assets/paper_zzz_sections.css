@@ -1,0 +1,31 @@
+/* Distinct paper panels share semantic tokens across learning modules. */
+[data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"] > div {
+  border-color: var(--ep-border);
+  background: var(--ep-surface-panel);
+}
+[data-testid="stMain"] [class*="st-key-learning_dna_"]:not(.st-key-learning_dna_cards) {
+  border-top: 3px solid var(--ep-action);
+  background: var(--ep-surface-panel);
+  box-shadow: 0 3px 12px rgb(19 34 79 / 6%);
+  border-radius: var(--ep-radius-panel);
+  padding: var(--ep-space-4);
+}
+[data-testid="stMain"] .st-key-learning_dna_cards { gap: var(--ep-space-6); }
+[class*="_prediction_choices"] { background: var(--ep-surface-panel); }
+[class*="_prediction_actions"] {
+  border-top: 1px solid var(--ep-border);
+  padding-top: var(--ep-space-4);
+  margin-top: var(--ep-space-3);
+}
+.st-key-learning_radar_chart_panel .paper-radar-chart { width: 100%; max-width: 760px; }
+.radar-ranking-scroll { max-height: 40rem; overflow-y: auto; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.radar-ranking-scroll:focus-visible { outline: 2px solid var(--ep-focus); outline-offset: 2px; }
+.radar-ranking-scroll ol { list-style: none; padding: 0; margin: 0; }
+.radar-ranking-scroll .radar-ranked-row {
+  box-sizing: border-box; height: 8rem; overflow-y: auto;
+  display: flex; flex-direction: column; justify-content: center;
+  gap: var(--ep-space-2); padding: var(--ep-space-3) var(--ep-space-4);
+  border-bottom: 1px solid var(--ep-border);
+}
+.radar-ranked-row:nth-child(2n) { background: var(--ep-surface-subtle); }
+.radar-ranked-row small { color: var(--ep-text-secondary); }

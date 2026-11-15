@@ -20,6 +20,8 @@ def render_language_control() -> None:
 
 
 _TRANSLATIONS = {
+    "Back to Knowledge Map": "返回知识图谱",
+    "Most flagged topics": "被标记最多的知识点",
     'Ask about this explanation': '针对这段解析提问',
     'Ask what you did not understand. This conversation stays in this session and does not change your score.': '哪里不理解就直接问。对话仅保留在当前会话，不影响成绩。',
     'What part is unclear?': '哪里没理解？',

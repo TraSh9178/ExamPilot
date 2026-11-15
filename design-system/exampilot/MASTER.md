@@ -28,4 +28,6 @@ Design Token provides primitive → semantic → component architecture. Heurist
 
 ## Verification
 
+Follow-up section review: topic details now open a dedicated teaching page with offline course examples and optional AI explanation; the map focus survives the return. Learning DNA cards use a paper surface, a top rule and wider gutters. Concept Lab prediction choices have a bordered panel, followed by a separated primary action. Learning Radar uses a 2:1 chart/picker layout and a keyboard-focusable ranking region below; five 8rem rows fit its 40rem viewport. Counts, privacy thresholds and sample-data labelling are unchanged. Desktop and 375px browser checks confirmed the layout, five-row geometry and no horizontal overflow.
+
 Full Python 3.12 suite after integrating main: 1560 passed, 20 skipped. Browser walkthroughs cover desktop, 375px portrait and 812px landscape, including pause/return, retained answers, retained Pilot draft, mobile navigation, panel bounds and focused controls. Reduced-motion rules were inspected in source; OS preference switching was not emulated. No live AI request or production account data was used.

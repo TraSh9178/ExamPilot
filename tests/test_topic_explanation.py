@@ -53,7 +53,7 @@ def test_explicit_generation_language_and_topic_isolation(monkeypatch):
     assert not any(item.value == 'Worked explanation' for item in app.markdown)
     assert any("暂时没有" in item.value for item in app.caption)
     app.toggle[0].set_value(True).run()
-    assert app.expander[0].label == '详细讲解与例题'
+    assert not app.expander
     app.button[0].click().run()
     assert 'Simplified Chinese' in tutor.call_args.args[1]
     assert tutor.call_args.args[2] == 't2'
@@ -70,3 +70,29 @@ def test_failure_keeps_examples_and_allows_retry(monkeypatch):
     app.button[0].click().run()
     assert any(item.value == 'Recovered' for item in app.markdown)
     assert not app.exception
+
+
+def test_map_details_open_dedicated_page_and_return_to_same_topic(monkeypatch):
+    from pathlib import Path
+    from tests.auth_helpers import signed_in_app
+    from models.schemas import StudyPackage
+    root = Path(__file__).resolve().parents[1]
+    course = StudyPackage.model_validate_json((root/'data/calculus_i_demo.json').read_text())
+    app = signed_in_app(root/'app.py').run()
+    app.session_state['current_course'] = course
+    app.session_state[f'graph_pending_focus_{course.course_id}'] = 'calc_limits'
+    app.switch_page('pages/4_Knowledge_Graph.py').run()
+    app.button(key='topic_details_open').click().run()
+    assert not app.exception
+    assert app.title[0].value == 'Detailed explanation & examples'
+    assert app.session_state[f'topic_details_{course.course_id}'] == 'calc_limits'
+    assert app.selectbox[0].options
+    assert not any(e.label == "Detailed explanation & examples" for e in app.expander)
+    # Back links preserve the course-scoped graph focus.
+    assert app.session_state[f'graph_pending_focus_{course.course_id}'] == 'calc_limits'
+    destinations = []
+    monkeypatch.setattr('streamlit.switch_page', lambda page: destinations.append(page))
+    app.button(key='topic_details_back').click().run()
+    assert not app.exception
+    assert destinations == ['pages/4_Knowledge_Graph.py']
+    assert app.session_state[f'graph_pending_focus_{course.course_id}'] == 'calc_limits'
