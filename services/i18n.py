@@ -20,6 +20,20 @@ def render_language_control() -> None:
 
 
 _TRANSLATIONS = {
+    'Detailed explanation & examples': '详细讲解与例题',
+    'Go beyond the summary: understand the idea, then work through an example.': '不止看概述：先理解思路，再通过例题掌握用法。',
+    'Explain step by step': '分步骤讲解',
+    'Preparing the explanation…': '正在准备讲解…',
+    'The explanation is unavailable. You can still read the course example below, or try again.': '暂时无法生成讲解。你仍可查看下方课程例题，或重新尝试。',
+    'AI explanation · check it against your course material.': 'AI 辅助讲解 · 请结合课程资料核对。',
+    '**Example from this course**': '**本课程例题**',
+    'Original course wording is preserved. Reading examples does not count as a graded attempt.': '例题保留课程原文。查看例题不会计入答题成绩。',
+    'There is no example for this topic in the current course yet.': '当前课程暂时没有这个知识点的例题。',
+    'Choose an example': '选择例题',
+    'Show answer and explanation': '显示答案与解析',
+    '**Answer**': '**答案**',
+    '**Why this answer**': '**解题解析**',
+
     "Home": "首页", "Review & tools": "复习与工具", "Account": "账户",
     "Start with one question, or open a course you already study.": "先试做一道题，或打开已经在学的课程。",
     "Try one practice question after signing in, then follow the next step from your result.": "登录后试做一道题，再根据结果继续学习。",

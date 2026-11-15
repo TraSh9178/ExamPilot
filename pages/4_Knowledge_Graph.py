@@ -328,7 +328,7 @@ with details_column:
                 ),
                 None,
             )
-        render_topic_details(details, topic_stats)
+        render_topic_details(details, topic_stats, course)
         if details is not None:
             links = related_topics(course, selected_node_id)
             st.divider()
