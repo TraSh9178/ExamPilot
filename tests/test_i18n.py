@@ -58,3 +58,24 @@ def test_chinese_page_headings_without_rewriting_course(
     assert not app.exception
     assert app.title[0].value == expected_title
     assert app.session_state["current_course"].course_id == course.course_id
+
+
+def test_language_survives_widget_cleanup_and_can_switch_back() -> None:
+    app = AppTest.from_string("""
+import streamlit as st
+from services.i18n import render_language_control, tr
+if st.session_state.get("show_control", True):
+    render_language_control()
+st.title(tr("Practice"))
+""").run()
+    app.toggle[0].set_value(True).run()
+    assert app.title[0].value == "练习"
+    app.session_state["show_control"] = False
+    app.run().run()
+    assert app.session_state[LANGUAGE_KEY] is True
+    assert app.title[0].value == "练习"
+    app.session_state["show_control"] = True
+    app.run()
+    assert app.toggle[0].value is True
+    app.toggle[0].set_value(False).run()
+    assert app.title[0].value == "Practice"

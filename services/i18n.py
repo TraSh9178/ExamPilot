@@ -5,6 +5,19 @@ import streamlit as st
 import re
 
 LANGUAGE_KEY = "a11y_bilingual_zh"
+LANGUAGE_WIDGET_KEY = "_ui_chinese_toggle"
+
+
+def render_language_control() -> None:
+    """Keep the preference separate from Streamlit's page-scoped widget state."""
+    st.session_state[LANGUAGE_WIDGET_KEY] = bool(st.session_state.get(LANGUAGE_KEY, False))
+
+    def remember_language() -> None:
+        st.session_state[LANGUAGE_KEY] = st.session_state[LANGUAGE_WIDGET_KEY]
+
+    st.toggle("中文界面 / Chinese interface", key=LANGUAGE_WIDGET_KEY,
+              on_change=remember_language)
+
 
 _TRANSLATIONS = {
     "Home": "首页", "Review & tools": "复习与工具", "Account": "账户",
