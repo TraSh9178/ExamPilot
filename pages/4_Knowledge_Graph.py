@@ -28,7 +28,8 @@ from services.relationship_suggestions import (
     suggestions_key,
 )
 from services.ui_style import apply_app_styles
-from services.learning_flow import open_lab, stage_practice
+from components.topic_practice_link import open_topic_practice
+from services.learning_flow import open_lab
 
 apply_app_styles()
 
@@ -343,13 +344,7 @@ with details_column:
                     st.session_state[pending_key] = linked_id
                     st.rerun()
             if st.button(tr("Practise this topic"), key=f"graph_practice_{course.course_id}_{selected_node_id}", type="primary"):
-                try:
-                    stage_practice(st.session_state, course, selected_node_id)
-                except ValueError as error:
-                    st.info(tr(str(error)))
-                    st.page_link("pages/1_Study_Hub.py", label=tr("Confirm scope in Study Plan"))
-                else:
-                    st.switch_page("pages/2_Practice_Center.py")
+                open_topic_practice(course, selected_node_id)
 
             if radar is not None:
                 st.divider()

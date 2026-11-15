@@ -364,7 +364,7 @@ def test_practice_now_on_confirmed_topic_preselects_topic_practice(monkeypatch):
 
 
 @pytest.mark.parametrize("confirmed", [None, ["calc_limits"]])
-def test_practice_now_on_unconfirmed_topic_asks_to_confirm_scope(monkeypatch, confirmed):
+def test_practice_now_on_unconfirmed_topic_keeps_the_exam_scope(monkeypatch, confirmed):
     destinations = []
     monkeypatch.setattr(st, "switch_page", lambda page: destinations.append(page))
     RadarFake(
@@ -376,12 +376,11 @@ def test_practice_now_on_unconfirmed_topic_asks_to_confirm_scope(monkeypatch, co
     app.button(key=_practice_key(CALCULUS_ID, "calc_derivatives")).click().run()
 
     assert not app.exception
-    assert destinations == []
-    assert "practice_mode_calculus-i-demo" not in app.session_state
-    assert "practice_topic_calculus-i-demo" not in app.session_state
-    assert [item.value for item in _panel(app).info] == [
-        "Confirm Derivatives in your exam scope above, then select Practice now again."
-    ]
+    assert destinations == [PRACTICE_PAGE]
+    assert app.session_state["practice_entry_calculus-i-demo"] == {
+        "topic_id": "calc_derivatives", "focused": True,
+    }
+    assert not _panel(app).info
     assert app.session_state["scope_selection_calculus-i-demo"] == (confirmed or [])
 
 

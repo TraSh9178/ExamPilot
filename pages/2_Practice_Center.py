@@ -88,10 +88,15 @@ def begin_mistake_review(practice_key, course, session, questions, confirmed_ids
     if graded is None:
         return  # a second click: the review session is already open
     try:
-        install_practice(st.session_state, course.course_id, create_mistake_review(
+        focused_topic = (graded.get("settings") or {}).get("focused_topic")
+        review = create_mistake_review(
             session, questions, graded["result"]["attempts"],
-            confirmed_ids, topic_id, approved_ids={q.id for q in available_questions(course)},
-        ))
+            confirmed_ids, topic_id or focused_topic,
+            approved_ids={q.id for q in available_questions(course)},
+        )
+        if focused_topic:
+            review["settings"]["focused_topic"] = focused_topic
+        install_practice(st.session_state, course.course_id, review)
     except ValueError as error:
         st.session_state["practice_launch_error"] = str(error)
     else:
@@ -116,11 +121,13 @@ def return_to_session(course_id):
 # always shows the value the page uses (Streamlit sends a value to the browser only when
 # the key is assigned in the run that draws the widget).
 
-def choice_key(course_id):
+def choice_key(course_id, focused_topic=None):
+    if focused_topic:
+        return f"practice_focused_choice_{course_id}_{focused_topic}"
     return f"practice_choice_{course_id}"
 
 
-def opening_choice(course_id, confirmed_topic_ids, active, pending_entry):
+def opening_choice(course_id, confirmed_topic_ids, active, pending_entry, focused_topic=None):
     """What the setup screen shows when it opens, in this order of preference: a request
     staged by another page, the open session's settings, the student's last choice, the
     defaults."""
@@ -135,7 +142,7 @@ def opening_choice(course_id, confirmed_topic_ids, active, pending_entry):
     else:
         staged = {}
     sources = (  # lowest preference first; later ones win
-        st.session_state.get(choice_key(course_id)) or {},
+        st.session_state.get(choice_key(course_id, focused_topic)) or {},
         {"mode": settings.get("mode"), "topic_id": settings.get("topic_id"), "count": settings.get("requested_count")},
         staged,
     )
@@ -150,9 +157,9 @@ def opening_choice(course_id, confirmed_topic_ids, active, pending_entry):
     return choice
 
 
-def remember_choice(course_id, field, confirmed_topic_ids):
+def remember_choice(course_id, field, confirmed_topic_ids, focused_topic=None):
     """on_change of a setup widget: keep the new value as the student's choice."""
-    choice = st.session_state.setdefault(choice_key(course_id), {})
+    choice = st.session_state.setdefault(choice_key(course_id, focused_topic), {})
     value = st.session_state.get(f"practice_{field}_{course_id}")
     if field == "mode":
         choice["mode"] = "mock" if value == tr("Mock Exam") else "topic"
@@ -163,14 +170,14 @@ def remember_choice(course_id, field, confirmed_topic_ids):
         choice["count"] = int(value)
 
 
-def shown_settings(course_id, confirmed_topic_ids):
+def shown_settings(course_id, confirmed_topic_ids, focused_topic=None):
     """The settings Start uses: the widgets' latest values, which are what the screen shows.
 
     The knowledge point counts only if it was on screen; otherwise it is the kept choice,
     which is what the screen shows as soon as Topic Practice is chosen.
     """
     state = st.session_state
-    choice = state.get(choice_key(course_id)) or {}
+    choice = state.get(choice_key(course_id, focused_topic)) or {}
     mode = "mock" if state.get(f"practice_mode_{course_id}", tr("Mock Exam")) == tr("Mock Exam") else "topic"
     topic_id = None
     if mode == "topic":
@@ -183,14 +190,16 @@ def shown_settings(course_id, confirmed_topic_ids):
     return mode, topic_id, int(count)
 
 
-def start_practice(course, confirmed_topic_ids, session_id):
+def start_practice(course, confirmed_topic_ids, session_id, focused_topic=None):
     """Start button: a new session from the settings on screen."""
     state = st.session_state
     course_id = course.course_id
     active = state.get(f"active_practice_{course_id}")
     if (active["session"].session_id if active else None) != session_id:
         return  # a second click: the new session is already open
-    mode, topic_id, requested_count = shown_settings(course_id, confirmed_topic_ids)
+    mode, topic_id, requested_count = shown_settings(course_id, confirmed_topic_ids, focused_topic)
+    if focused_topic:
+        mode, topic_id = "topic", focused_topic
     try:
         exam = create_exam(
             package=course,
@@ -202,13 +211,16 @@ def start_practice(course, confirmed_topic_ids, session_id):
     except ValueError:
         state["practice_create_error"] = True
         return
+    settings = {
+        "mode": mode,
+        "requested_count": requested_count,
+        "confirmed_topic_ids": sorted(confirmed_topic_ids),
+        "topic_id": topic_id,
+    }
+    if focused_topic:
+        settings["focused_topic"] = focused_topic
     install_practice(state, course_id, {
-        "settings": {
-            "mode": mode,
-            "requested_count": requested_count,
-            "confirmed_topic_ids": sorted(confirmed_topic_ids),
-            "topic_id": topic_id,
-        },
+        "settings": settings,
         "session": exam["session"],
         "questions": exam["questions"],
         "warning": exam["warning"],
@@ -284,9 +296,10 @@ def follow_question(active, question_id):
 
 # ---- Screens ------------------------------------------------------------------------
 
-def setup_heading():
+def setup_heading(*, focused=False):
     st.title(tr("Practice"))
-    st.caption(tr("Choose a mode, then focus on one question at a time."))
+    if not focused:
+        st.caption(tr("Choose a mode, then focus on one question at a time."))
 
 
 def choose_topic(course_id, confirmed_topic_ids, topic_names):
@@ -303,27 +316,33 @@ def choose_topic(course_id, confirmed_topic_ids, topic_names):
     )
 
 
-def render_setup_screen(course, confirmed_topic_ids, topic_names, active_practice, pending_entry, opening):
+def render_setup_screen(
+    course, confirmed_topic_ids, topic_names, active_practice, pending_entry, opening,
+    focused_topic=None,
+):
     cid = course.course_id
     in_progress = active_practice is not None and "result" not in active_practice
-    choice = st.session_state.get(choice_key(cid))
+    selected_choice_key = choice_key(cid, focused_topic)
+    choice = st.session_state.get(selected_choice_key)
     if opening or not isinstance(choice, dict):
-        choice = st.session_state[choice_key(cid)] = opening_choice(
-            cid, confirmed_topic_ids, active_practice, pending_entry)
+        choice = st.session_state[selected_choice_key] = opening_choice(
+            cid, confirmed_topic_ids, active_practice, pending_entry, focused_topic)
     if choice.get("topic_id") not in confirmed_topic_ids:  # the scope changed since
         choice["topic_id"] = confirmed_topic_ids[0]
+    if focused_topic:
+        choice.update(mode="topic", topic_id=focused_topic)
     # Assigned in the run that draws the widgets, so the browser shows what Start uses.
     st.session_state[f"practice_mode_{cid}"] = tr("Topic Practice") if choice["mode"] == "topic" else tr("Mock Exam")
     st.session_state[f"practice_count_{cid}"] = choice["count"]
-    st.session_state[f"practice_topic_drawn_{cid}"] = choice["mode"] == "topic"
-    if choice["mode"] == "topic":
+    st.session_state[f"practice_topic_drawn_{cid}"] = choice["mode"] == "topic" and not focused_topic
+    if st.session_state[f"practice_topic_drawn_{cid}"]:
         st.session_state[f"practice_topic_{cid}"] = choice["topic_id"]
 
-    setup_heading()
-    if pending_entry is not None:
+    setup_heading(focused=focused_topic is not None)
+    if pending_entry is not None and not focused_topic:
         target = pending_entry.get("topic_id")
         st.info(
-            (tr("New practice: ") + topic_names[target]) if target
+            (tr("New practice: ") + topic_names[target]) if target in topic_names
             else tr("New practice for your confirmed topics.")
         )
     if in_progress or (pending_entry is not None and active_practice is not None):
@@ -334,21 +353,24 @@ def render_setup_screen(course, confirmed_topic_ids, topic_names, active_practic
         )
 
     with st.container(border=True, key="practice_setup"):
-        st.caption(
-            tr("Confirmed topics") + ": "
-            + " · ".join(topic_names[value] for value in confirmed_topic_ids)
-        )
-        st.radio(
-            tr("Practice mode"),
-            options=[tr("Mock Exam"), tr("Topic Practice")],
-            key=f"practice_mode_{cid}",
-            horizontal=True,
-            width="stretch",
-            on_change=remember_choice, args=(cid, "mode", confirmed_topic_ids),
-        )
-
-        if choice["mode"] == "topic":
-            choose_topic(cid, confirmed_topic_ids, topic_names)
+        if focused_topic:
+            st.subheader(topic_names[focused_topic])
+            st.caption(tr("Topic Practice"))
+        else:
+            st.caption(
+                tr("Confirmed topics") + ": "
+                + " · ".join(topic_names[value] for value in confirmed_topic_ids)
+            )
+            st.radio(
+                tr("Practice mode"),
+                options=[tr("Mock Exam"), tr("Topic Practice")],
+                key=f"practice_mode_{cid}",
+                horizontal=True,
+                width="stretch",
+                on_change=remember_choice, args=(cid, "mode", confirmed_topic_ids),
+            )
+            if choice["mode"] == "topic":
+                choose_topic(cid, confirmed_topic_ids, topic_names)
 
         # No default value: the key is always assigned above.
         st.number_input(
@@ -358,7 +380,7 @@ def render_setup_screen(course, confirmed_topic_ids, topic_names, active_practic
             step=1,
             key=f"practice_count_{cid}",
             width=240,
-            on_change=remember_choice, args=(cid, "count", confirmed_topic_ids),
+            on_change=remember_choice, args=(cid, "count", confirmed_topic_ids, focused_topic),
         )
 
         start_label = (
@@ -370,10 +392,14 @@ def render_setup_screen(course, confirmed_topic_ids, topic_names, active_practic
         st.button(
             tr(start_label), type="primary", key=f"practice_start_{cid}",
             on_click=start_practice,
-            args=(course, confirmed_topic_ids, active_practice["session"].session_id if active_practice else None),
+            args=(course, confirmed_topic_ids, active_practice["session"].session_id if active_practice else None,
+                  focused_topic),
         )
         if st.session_state.pop("practice_create_error", None):
-            st.error(tr("Could not create practice. Try another topic or check your exam scope in Study Plan."))
+            if focused_topic:
+                st.error(tr("There are no approved practice questions for this topic yet."))
+            else:
+                st.error(tr("Could not create practice. Try another topic or check your exam scope in Study Plan."))
 
     # Unfinished and graded sessions are listed on a page of their own.
     if has_practice_history(st.session_state, course.course_id):
@@ -715,9 +741,22 @@ if course is None:
     st.page_link("pages/0_Dashboard.py", label=tr("Back to Dashboard"))
     st.stop()
 
-confirmed_key = f"confirmed_scope_{course.course_id}"
-confirmed_topic_ids = st.session_state.get(confirmed_key)
+practice_key = f"active_practice_{course.course_id}"
+active_practice = st.session_state.get(practice_key)
+pending_entry = st.session_state.get(f"practice_entry_{course.course_id}")
+topic_names = {topic.id: topic.name for topic in course.topics}
 
+# A single-topic shortcut supplies scope only for this practice session.
+if pending_entry is not None:
+    focused_topic = pending_entry.get("topic_id") if pending_entry.get("focused") else None
+else:
+    focused_topic = ((active_practice or {}).get("settings") or {}).get("focused_topic")
+if focused_topic not in topic_names:
+    focused_topic = None
+
+confirmed_topic_ids = (
+    [focused_topic] if focused_topic else st.session_state.get(f"confirmed_scope_{course.course_id}")
+)
 if not confirmed_topic_ids:
     setup_heading()
     st.warning(tr("Confirm your exam scope in Study Plan first."))
@@ -726,8 +765,6 @@ if not confirmed_topic_ids:
     st.stop()
 
 # Validate the confirmed scope before offering practice settings.
-topic_names = {topic.id: topic.name for topic in course.topics}
-
 if (
     len(confirmed_topic_ids) != len(set(confirmed_topic_ids))
     or not set(confirmed_topic_ids).issubset(topic_names)
@@ -737,9 +774,6 @@ if (
     st.page_link("pages/1_Study_Hub.py", label=tr("Go to Study Plan"))
     st.stop()
 
-practice_key = f"active_practice_{course.course_id}"
-active_practice = st.session_state.get(practice_key)
-pending_entry = st.session_state.get(f"practice_entry_{course.course_id}")
 st.session_state.pop("priority_ready", None)
 
 # app.py sets this flag when the student arrives from another page: the page then opens
@@ -775,7 +809,9 @@ opening = arrived or st.session_state.get(screen_key) != screen
 st.session_state[screen_key] = screen
 
 if screen == "setup":
-    render_setup_screen(course, confirmed_topic_ids, topic_names, active_practice, pending_entry, opening)
+    render_setup_screen(
+        course, confirmed_topic_ids, topic_names, active_practice, pending_entry, opening, focused_topic
+    )
 elif screen == "result":
     render_result_screen(course, active_practice, confirmed_topic_ids, topic_names)
 elif screen == "review":

@@ -14,7 +14,7 @@ from services.concept_lab import (
     cubic, cubic_derivative, limit_example, limit_table, secant_slope, tangent_line, corner_slopes,
 )
 from services.ui_style import apply_app_styles
-from services.learning_flow import stage_practice
+from components.topic_practice_link import open_topic_practice
 from services.concept_lab_ui import (
     DISTANCES, current_step, explanation, explore_navigation, keep_value, observation,
     prediction, restore_values, step_indicator,
@@ -29,13 +29,7 @@ def practice_topic(topic_id: str, suffix: str = "") -> None:
     if course is None or course.course_id != "calculus-i-demo":
         st.info(tr("Open the Calculus I Demo course on the Dashboard to practise this topic."))
         return
-    confirmed = st.session_state.get(f"confirmed_scope_{course.course_id}", [])
-    if topic_id not in confirmed:
-        st.info(tr("Confirm this topic in Study Plan first."))
-        st.page_link("pages/1_Study_Hub.py", label=tr("Go to Study Plan"))
-        return
-    stage_practice(st.session_state, course, topic_id)
-    st.switch_page("pages/2_Practice_Center.py")
+    open_topic_practice(course, topic_id)
 
 
 def start_step(topic: str) -> int:

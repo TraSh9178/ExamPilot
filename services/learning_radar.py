@@ -55,6 +55,7 @@ _USER_FLAGS_SQL = """
     SELECT topic_id, reason
     FROM radar_flags
     WHERE demo_user_id = %s AND course_id = %s
+    ORDER BY created_at DESC, topic_id
 """
 
 _COURSE_COUNTS_SQL = """
@@ -189,7 +190,7 @@ def clear_flag(user_id: str, course_id: str, topic_id: str) -> PersistenceResult
 
 
 def get_user_flags(user_id: str, course_id: str) -> dict[str, str | None]:
-    """Map each topic this user flagged in the course to its reason; {} if unreadable."""
+    """Map this account’s flagged topics to their reasons, newest flag first."""
     normalized_user_id = _normalized_user_id(user_id)
     if normalized_user_id is None or not radar_enabled(course_id):
         return {}
