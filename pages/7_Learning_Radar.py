@@ -1,5 +1,5 @@
 """Learning Radar: where students of the built-in demo courses get stuck."""
-
+from services.ui_help import help_tip
 from services.i18n import tr
 
 import streamlit as st
@@ -16,7 +16,7 @@ MAX_PILL_TOPICS = 8
 apply_app_styles()
 
 st.title(tr("Learning Radar"))
-st.caption(tr("See where students get stuck, and mark the topics that stop you."))
+help_tip(tr("See where students get stuck, and mark the topics that stop you."))
 
 course = st.session_state.get("current_course")
 
@@ -45,7 +45,7 @@ chart_column, mark_column = st.columns([2, 1], gap="large")
 with chart_column:
     with st.container(border=True, key="learning_radar_chart_panel"):
         render_course_radar_chart(
-            course, radar, focus_topic_id=picked, limit=8,
+            course, radar, focus_topic_id=picked, limit=8, size=680,
             key="learning_radar_page_chart",
         )
 with mark_column:

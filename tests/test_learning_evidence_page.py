@@ -269,23 +269,22 @@ def test_page_has_back_button_title_caption_mode_and_tables_only(monkeypatch):
     assert not app.exception
 
     order = [entry for entry in _top_level_order(app) if entry != "markdown"]
-    assert order[:4] == ["page_link_learning_evidence_back", "title", "caption", "radio"]
+    assert order[:3] == ["page_link_learning_evidence_back", "title", "radio"]
     assert edge(app, "learning_evidence_back") == "left"
     back = app.button(key="learning_evidence_back")
     assert back.label == "Back to Progress" and back.proto.icon == ":material/arrow_back:"
     assert [item.value for item in app.title] == ["Answers behind Learning DNA"]
-    assert [item.value for item in app.caption] == [
-        "Your latest answer to each question behind your Learning DNA, topic by topic."
-    ]
+    from tests.tooltip_helpers import tooltip_texts
+    assert tooltip_texts(app) == ["Your latest answer to each question behind your Learning DNA, topic by topic."]
     radio = app.radio(key=f"performance_mode_{COURSE_ID}")
     assert radio.label == "Performance mode" and list(radio.options) == ["Mock Exam", "Topic Practice"]
     assert radio.horizontal
 
     # Then one keyed block per topic with answers, and nothing else.
-    assert order[4:] == [f"learning_evidence_{topic_id}" for topic_id in ("rates", "limits", "series")]
+    assert order[3:] == [f"learning_evidence_{topic_id}" for topic_id in ("rates", "limits", "series")]
     assert [button.key for button in app.button] == ["learning_evidence_back"]
     assert not app.expander and not app.metric and not app.info and not app.warning
-    assert [m.value for m in app.markdown if not m.value.startswith("<style")] == []
+    assert [m.value for m in app.markdown if not m.value.startswith("<style") and "quiet-help-row" not in m.value] == []
     assert len(app.dataframe) == 3
 
     back.click().run()

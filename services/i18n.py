@@ -20,6 +20,13 @@ def render_language_control() -> None:
 
 
 _TRANSLATIONS = {
+    "Help": "帮助",
+    "Step-by-step explanation": "分步骤讲解",
+    "Worked example": "分步例题",
+    "Common mistake": "常见误区",
+    "Example from this course": "本课程例题",
+    "Change example": "更换例题",
+    "Self-check": "自评",
     "Back to Knowledge Map": "返回知识图谱",
     "Most flagged topics": "被标记最多的知识点",
     'Ask about this explanation': '针对这段解析提问',

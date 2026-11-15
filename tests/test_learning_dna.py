@@ -124,7 +124,8 @@ def test_progress_exposes_learning_dna_evidence(with_history):
     assert not app.exception
     assert 'Learning DNA' in [s.value for s in app.subheader]
     captions=' '.join(c.value for c in app.caption)
-    assert 'not a validated cognitive diagnosis' in captions
+    assert 'not a validated cognitive diagnosis' not in captions
+    assert any('not a validated cognitive diagnosis' in m.value and 'role="tooltip"' in m.value for m in app.markdown)
     if with_history:
         assert 'Computation answers are more consistent' in ' '.join(m.value for m in app.markdown)
         # The answers behind the bars open on their own page.
@@ -210,43 +211,14 @@ def test_progress_for_old_untagged_history_does_not_infer_abilities():
     assert computation['fill'] is None and computation['detail']=='0 different questions'
 
 
-def test_dashboard_entry_navigates_to_learning_dna_in_registered_app():
-    from tests.auth_helpers import signed_in_app
-    app=signed_in_app(ROOT/'app.py').run()
-    assert not app.exception
-    assert not app.button(key='learning_dna_open').disabled
-    course,history=course_and_history()
-    app.session_state['courses'] = [course]
-    app.session_state['current_course']=course
-    app.session_state['practice_history_test-dna']=history
-    app.session_state['performance_mode_test-dna']='Topic Practice'
-    app.run()
-    app.button(key='learning_dna_open').click().run()
-    assert not app.exception
-    assert app.title[0].value=='Progress'
-    # The section the student asked for is the first one under the figures.
-    sections=[s.value for s in app.subheader if s.value!=course.course_name]
-    assert sections[0]=='Learning DNA'
-    # The request holds for this visit, the answers page included, and ends on any other page.
-    app.switch_page('pages/12_Learning_Evidence.py').run()
-    assert app.session_state['progress_tab_test-dna']=='Learning DNA'
-    app.switch_page('pages/3_Performance.py').run()
-    assert [s.value for s in app.subheader if s.value!=course.course_name][0]=='Learning DNA'
-    app.switch_page('pages/1_Study_Hub.py').run()
-    assert 'progress_tab_test-dna' not in app.session_state
-    app.switch_page('pages/3_Performance.py').run()
-    assert [s.value for s in app.subheader if s.value!=course.course_name][0]=='Mastery by topic'
-
-
-def test_dashboard_dna_opens_chosen_demo_without_previously_opening_course():
+def test_home_has_no_dna_shortcut_but_progress_keeps_the_profile():
     from tests.auth_helpers import signed_in_app
     app = signed_in_app(ROOT/'app.py').run()
-    assert app.session_state['current_course'] is None
-    app.selectbox(key='learning_dna_course').select('calculus-i-demo').run()
-    app.button(key='learning_dna_open').click().run()
+    assert not any(button.key == 'learning_dna_open' for button in app.button)
+    course, history = course_and_history()
+    app.session_state['current_course'] = course
+    app.session_state['practice_history_test-dna'] = history
+    app.session_state['performance_mode_test-dna'] = 'Topic Practice'
+    app.switch_page('pages/3_Performance.py').run()
     assert not app.exception
-    assert app.title[0].value == 'Progress'
-    assert app.session_state['current_course'].course_id == 'calculus-i-demo'
-    assert app.session_state['progress_tab_calculus-i-demo'] == 'Learning DNA'
-    sections = [s.value for s in app.subheader if s.value != 'Calculus I Demo']
-    assert sections[0] == 'Example · Learning DNA'
+    assert 'Learning DNA' in [heading.value for heading in app.subheader]

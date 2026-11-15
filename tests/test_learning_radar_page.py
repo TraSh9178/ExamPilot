@@ -111,7 +111,7 @@ def test_demo_course_shows_chart_ranking_and_topic_pills(monkeypatch):
         in svg
     )
     assert "radar-label-focus" not in svg
-    assert "**Most flagged topics**" in _markdown(app)
+    assert "Most flagged topics" in [item.value for item in app.subheader]
     ranking = next(item.proto.body for item in app.get("html") if "radar-ranking-scroll" in item.proto.body)
     assert 'radar-ranking-scroll' in ranking
     assert ranking.count('class="radar-ranked-row"') == 3

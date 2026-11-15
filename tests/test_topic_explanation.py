@@ -31,6 +31,8 @@ def test_examples_are_offline_and_answers_require_action(monkeypatch):
     assert not app.exception
     assert not tutor.called
     assert not any('One plus one' in item.value for item in app.markdown)
+    app.selectbox[1].select('q1').run()
+    assert len(app.selectbox) == 1
     app.checkbox[0].check().run()
     assert any('One plus one' in item.value for item in app.markdown)
     assert not tutor.called
@@ -66,6 +68,8 @@ def test_failure_keeps_examples_and_allows_retry(monkeypatch):
     app = AppTest.from_function(app_script).run()
     app.button[0].click().run()
     assert len(app.warning) == 1
+    assert not app.checkbox
+    app.selectbox[1].select('q1').run()
     assert app.checkbox[0].label == 'Show answer and explanation'
     app.button[0].click().run()
     assert any(item.value == 'Recovered' for item in app.markdown)
@@ -91,3 +95,17 @@ def test_map_details_open_dedicated_page_and_return_to_same_topic(monkeypatch):
     # Back links preserve the course-scoped graph focus.
     assert app.session_state[f'graph_pending_focus_{course.course_id}'] == 'calc_limits'
     assert app.button(key='topic_details_back').label == 'Back to Knowledge Map'
+
+
+def test_example_selection_is_deliberate_and_can_be_changed_without_a_grade():
+    app = AppTest.from_function(app_script).run()
+    assert not app.checkbox and not app.radio
+    assert not any(item.value == '1 + 1?' for item in app.markdown)
+    app.selectbox[1].select('q1').run()
+    assert len(app.selectbox) == 1  # only the fixture's topic selector remains
+    assert app.radio[0].options == ['A. 2', 'B. 3', 'C. 4', 'D. 5']
+    app.radio[0].set_value(0).run()
+    app.button[-1].click().run()  # Change example
+    assert len(app.selectbox) == 2
+    assert not app.checkbox and not app.radio
+    assert not any(k.startswith('practice_history_') for k in app.session_state.filtered_state)

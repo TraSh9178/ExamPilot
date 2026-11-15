@@ -71,6 +71,7 @@ def test_new_controls_translate_without_changing_widget_contracts():
     assert not app.exception
     assert app.button(key='lab_limits_reset').label=='重置实验'
     assert app.radio(key='concept_lab_side').options==['右侧','左侧']
+    app.session_state['lab_derivatives_self_check']='right'
     app.session_state['lab_derivatives_step']=3  # practice sits in the explain step
     app.run()
     assert app.button(key='concept_lab_practice_calc_derivatives').label=='练习这个知识点'

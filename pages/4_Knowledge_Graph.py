@@ -1,3 +1,4 @@
+from services.ui_help import help_tip
 from services.i18n import tr
 from pathlib import Path
 
@@ -33,7 +34,7 @@ from services.learning_flow import open_lab, stage_practice
 apply_app_styles()
 
 st.title(tr("Knowledge Map"))
-st.caption(tr("Explore connected ideas. Click a topic to read its summary and learning progress."))
+help_tip(tr("Explore connected ideas. Click a topic to read its summary and learning progress."))
 
 course = st.session_state.get("current_course")
 
@@ -113,7 +114,7 @@ with graph_controls[0]:
         st.session_state[zoom_key] = 0
         st.rerun()
 with graph_controls[1]:
-    st.caption(tr("Click for details · Drag to rearrange · Scroll to zoom"))
+    help_tip(tr("Click for details · Drag to rearrange · Scroll to zoom"))
 
 history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})
@@ -332,16 +333,6 @@ with details_column:
         if details is not None:
             links = related_topics(course, selected_node_id)
             st.divider()
-            st.markdown(tr("**Connected topics**"))
-            for label, group in (("Prerequisites", "prerequisites"), ("Leads to", "next_topics"), ("Related", "related")):
-                if links[group]:
-                    st.caption(tr(label) + "：" + ", ".join(topic_names[item] for item in links[group]))
-            if not any(links.values()):
-                st.caption(tr("No connections recorded for this topic."))
-            for linked_id in links["prerequisites"]:
-                if st.button(tr("Review ") + topic_names[linked_id], key=f"graph_prerequisite_{course.course_id}_{linked_id}"):
-                    st.session_state[pending_key] = linked_id
-                    st.rerun()
             if st.button(tr("Practise this topic"), key=f"graph_practice_{course.course_id}_{selected_node_id}", type="primary"):
                 try:
                     stage_practice(st.session_state, course, selected_node_id)

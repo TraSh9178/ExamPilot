@@ -484,8 +484,7 @@ def render_radar_panel(
     With ``course`` the spider chart is drawn above the list, highlighting
     ``focus_topic_id`` when one is given.
     """
-    st.markdown(tr(title))
-    st.caption(tr("Topics where students marked \"I'm stuck here\", most flagged first."))
+    st.subheader(tr(title.strip("*")))
     if course is not None:
         # Imported here: components.radar_chart imports this module.
         from components.radar_chart import render_radar_figure

@@ -3,7 +3,7 @@
 Each tab keeps its chart on the right and walks through one step at a time on
 the left: predict, explore, explain (services/concept_lab_ui.py).
 """
-
+from services.ui_help import help_tip
 from services.i18n import tr
 
 import altair as alt
@@ -23,7 +23,7 @@ from services.concept_lab_ui import (
 
 def practice_topic(topic_id: str, suffix: str = "") -> None:
     """Use the Practice page's existing course-scoped widget contract."""
-    if not st.button(tr("Practice this topic"), key=f"concept_lab_practice_{topic_id}{suffix}"):
+    if not st.button(tr("Practice this topic"), key=f"concept_lab_practice_{topic_id}{suffix}", type="primary"):
         return
     course = st.session_state.get("current_course")
     if course is None or course.course_id != "calculus-i-demo":
@@ -48,7 +48,7 @@ def start_step(topic: str) -> int:
 apply_app_styles()
 
 st.title(tr("Concept Lab"))
-st.caption(tr("Predict, move the controls, then explain what changed."))
+help_tip(tr("Predict, move the controls, then explain what changed."))
 # Values of steps that are not on screen (or were set before leaving the page).
 restore_values()
 # Written again on every run, not only the first: the browser shows a control's
@@ -87,8 +87,7 @@ with limits_tab:
             observation("limits", "concept_lab_limit_distance")
             explore_navigation("limits")
         else:
-            explanation("limits")
-            practice_topic("calc_limits")
+            explanation("limits", lambda: practice_topic("calc_limits"))
     # The slider's value, also in the steps that do not draw the slider.
     distance = st.session_state["concept_lab_limit_distance"]
     selected = limit_table([float(distance)])[0]
@@ -146,7 +145,7 @@ with limits_tab:
             alt.layer(curve, selected_points, hole).properties(height=320),
             width="stretch",
         )
-        st.caption(tr("The open circle at (2, 4) marks a point where f(x) is undefined."))
+        help_tip(tr("The open circle at (2, 4) marks a point where f(x) is undefined."))
 
         left_column, right_column = st.columns(2)
         left_column.metric(
@@ -202,8 +201,7 @@ with derivatives_tab:
                 st.session_state['lab_saved_secant'] = {'x0': x0, 'h': h, 'slope': secant_slope(x0, h)}
             explore_navigation("derivatives")
         else:
-            explanation("derivatives")
-            practice_topic("calc_derivatives")
+            explanation("derivatives", lambda: practice_topic("calc_derivatives"))
     # The controls' values, also in the steps that do not draw them.
     x0 = st.session_state["concept_lab_x0"]
     h = float(st.session_state["concept_lab_h"])
@@ -251,7 +249,7 @@ with derivatives_tab:
     ])).mark_text(align="left", dx=8, dy=-14, fontSize=13).encode(x="x:Q", y="y:Q", text="Point:N")
     with visual:
         st.altair_chart(alt.layer(lines, points, labels).properties(height=360), width="stretch")
-        st.caption(tr("Blue: function · Green dashed: secant · Red: tangent. Hover over the two points to inspect their coordinates."))
+        help_tip(tr("Blue: function · Green dashed: secant · Red: tangent. Hover over the two points to inspect their coordinates."))
         secant_column, derivative_column = st.columns(2)
         secant_column.metric(tr("Secant slope"), f"{slope:.6f}")
         derivative_column.metric(tr("Derivative f′(x₀)"), f"{cubic_derivative(x0):.6f}")
@@ -281,8 +279,7 @@ with corner_tab:
             observation("corner", "concept_lab_corner_h")
             explore_navigation("corner")
         else:
-            explanation("corner")
-            practice_topic('calc_derivatives', '_corner')
+            explanation("corner", lambda: practice_topic("calc_derivatives", "_corner"))
     distance = st.session_state["concept_lab_corner_h"]
     left, right = corner_slopes(float(distance))
     samples = [{'x': -1.2 + i*2.4/200, 'y': abs(-1.2+i*2.4/200)} for i in range(201)]

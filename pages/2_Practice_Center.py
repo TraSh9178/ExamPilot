@@ -1,6 +1,6 @@
+from services.ui_help import help_tip
 from services.i18n import tr
 from html import escape
-from services.ui_style import BRAND_PLANE
 import time
 
 import streamlit as st
@@ -287,7 +287,7 @@ def follow_question(active, question_id):
 
 def setup_heading():
     st.title(tr("Practice"))
-    st.caption(tr("Choose a mode, then focus on one question at a time."))
+    help_tip(tr("Choose a mode, then focus on one question at a time."))
 
 
 def choose_topic(course_id, confirmed_topic_ids, topic_names):
@@ -410,7 +410,8 @@ def render_question_screen(course, active, topic_names):
     has_panel = radar_on or notes
     panel_shown = has_panel and st.session_state.get(f"practice_side_panel_{course.course_id}", True)
 
-    if panel_shown:
+    if has_panel:
+        st.markdown(f'<span class="practice-panel-state" data-open="{str(panel_shown).lower()}"></span>', unsafe_allow_html=True)
         paper, margin = st.columns([3, 1], gap="large")
     else:
         paper, margin = st.container(key="practice_main_full"), None
@@ -449,17 +450,11 @@ def render_question_screen(course, active, topic_names):
                 with st.container(key="flight_progress_count", width="content"):
                     st.caption(tr("Question") + f" {index + 1:02} / {len(questions):02}")
                 with st.container(key="flight_progress_track"):
-                    stops = min(len(questions), 12)
-                    current_stop = index * (stops - 1) // max(1, len(questions) - 1)
-                    markers = "".join(
-                        '<span class="flight-waypoint is-current">' + BRAND_PLANE.read_text(encoding='utf-8') + '</span>' if step == current_stop
-                        else '<span class="flight-waypoint"></span>'
-                        for step in range(stops)
-                    )
-                    st.markdown(
-                        f'<div class="flight-waypoints" aria-hidden="true">{markers}</div>',
-                        unsafe_allow_html=True,
-                    )
+                    from services.paper_progress import progress_route
+                    route_key = f'practice_route_index_{sid}'
+                    st.markdown(progress_route(index, len(questions), st.session_state.get(route_key)),
+                                unsafe_allow_html=True)
+                    st.session_state[route_key] = index
                 with st.container(
                     key="flight_progress_clock", horizontal=True, width="content", vertical_alignment="center",
                     gap="xsmall",

@@ -134,7 +134,7 @@ def _panel(app):
 
 
 def _rows(panel):
-    return [item.value for item in panel.markdown]
+    return [item.value for item in panel.markdown if "quiet-help-row" not in item.value]
 
 
 def _captions(panel):

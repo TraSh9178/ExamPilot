@@ -1,5 +1,5 @@
 """Progress page charts: markup, numbers from the existing calculations, layout and wording."""
-
+from tests.tooltip_helpers import tooltip_texts
 import ast
 import html
 import re
@@ -364,7 +364,7 @@ def test_page_has_no_tabs_and_nothing_analytical_behind_a_click():
     assert len(charts(app, "dna")) == len(TOPICS)
     captions = [caption.value for caption in app.caption]
     assert any(text.startswith("How to read this profile · These are question-based observations")
-               for text in captions)
+               for text in tooltip_texts(app))
     headings = [s.value for s in app.subheader]
     assert {"Mastery by topic", "Accuracy by session", "Learning DNA", "Time by topic"} <= set(headings)
     # The per-topic boxes of the old details tab are gone: one list, in the chart.
@@ -536,8 +536,10 @@ def test_stale_progress_tab_value_changes_nothing(stale):
     course, history = chart_course_and_history()
 
     def snapshot(app):
-        return [(type(element).__name__, getattr(element, "value", None) if element.type != "dataframe"
-                 else element.value.to_dict(), getattr(element, "label", None))
+        def normalized(element):
+            value = element.value.to_dict() if element.type == "dataframe" else getattr(element, "value", None)
+            return re.sub(r'help-[a-f0-9]{32}', 'help-id', value) if isinstance(value, str) else value
+        return [(type(element).__name__, normalized(element), getattr(element, "label", None))
                 for element, _ in elements_with_ancestors(app.main)]
 
     plain = progress_app(course, history, mode="Topic Practice")
