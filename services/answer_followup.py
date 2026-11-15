@@ -1,6 +1,6 @@
 """Question-scoped follow-up, asked only after a student submits the form."""
 import hashlib
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 
 import streamlit as st
 
@@ -14,8 +14,7 @@ def render_answer_followup(course: StudyPackage, question: Question) -> None:
         (course.model_dump_json() + question.model_dump_json()).encode('utf-8')
     ).hexdigest()
     history_key = f'answer_followup_history_{scope}'
-    st.subheader(tr('Ask about this explanation'))
-    help_tip(tr('Ask what you did not understand. This conversation stays in this session and does not change your score.'))
+    help_heading(tr('Ask about this explanation'), tr('Ask what you did not understand. This conversation stays in this session and does not change your score.'))
     for item in st.session_state.get(history_key, []):
         with st.chat_message('user'):
             st.write(item['question'])

@@ -1,5 +1,5 @@
 """Flashcards: review one card at a time; the Anki export opens on its own page."""
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 from html import escape
 
 import streamlit as st
@@ -62,7 +62,6 @@ def _render_question(card: Flashcard, side: str) -> None:
             f'<div class="flashcard-options">{options}</div>',
             unsafe_allow_html=True,
         )
-        help_tip(tr("Think of your answer first, then flip the card."))
         return
 
     note = ""
@@ -90,7 +89,6 @@ def _render_idea(card: Flashcard, side: str) -> None:
             f'<div class="flashcard-heading" role="heading" aria-level="3">{_text(card.topic_name)}</div>',
             unsafe_allow_html=True,
         )
-        help_tip(tr("Recall what you know about this idea, then flip the card."))
         return
     st.markdown(
         f'<div class="flashcard-recap">{_text(card.topic_name)}</div>'
@@ -101,8 +99,7 @@ def _render_idea(card: Flashcard, side: str) -> None:
 
 apply_app_styles()
 
-st.title(tr("Flashcards"))
-help_tip(tr("One card at a time, from your mistakes, weak topics and key ideas."))
+help_heading(tr("Flashcards"), tr("One card at a time, from your mistakes, weak topics and key ideas.") + "\n\n" + tr("Think of your answer first, then flip the card.") + " " + tr("Recall what you know about this idea, then flip the card."), level='title')
 
 course = st.session_state.get("current_course")
 

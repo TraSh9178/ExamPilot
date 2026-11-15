@@ -9,6 +9,11 @@ def progress_route(index, total, previous=None):
     def point(t):
         return 20 + 560*t, 48 + 22*math.sin(4*math.pi*t)
 
+    def angle(t):
+        # Brand artwork points 25 degrees above its x axis. Align its nose
+        # with the local tangent, reversing direction on a backwards jump.
+        return math.degrees(math.atan2(88*math.pi*math.cos(4*math.pi*t), 560)) + 25 + (180 if fraction < before else 0)
+
     stops = min(max(total, 1), 12)
     fraction = max(0, min(index / max(1, total-1), 1))
     before = fraction if previous is None else max(0, min(previous / max(1, total-1), 1))
@@ -24,12 +29,13 @@ def progress_route(index, total, previous=None):
     name = 'route-flight-' + hashlib.sha256(f'{before}:{fraction}'.encode()).hexdigest()[:12]
     frames = []
     for frame in range(21):
-        x,y = point(before + (fraction-before)*frame/20)
-        frames.append(f'{frame*5}%{{transform:translate({x:.2f}px,{y:.2f}px)}}')
+        t = before + (fraction-before)*frame/20
+        x,y = point(t)
+        frames.append(f'{frame*5}%{{transform:translate({x:.2f}px,{y:.2f}px) rotate({angle(t):.2f}deg)}}')
     style = f'<style>@keyframes {name}{{{"".join(frames)}}}</style>'
     x,y = point(fraction)
     return (f'<svg class="paper-progress-route" viewBox="0 0 600 96" aria-hidden="true">{style}'
             f'<path class="route-line" d="{path}"/>{dots}'
-            f'<g class="route-plane-static" transform="translate({x:.2f} {y:.2f})">{plane}</g>'
-            f'<g class="route-plane-moving" transform="translate({x:.2f} {y:.2f})" '
+            f'<g class="route-plane-static" transform="translate({x:.2f} {y:.2f}) rotate({angle(fraction):.2f})">{plane}</g>'
+            f'<g class="route-plane-moving" transform="translate({x:.2f} {y:.2f}) rotate({angle(fraction):.2f})" '
             f'style="transform-origin:0 0;animation:{name} 700ms ease-in-out both">{plane}</g></svg>')

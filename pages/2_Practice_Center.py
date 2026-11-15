@@ -1,4 +1,4 @@
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 from services.i18n import tr
 from html import escape
 import time
@@ -286,8 +286,7 @@ def follow_question(active, question_id):
 # ---- Screens ------------------------------------------------------------------------
 
 def setup_heading():
-    st.title(tr("Practice"))
-    help_tip(tr("Choose a mode, then focus on one question at a time."))
+    help_heading(tr("Practice"), tr("Choose a mode, then focus on one question at a time."), level='title')
 
 
 def choose_topic(course_id, confirmed_topic_ids, topic_names):
@@ -639,16 +638,12 @@ def render_result_screen(course, active_practice, confirmed_topic_ids, topic_nam
     missed_ids = {attempt.question_id for attempt in result["attempts"] if not attempt.is_correct}
     next_question = next((q for q in questions if q.id in missed_ids), questions[0])
     with st.container(key="practice_result_overview"):
-        stats, review_action, next_step = st.columns([1, 1.2, 1.6], gap="large", vertical_alignment="center")
+        stats, next_step = st.columns([1, 1.6], gap="large", vertical_alignment="center")
         with stats:
             with st.container(border=True, key="result_score"):
                 st.metric(tr("Score"), f"{result['correct_count']} / {result['total_count']}")
             with st.container(border=True, key="result_accuracy"):
                 st.metric(tr("Accuracy"), f"{result['accuracy']:.2f}%")
-        with review_action, st.container(key="result_review_action"):
-            if st.button(tr("Review answers"), key="open_answer_review", icon=":material/fact_check:",
-                         type="primary", width="stretch"):
-                st.switch_page(ANSWER_REVIEW_PAGE)
         with next_step, st.container(border=True, key="flight_next_topic"):
             st.subheader(tr("Take the next step"))
             st.markdown(f"**{escape(topic_names.get(next_question.topic_id, tr('Topic')))}**")
@@ -661,6 +656,10 @@ def render_result_screen(course, active_practice, confirmed_topic_ids, topic_nam
                 if st.button(tr("Explore this topic in Concept Lab"), key=f"flight_lab_{session.session_id}"):
                     open_lab(st.session_state, course.course_id, next_question.topic_id)
                     st.switch_page("pages/6_Concept_Lab.py")
+    with st.container(horizontal=True, horizontal_alignment="center", key="result_review_action"):
+        if st.button(tr("Review answers"), key="open_answer_review", icon=":material/fact_check:",
+                     type="primary", width=352):
+            st.switch_page(ANSWER_REVIEW_PAGE)
     guided_review_available = render_guided_review(course, session, questions, result)
     result_overview(course, session, questions, result)
 

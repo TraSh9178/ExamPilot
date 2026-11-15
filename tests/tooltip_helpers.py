@@ -4,8 +4,10 @@ import re
 
 
 def tooltip_texts(app):
-    return [html.unescape(text) for item in app.markdown
-            for text in re.findall(r'<span class="quiet-help-text"[^>]*>(.*?)</span>', item.value, re.S)]
+    # A module's one popover may contain several paragraphs of supporting copy.
+    return [paragraph for item in app.markdown
+            for text in re.findall(r'<span class="quiet-help-text"[^>]*>(.*?)</span>', item.value, re.S)
+            for paragraph in html.unescape(text.replace('<br><br>', '\n\n').replace('<br>', '\n')).split('\n\n')]
 
 
 def supporting_texts(app):

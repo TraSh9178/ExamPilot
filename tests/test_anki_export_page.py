@@ -19,6 +19,7 @@ from streamlit.testing.v1.element_tree import Block
 from models.schemas import AttemptResult, ExamSession, StudyPackage
 from services.i18n import LANGUAGE_KEY
 from services.question_editor import available_questions
+from tests.tooltip_helpers import tooltip_texts
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -190,7 +191,8 @@ def _top_level_order(app: AppTest) -> list[str]:
     order = []
     for child in app.main.children.values():
         block_id = getattr(child.proto, "id", "") if isinstance(child, Block) and child.proto is not None else ""
-        order.append(block_id.split("-", 2)[2] if block_id else child.type)
+        key = block_id.split("-", 2)[2] if block_id else child.type
+        order.append("title" if key.startswith("help_heading_") and child.title else key)
     return order
 
 
@@ -226,7 +228,7 @@ def test_page_is_flashcards_with_one_card_and_a_small_export_button_on_the_right
     assert question.question in front
     for letter, option in zip("ABCD", question.options):
         assert f"{letter}. {option}" in front
-    assert "Think of your answer first, then flip the card." in front
+    assert "Think of your answer first, then flip the card." in " ".join(tooltip_texts(app))
     assert question.explanation not in front
 
     assert [(item.label, item.disabled) for item in app.button] == [
@@ -398,7 +400,7 @@ def test_deck_choice_is_one_click_and_switching_returns_to_card_one_front():
     assert _card_caption(app) == "Card 1 of 3"
     front = _card_text(app)
     assert "Key idea" in front and course.topics[0].name in front
-    assert "Recall what you know about this idea, then flip the card." in front
+    assert "Recall what you know about this idea, then flip the card." in " ".join(tooltip_texts(app))
     assert course.topics[0].summary not in front
     _button(app, "flip").click().run()
     assert course.topics[0].summary in _card_text(app)
@@ -689,7 +691,7 @@ def test_chinese_interface_translates_every_flashcard_string():
     assert any("一次一张卡片，复习你的错题、薄弱知识点和知识要点。" in m.value for m in app.markdown)
     assert _decks(app).options == ["我的错题 · 2", "薄弱知识点 · 3", "知识要点 · 3", "全部题目 · 9"]
     assert _card_caption(app) == "第 1 / 2 张 · Variables and Expressions"
-    assert "先想好答案，再翻开卡片。" in _card_text(app)
+    assert "先想好答案，再翻开卡片。" in " ".join(tooltip_texts(app))
     _button(app, "flip").click().run()
     back = _card_text(app)
     assert "答案" in back and "上次你选了 C。" in back
@@ -701,7 +703,7 @@ def test_chinese_interface_translates_every_flashcard_string():
     _decks(app).set_value("ideas").run()
     assert _card_caption(app) == "第 1 / 3 张"
     assert "知识要点" in _card_text(app)
-    assert "先回想你对这个知识点的了解，再翻开卡片。" in _card_text(app)
+    assert "先回想你对这个知识点的了解，再翻开卡片。" in " ".join(tooltip_texts(app))
 
     empty = _app_with_course(_python_basics_course(), chinese=True)
     assert "练习之后，你的错题会单独成组，出现在这里。" in [item.value for item in empty.caption]

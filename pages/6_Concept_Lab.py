@@ -3,7 +3,7 @@
 Each tab keeps its chart on the right and walks through one step at a time on
 the left: predict, explore, explain (services/concept_lab_ui.py).
 """
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 from services.i18n import tr
 
 import altair as alt
@@ -47,8 +47,7 @@ def start_step(topic: str) -> int:
 
 apply_app_styles()
 
-st.title(tr("Concept Lab"))
-help_tip(tr("Predict, move the controls, then explain what changed."))
+help_heading(tr("Concept Lab"), "\n\n".join([tr("Predict, move the controls, then explain what changed."), tr("The open circle at (2, 4) marks a point where f(x) is undefined."), tr("Blue: function · Green dashed: secant · Red: tangent. Hover over the two points to inspect their coordinates.")]), level='title')
 # Values of steps that are not on screen (or were set before leaving the page).
 restore_values()
 # Written again on every run, not only the first: the browser shows a control's
@@ -145,7 +144,6 @@ with limits_tab:
             alt.layer(curve, selected_points, hole).properties(height=320),
             width="stretch",
         )
-        help_tip(tr("The open circle at (2, 4) marks a point where f(x) is undefined."))
 
         left_column, right_column = st.columns(2)
         left_column.metric(
@@ -249,7 +247,6 @@ with derivatives_tab:
     ])).mark_text(align="left", dx=8, dy=-14, fontSize=13).encode(x="x:Q", y="y:Q", text="Point:N")
     with visual:
         st.altair_chart(alt.layer(lines, points, labels).properties(height=360), width="stretch")
-        help_tip(tr("Blue: function · Green dashed: secant · Red: tangent. Hover over the two points to inspect their coordinates."))
         secant_column, derivative_column = st.columns(2)
         secant_column.metric(tr("Secant slope"), f"{slope:.6f}")
         derivative_column.metric(tr("Derivative f′(x₀)"), f"{cubic_derivative(x0):.6f}")

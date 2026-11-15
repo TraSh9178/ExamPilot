@@ -1,5 +1,5 @@
 """Course tools: question review, account backup and source material, one at a time."""
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 from services.i18n import tr
 import streamlit as st
 
@@ -41,7 +41,6 @@ def render_question_review(course) -> None:
             key=f"editor_question_{course.course_id}",
         )
         original = by_id[question_id]
-        help_tip(tr("Check the answer and explanation before approving; edits never change past results."))
         with st.form(f"question_review_{course.course_id}_{question_id}"):
             prompt = st.text_area(tr("Question text"), value=original.question)
             options = [st.text_input(tr(f"Option {chr(65 + index)}"), value=value) for index, value in enumerate(original.options)]
@@ -92,7 +91,6 @@ def render_source_material(course) -> None:
     material = st.session_state.get(f"course_document_{course.course_id}")
     if material:
         st.caption(material.get("filename", tr("Course material")))
-        help_tip(tr("The text from your material is saved with this course. The original uploaded file is not stored."))
         with st.expander(tr("Read saved text")):
             st.text(material.get("text", ""))
         with st.form(f"material_delete_form_{course.course_id}"):
@@ -121,8 +119,7 @@ def render_source_material(course) -> None:
 apply_app_styles()
 
 back_button(tr("Back to Study Plan"), "pages/1_Study_Hub.py", key="course_tools_back")
-st.title(tr("Course tools"))
-help_tip(tr("Manage questions, account backups and source material when needed."))
+help_heading(tr("Course tools"), "\n\n".join([tr("Manage questions, account backups and source material when needed."), tr("Check the answer and explanation before approving; edits never change past results."), tr("The text from your material is saved with this course. The original uploaded file is not stored.")]), level='title')
 
 course = st.session_state.get("current_course")
 

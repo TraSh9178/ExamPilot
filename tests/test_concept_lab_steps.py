@@ -317,7 +317,7 @@ def test_the_answer_waits_for_show_answer_then_says_how_the_prediction_went(topi
 
     question = EXPLANATIONS[topic][0]
     block = _explain_block(app, topic)
-    assert [node.value for node in _walk(block) if node.type == "markdown"][0] == f"##### {question}"
+    assert [node.value for node in _walk(block) if node.type == "subheader"][0] == question
     assert app.text_area(key=f"lab_{topic}_explanation").label == "Your explanation"
     assert any("Only you see this. Write it first, then compare." in m.value and 'role="tooltip"' in m.value for m in app.markdown)
     show = app.button(key=f"lab_{topic}_show_answer")
