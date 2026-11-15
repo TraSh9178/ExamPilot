@@ -1,4 +1,5 @@
 """Explicit append-only demo updates; never replace a learner's saved content."""
+import logging
 from pathlib import Path
 from copy import deepcopy
 from models.schemas import StudyPackage
@@ -52,14 +53,19 @@ def sync_demo_catalog(state):
             by_id[current.course_id] = len(courses)
             courses.append(current)
     for course_id, filename in FILES.items():
-        if course_id in by_id:
-            index = by_id[course_id]
-            courses[index], _ = demo_update(courses[index])
-        else:
-            package = StudyPackage.model_validate_json(
-                (Path(__file__).resolve().parents[1]/'data'/filename).read_text(encoding='utf-8'))
-            by_id[course_id] = len(courses)
-            courses.append(package)
+        # One broken built-in update must not stop every page; keep that
+        # course as it was and carry on with the others.
+        try:
+            if course_id in by_id:
+                index = by_id[course_id]
+                courses[index], _ = demo_update(courses[index])
+            else:
+                package = StudyPackage.model_validate_json(
+                    (Path(__file__).resolve().parents[1]/'data'/filename).read_text(encoding='utf-8'))
+                by_id[course_id] = len(courses)
+                courses.append(package)
+        except Exception:
+            logging.getLogger(__name__).exception('Built-in course %s was not updated.', course_id)
     state['courses'] = courses
     if current is not None and current.course_id in by_id:
         state['current_course'] = courses[by_id[current.course_id]]
