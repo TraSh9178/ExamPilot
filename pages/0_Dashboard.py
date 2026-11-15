@@ -115,11 +115,21 @@ with st.container(key="dashboard_actions"):
         st.rerun()
 
 with st.container(key="dashboard_learning_dna"):
+    dna_course = selected_course
+    if dna_course is None and st.session_state["courses"]:
+        courses_by_id = {course.course_id: course for course in st.session_state["courses"]}
+        dna_course_id = st.selectbox(
+            tr("Course"), list(courses_by_id),
+            format_func=lambda course_id: courses_by_id[course_id].course_name,
+            key="learning_dna_course",
+        )
+        dna_course = courses_by_id[dna_course_id]
     if st.button(
         tr("View Learning DNA"), icon=":material/insights:",
-        key="learning_dna_open", disabled=selected_course is None,
+        key="learning_dna_open", disabled=dna_course is None,
     ):
-        st.session_state[f"progress_tab_{selected_course.course_id}"] = "Learning DNA"
+        select_course(st.session_state, dna_course.course_id)
+        st.session_state[f"progress_tab_{dna_course.course_id}"] = "Learning DNA"
         st.switch_page("pages/3_Performance.py")
 
 # Study totals: one always-visible row of small tiles (assets/paper_panels.css).
