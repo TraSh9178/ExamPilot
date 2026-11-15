@@ -38,7 +38,10 @@ def test_new_entry_shows_settings_instead_of_old_graded_result():
     assert not app.exception
     assert 'Your result' not in [s.value for s in app.subheader]
     assert app.session_state['active_practice_insights']==old
-    assert any(e.label=='Practice settings' and e.proto.expanded for e in app.expander)
+    # The settings are on the page itself, not in an expander.
+    assert app.radio(key='practice_mode_insights').value=='Topic Practice'
+    assert app.button_group(key='practice_topic_insights').value=='t'
+    assert not [e for e in app.expander if e.label in ('Practice settings','Change settings')]
     app.button(key='practice_return_previous').click().run()
     assert not app.exception
     assert 'Your result' in [s.value for s in app.subheader]
@@ -170,7 +173,7 @@ def test_map_to_derivatives_lab_to_practice_preserves_context_and_old_result(mon
     app.button(key='concept_lab_practice_calc_derivatives').click().run()
     assert not app.exception
     assert app.radio(key='practice_mode_calculus-i-demo').value=='Topic Practice'
-    assert app.selectbox(key='practice_topic_calculus-i-demo').value=='calc_derivatives'
+    assert app.button_group(key='practice_topic_calculus-i-demo').value=='calc_derivatives'
     assert 'Your result' not in [s.value for s in app.subheader]
     assert app.session_state['practice_history_calculus-i-demo']==history
 

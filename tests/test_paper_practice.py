@@ -20,6 +20,7 @@ from services.practice_insights import session_insights, set_session_insights
 from tests.auth_helpers import TEST_USER, signed_in_app
 from tests.test_learning_flow_ux import calculus
 from tests.test_practice_insights import setup_course, start_app
+from tests.test_practice_page import open_review, open_setup, submit_answers
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "pages" / "2_Practice_Center.py"
@@ -77,7 +78,10 @@ def test_topic_question_card_has_two_digit_badge_and_lettered_options():
 def test_mock_exam_and_review_use_the_same_badges():
     app = mock_app()
     assert not app.exception
-    assert badges(app) == ["Q01", "Q02"]
+    # One question at a time in Mock Exam too.
+    assert badges(app) == ["Q01"]
+    app.button(key="worksheet_next_m").click().run()
+    assert badges(app) == ["Q02"]
     assert app.radio(key="answer_m_q1").options[0] == "A. A"
     app = mock_app(graded=True)
     assert badges(app) == ["Q01", "Q02"]
@@ -119,7 +123,7 @@ def test_confidence_is_one_click_and_survives_worksheet_paging():
     app.button(key="worksheet_next_s").click().run()
     app.button(key="worksheet_previous_s").click().run()
     assert app.button_group(key="confidence_s_q0").value == "sure"
-    next(b for b in app.button if b.label == "Submit answers").click().run()
+    submit_answers(app)
     assert not app.exception
     rows = session_insights(app.session_state["current_course"], "s")
     assert rows["q0"]["confidence"] == "sure"
@@ -129,9 +133,12 @@ def test_confidence_is_one_click_and_survives_worksheet_paging():
 def test_unrecorded_confidence_is_not_flagged_before_submit():
     app, _ = start_app()
     app.radio(key="answer_s_q0").set_value(0).run()
+    open_review(app)
     table = next(frame.value for frame in app.dataframe)
     assert list(table["Check"]) == ["Unanswered"]  # q1 only; q0 has no confidence yet
+    app.button(key="worksheet_back_s").click().run()
     app.button_group(key="confidence_s_q0").set_value("unsure").run()
+    open_review(app)
     table = next(frame.value for frame in app.dataframe)
     assert list(table["Check"]) == ["Unsure", "Unanswered"]
 
@@ -198,8 +205,9 @@ def test_margin_chart_and_stuck_popover_use_the_radar_component(monkeypatch):
     assert (focus, key) == (first.topic_id, "practice_radar")
     assert fake.stuck == [(course.course_id, first.topic_id, TEST_USER.user_id, f"practice_stuck_{sid}_{first.id}")]
     popovers = app.get("popover")
-    assert [p.proto.popover.label for p in popovers] == ["Learning Radar"]
-    assert "fake stuck buttons" in [c.value for c in popovers[0].caption]
+    # The session menu in the title row, then Learning Radar in the actions row.
+    assert [p.proto.popover.label for p in popovers] == ["This session", "Learning Radar"]
+    assert "fake stuck buttons" in [c.value for c in popovers[1].caption]
     # The chart sits above the existing count, and the Explore button stays below.
     markdown = page_markdown(app)
     count_text = radar_count_text(cached.topics.get(first.topic_id))
@@ -213,7 +221,8 @@ def test_signed_out_student_sees_the_chart_but_no_stuck_popover(monkeypatch):
     app, _, _ = radar_app(signed_in=False)
     assert not app.exception
     assert len(fake.charts) == 1
-    assert fake.stuck == [] and not app.get("popover")
+    assert fake.stuck == []
+    assert [p.proto.popover.label for p in app.get("popover")] == ["This session"]
 
 
 def test_page_works_before_the_radar_component_is_merged(monkeypatch):
@@ -221,12 +230,12 @@ def test_page_works_before_the_radar_component_is_merged(monkeypatch):
     monkeypatch.setitem(sys.modules, "components.radar_chart", None)
     app, _, exam = radar_app()
     assert not app.exception
-    assert not app.get("popover")
+    assert [p.proto.popover.label for p in app.get("popover")] == ["This session"]
     assert "Learning Radar" in [s.value for s in app.subheader]
     assert any(b.key == f"worksheet_radar_{exam['session'].session_id}" for b in app.button)
 
 
-def test_mock_exam_offers_the_stuck_popover_under_each_question(monkeypatch):
+def test_mock_exam_offers_the_stuck_popover_under_the_question(monkeypatch):
     fake = FakeRadarChart(monkeypatch)
     course = calculus()
     scope = ["calc_limits", "calc_derivatives"]
@@ -239,15 +248,23 @@ def test_mock_exam_offers_the_stuck_popover_under_each_question(monkeypatch):
     }
     app.run()
     assert not app.exception
-    assert len(app.get("popover")) == len(exam["questions"]) == 2
-    assert fake.charts == []  # Mock Exam has no margin
+    sid = exam["session"].session_id
+    for question in exam["questions"]:
+        radar_menus = [p for p in app.get("popover") if p.proto.popover.label == "Learning Radar"]
+        assert len(radar_menus) == 1
+        assert fake.stuck[-1] == (course.course_id, question.topic_id, TEST_USER.user_id, f"practice_stuck_{sid}_{question.id}")
+        # The side panel shows the radar for the question on screen, but no notes in Mock Exam.
+        assert fake.charts[-1][2] == question.topic_id
+        assert "Quick Notes" not in [s.value for s in app.subheader]
+        if question is not exam["questions"][-1]:
+            app.button(key=f"worksheet_next_{sid}").click().run()
+    assert len(fake.stuck) == len(fake.charts) == 2
 
 
 # 6 · Clean-up ---------------------------------------------------------------
 
 def test_bookkeeping_text_is_gone_from_practice_and_result():
     app, _ = start_app()
-    app.button(key="focus_s_q0").click().run()
     shown = " ".join(texts(app))
     for removed in ("Selected for focus-time tracking", "Saved practice sessions", "pending, flagged",
                     "Question availability"):
@@ -258,7 +275,8 @@ def test_bookkeeping_text_is_gone_from_practice_and_result():
                     "Hint use was not recorded", "No focus-time measurements", "Saved practice sessions",
                     "No source page was provided", "Source text is not available", "A review creates"):
         assert removed not in shown
-    assert app.button(key="open_saved_result_insights")  # saved sessions can still be reopened
+    open_setup(app)  # "New practice": saved sessions can still be reopened from there
+    assert app.button(key="open_saved_result_insights")
 
 
 def test_pending_questions_no_longer_show_an_availability_note(monkeypatch):
@@ -282,10 +300,15 @@ def test_short_availability_notice_and_new_practice_line():
     app.number_input(key="practice_count_insights").set_value(10)
     next(b for b in app.button if b.label == "Start new practice").click().run()
     assert not app.exception
-    assert [w.value for w in app.warning] == ["3 questions available; all included."]
+    # On the question screen the notice is one quiet line under the header, first question only.
+    assert not app.warning
+    assert "3 questions available; all included." in [c.value for c in app.caption]
     app.session_state[LANGUAGE_KEY] = True
     app.run()
-    assert [w.value for w in app.warning] == ["仅有 3 道题可用，已全部加入。"]
+    assert "仅有 3 道题可用，已全部加入。" in [c.value for c in app.caption]
+    sid = app.session_state["active_practice_insights"]["session"].session_id
+    app.button(key=f"worksheet_next_{sid}").click().run()
+    assert "仅有 3 道题可用，已全部加入。" not in [c.value for c in app.caption]
 
 
 def test_practice_errors_are_short_and_never_raw(monkeypatch):
@@ -301,12 +324,14 @@ def test_practice_errors_are_short_and_never_raw(monkeypatch):
     monkeypatch.setattr(exam_engine, "create_exam", broken_create)
     monkeypatch.setattr(exam_engine, "grade_exam", broken_grade)
     app, _ = start_app()
+    open_setup(app)
     next(b for b in app.button if b.label == "Start new practice").click().run()
     assert not app.exception
     errors = [e.value for e in app.error]
     assert errors == ["Could not create practice. Try another topic or check your exam scope in Study Plan."]
 
-    next(b for b in app.button if b.label == "Submit answers").click().run()
+    app.button(key="practice_return_previous").click().run()
+    submit_answers(app)
     assert not app.exception
     assert [e.value for e in app.error] == ["Could not grade this practice. Please try again."]
     assert not any("q0" in value or "secret_topic_id" in value for value in texts(app))
@@ -385,6 +410,7 @@ def test_guessed_note_and_saved_session_label_use_plural_forms():
     app.run()
     assert ("2 correct answers were marked Guessed. Revisit them before treating them as secure knowledge."
             in [i.value for i in app.info])
+    open_setup(app)  # saved sessions are listed on the setup screen
     history = app.session_state["practice_history_insights"]
     record = history["s"]
     single = ExamSession(session_id="one", mode="topic", question_ids=["q0"])
@@ -412,6 +438,7 @@ def test_unfinished_sessions_label_is_translated():
     state["active_practice_insights"] = replacement
     state["practice_drafts_insights"] = plain["practice_drafts_insights"]
     app.run()
+    open_setup(app)  # drafts are listed on the setup screen
     assert any(e.label == "Unfinished sessions (1)" for e in app.expander)
     assert list(app.selectbox(key="draft_choice_insights").options) == ["1 · Topic practice · 2 questions · Unfinished"]
     state[LANGUAGE_KEY] = True
@@ -444,22 +471,24 @@ def test_practice_interface_strings_have_chinese_entries(relative):
 
 def test_worksheet_index_stays_in_range_after_a_late_click():
     app, _ = start_app()
-    active = dict(app.session_state["active_practice_insights"])
-    last = len(active["questions"]) - 1
-    active["worksheet_index"] = last
-    app.session_state["active_practice_insights"] = active
-    app.run()
+    last = len(app.session_state["active_practice_insights"]["questions"]) - 1
 
-    # A click that arrives after Next was disabled must not leave the range.
+    # Next was on screen, but an earlier click already reached the last question.
+    app.session_state["active_practice_insights"]["worksheet_index"] = last
     app.button(key="worksheet_next_s").click().run()
     assert not app.exception
     assert app.session_state["active_practice_insights"]["worksheet_index"] == last
+    assert badges(app) == [f"Q{last + 1:02}"]
+    assert app.button(key="worksheet_finish_s").proto.type == "primary"
 
-    active = dict(app.session_state["active_practice_insights"])
-    active["worksheet_index"] = 0
-    app.session_state["active_practice_insights"] = active
-    app.run()
+    # Previous was on screen, but an earlier click already reached the first question.
+    app.session_state["active_practice_insights"]["worksheet_index"] = 0
     app.button(key="worksheet_previous_s").click().run()
     assert not app.exception
     assert app.session_state["active_practice_insights"]["worksheet_index"] == 0
     assert badges(app) == ["Q01"]
+    assert app.button(key="worksheet_previous_s").disabled
+    # A click on the disabled Previous changes nothing either.
+    app.button(key="worksheet_previous_s").click().run()
+    assert not app.exception
+    assert app.session_state["active_practice_insights"]["worksheet_index"] == 0

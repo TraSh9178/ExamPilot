@@ -475,7 +475,7 @@ def test_logout_and_account_switch_clear_previous_account_state(store):
 
 
 def test_practice_submit_saves_course_then_exam_for_signed_in_user(store):
-    from tests.test_practice_page import make_practice_state
+    from tests.test_practice_page import make_practice_state, submit_answers
 
     app = signed_in_app(PRACTICE_PATH)
     for key, value in make_practice_state(graded=False).items():
@@ -484,7 +484,7 @@ def test_practice_submit_saves_course_then_exam_for_signed_in_user(store):
     app.run()
 
     app.radio(key="answer_session-1_question-1").set_value(1)
-    next(b for b in app.button if b.label == "Submit answers").click().run()
+    submit_answers(app)
 
     assert not app.exception
     assert [c[0] for c in store.calls] == ["save_course", "save_exam"]
@@ -499,7 +499,7 @@ def test_practice_submit_saves_course_then_exam_for_signed_in_user(store):
 
 
 def test_practice_submit_failure_warns_and_keeps_local_history(store):
-    from tests.test_practice_page import make_practice_state
+    from tests.test_practice_page import make_practice_state, submit_answers
 
     store.fail.add("save_exam")
     app = signed_in_app(PRACTICE_PATH)
@@ -509,7 +509,7 @@ def test_practice_submit_failure_warns_and_keeps_local_history(store):
     app.run()
 
     app.radio(key="answer_session-1_question-1").set_value(1)
-    next(b for b in app.button if b.label == "Submit answers").click().run()
+    submit_answers(app)
 
     assert not app.exception
     assert "session-1" in app.session_state["practice_history_course-1"]

@@ -5,7 +5,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 from models.schemas import Question
 from services.question_review import validate_question_content, create_mistake_review, question_sources
-from tests.test_practice_page import make_practice_state, PAGE_PATH
+from tests.test_practice_page import make_practice_state, PAGE_PATH, submit_answers
 
 
 def question(stem="What is x²?", options=None):
@@ -85,7 +85,7 @@ def test_review_button_starts_blank_practice_and_retains_history():
     assert answer.value is None
     assert app.session_state["practice_history_course-1"] == previous
     answer.set_value(0).run()
-    next(button for button in app.button if button.label == "Submit answers").click().run()
+    submit_answers(app)
     assert not app.exception
     assert len(app.session_state["practice_history_course-1"]) == len(previous) + 1
     assert app.session_state["practice_history_course-1"]["session-1"] == previous["session-1"]

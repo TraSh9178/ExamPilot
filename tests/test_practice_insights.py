@@ -144,8 +144,9 @@ def test_submission_persists_confidence_and_hint_snapshots_without_changing_grad
     app.button(key="worksheet_previous_s").click().run()
     assert app.radio(key="answer_s_q0").value == 0
     assert app.button_group(key="confidence_s_q0").value == 'guessed'
+    app.button(key='worksheet_review_s').click().run()
     assert 'Review before submit' in [h.value for h in app.subheader]
-    next(b for b in app.button if b.label=='Submit answers').click().run()
+    app.button(key='practice_submit_s').click().run()
     assert not app.exception
     assert app.session_state['active_practice_insights']['result']['correct_count']==1
     saved=app.session_state['current_course']
@@ -245,7 +246,8 @@ def test_hint_count_is_frozen_in_grade_snapshot_and_available_after_rerun():
     app.run()
     app.button(key='hint_button_s_q0').click().run()
     app.radio(key='answer_s_q0').set_value(0).run()
-    next(b for b in app.button if b.label=='Submit answers').click().run()
+    app.button(key='worksheet_review_s').click().run()
+    app.button(key='practice_submit_s').click().run()
     assert not app.exception
     assert session_insights(app.session_state['current_course'],'s')['q0']['hints_used']==1
     app.session_state['hints_shown_s_q0']=0

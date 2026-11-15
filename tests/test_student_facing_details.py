@@ -2,6 +2,7 @@ from pathlib import Path
 from streamlit.testing.v1 import AppTest
 from tests.test_learning_dna import course_and_history
 from tests.test_practice_insights import start_app
+from tests.test_practice_page import open_setup
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -42,6 +43,7 @@ def test_course_maintenance_is_grouped_and_stays_closed_with_pending_review():
 
 def test_saved_session_display_is_readable_and_selection_keeps_stable_ids():
     app,_ = start_app(graded=True)
+    open_setup(app)  # saved sessions are listed on the setup screen
     selector = app.selectbox(key='saved_session_insights')
     assert selector.value == 's'
     assert list(selector.options) == ['1 · Topic practice · 2 questions · 1/2 correct']

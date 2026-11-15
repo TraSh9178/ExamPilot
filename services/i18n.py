@@ -513,6 +513,20 @@ _TRANSLATIONS.update({
     "Pause when you take a break.": "休息时可以暂停。",
 })
 
+# practice focus
+_TRANSLATIONS.update({
+    "Finish": "完成",
+    "Review and submit": "检查并交卷",
+    "Back to questions": "返回题目",
+    "Return to your session": "回到当前练习",
+    "New practice": "新的练习",
+    "This session": "本次练习",
+    "Hide side panel": "收起右栏",
+    "Show side panel": "展开右栏",
+    "Practice · Review": "练习 · 检查",
+    "Go back to the questions to change these answers, or submit them as they are.": "可以返回题目修改这些答案，也可以按现在的答案提交。",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
@@ -591,6 +605,9 @@ _DYNAMIC = [
     (r"^Last time you chose ([A-D])\.$", r"上次你选了 \1。"),
     # practice clock
     (r"^Session time (.+)$", r"本次用时 \1"),
+    # practice focus
+    (r"^Practice · (.+)$", r"练习 · \1"),
+    (r"^(\d+) of (\d+) answered$", r"已作答 \1 / \2"),
 ]
 
 
