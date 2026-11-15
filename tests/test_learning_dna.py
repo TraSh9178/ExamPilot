@@ -214,8 +214,9 @@ def test_dashboard_entry_navigates_to_learning_dna_in_registered_app():
     from tests.auth_helpers import signed_in_app
     app=signed_in_app(ROOT/'app.py').run()
     assert not app.exception
-    assert app.button(key='learning_dna_open').disabled
+    assert not app.button(key='learning_dna_open').disabled
     course,history=course_and_history()
+    app.session_state['courses'] = [course]
     app.session_state['current_course']=course
     app.session_state['practice_history_test-dna']=history
     app.session_state['performance_mode_test-dna']='Topic Practice'
@@ -235,3 +236,17 @@ def test_dashboard_entry_navigates_to_learning_dna_in_registered_app():
     assert 'progress_tab_test-dna' not in app.session_state
     app.switch_page('pages/3_Performance.py').run()
     assert [s.value for s in app.subheader if s.value!=course.course_name][0]=='Mastery by topic'
+
+
+def test_dashboard_dna_opens_chosen_demo_without_previously_opening_course():
+    from tests.auth_helpers import signed_in_app
+    app = signed_in_app(ROOT/'app.py').run()
+    assert app.session_state['current_course'] is None
+    app.selectbox(key='learning_dna_course').select('calculus-i-demo').run()
+    app.button(key='learning_dna_open').click().run()
+    assert not app.exception
+    assert app.title[0].value == 'Progress'
+    assert app.session_state['current_course'].course_id == 'calculus-i-demo'
+    assert app.session_state['progress_tab_calculus-i-demo'] == 'Learning DNA'
+    sections = [s.value for s in app.subheader if s.value != 'Calculus I Demo']
+    assert sections[0] == 'Example · Learning DNA'
