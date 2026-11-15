@@ -17,7 +17,6 @@ FOCUS_PAGES = (
     ("pages/11_Anki_Export.py", "Export to Anki", "Anki_Export"),
     ("pages/12_Learning_Evidence.py", "Answers behind Learning DNA", "Learning_Evidence"),
     ("pages/13_Answer_Review.py", "Review answers", "Answer_Review"),
-    ("pages/14_Concept_Explanations.py", "Why it works", "Concept_Explanations"),
 )
 
 
