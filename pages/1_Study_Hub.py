@@ -36,17 +36,40 @@ save_failed_notice_key = f"study_save_failed_notice_{course.course_id}"
 # Hydrate widgets on first entry, before their frontend defaults can clear
 # the separately saved confirmation. Subsequent edits still require confirmation.
 initialised_key = f"scope_initialised_{course.course_id}"
+draft_key = f"scope_draft_{course.course_id}"
 if not st.session_state.get(initialised_key, False):
     saved_scope = st.session_state.get(confirmed_key, course.learning_state.get("confirmed_scope"))
     if saved_scope:
         st.session_state[confirmed_key] = list(saved_scope)
         st.session_state[scope_key] = list(saved_scope)
+    # Back from Topic summaries or Course tools: the selection as the student
+    # left it, unless the saved scope it was made against has changed since.
+    draft = st.session_state.pop(draft_key, None)
+    if draft is not None and draft["saved"] == list(course.learning_state.get("confirmed_scope") or []):
+        valid_ids = {topic.id for topic in course.topics}
+        st.session_state[scope_key] = [topic_id for topic_id in draft["selection"] if topic_id in valid_ids]
     st.session_state[initialised_key] = True
 # Restore the selection when returning from another page.
 if scope_key not in st.session_state:
     st.session_state[scope_key] = list(
         st.session_state.get(confirmed_key, [])
     )
+
+def keep_scope_selection(course_id: str) -> None:
+    """Runs on the click that opens Topic summaries or Course tools.
+
+    Those pages do not draw the scope pills, so Streamlit would forget a
+    selection that is not confirmed yet. Put it aside, with the saved scope it
+    was made against, for the way back.
+    """
+    selection = st.session_state.get(f"scope_selection_{course_id}")
+    current = st.session_state.get("current_course")
+    if selection is not None and current is not None:
+        st.session_state[f"scope_draft_{course_id}"] = {
+            "selection": list(selection),
+            "saved": list(current.learning_state.get("confirmed_scope") or []),
+        }
+
 
 def render_most_flagged_topics(course, confirmed_key: str) -> None:
     """Show a demo course's three most flagged topics with a practice shortcut.
@@ -109,6 +132,7 @@ else:
         tr("Topic summaries"), "pages/10_Topic_Summaries.py",
         key="open_topic_summaries",
         icon=":material/menu_book:", align="left",
+        on_click=keep_scope_selection, args=(course.course_id,),
     )
 
 with st.container(border=True, key="study_scope_panel"):
@@ -281,4 +305,5 @@ open_page_button(
     tr("Course tools"), "pages/9_Course_Tools.py",
     key="open_course_tools",
     icon=":material/build:", align="right",
+    on_click=keep_scope_selection, args=(course.course_id,),
 )
