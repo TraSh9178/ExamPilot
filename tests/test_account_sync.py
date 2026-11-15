@@ -379,6 +379,36 @@ def test_restoring_a_course_with_nothing_saved_hides_its_id(store):
     assert "course-1" not in outcome.message
 
 
+def test_restore_with_nothing_saved_does_not_block_later_saves(store):
+    course = make_course()
+    state = signed_in_state()
+
+    assert account_sync.restore_course(state, course.course_id).message == (
+        account_sync.NOTHING_SAVED_MESSAGE
+    )
+    assert account_sync.save_course_to_account(state, course).success
+    assert account_sync.save_course_with_history(state, course).success
+    assert course.course_id in store.courses[TEST_USER.user_id]
+
+
+def test_failed_restore_still_blocks_later_saves(store):
+    course = make_course()
+    seed(store, TEST_USER, course)
+    store.fail_course_ids.add(course.course_id)
+    state = signed_in_state()
+
+    assert not account_sync.restore_course(state, course.course_id).success
+    assert not account_sync.save_course_to_account(state, course).success
+    assert not account_sync.save_course_with_history(state, course).success
+    assert store.names("save_course") == []
+
+    # A later restore that finds nothing stored clears the earlier block.
+    store.fail_course_ids.clear()
+    del store.courses[TEST_USER.user_id][course.course_id]
+    account_sync.restore_course(state, course.course_id)
+    assert account_sync.save_course_to_account(state, course).success
+
+
 def test_app_restores_once_per_login_despite_reruns(store):
     course = make_course()
     seed(store, TEST_USER, course, make_exam(course, "s1"))

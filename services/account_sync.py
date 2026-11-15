@@ -162,9 +162,13 @@ def _restore_one(
 ) -> str | None:
     """Restore one course; return the internal failure reason, or None on success."""
     restored = postgres_store.load_course_history(user_id, course_id)
-    if not restored.success or restored.package is None:
+    if not restored.success:
         state.setdefault("failed_course_ids", set()).add(course_id)
-        return restored.message if not restored.success else _COURSE_NOT_FOUND
+        return restored.message
+    if restored.package is None:
+        # Nothing saved yet is not a failed restore; it must not block saves.
+        state.setdefault("failed_course_ids", set()).discard(course_id)
+        return _COURSE_NOT_FOUND
     try:
         _apply_restored_course(session_state, state, restored)
     except (KeyError, ValueError):
