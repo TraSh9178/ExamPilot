@@ -117,8 +117,8 @@ def test_calculus_demo_can_be_practiced_and_graded_offline() -> None:
         expected_answers,
     )
 
-    assert result["correct_count"] == 3
-    assert result["total_count"] == 3
+    assert result["correct_count"] == len(exam["questions"])
+    assert result["total_count"] == len(exam["questions"])
     assert result["accuracy"] == 100
     assert all(review["is_correct"] for review in result["question_results"])
     assert all(

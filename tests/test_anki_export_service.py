@@ -12,7 +12,8 @@ from services.anki_export_service import export_anki_tsv, get_weak_topic_ids
 def _load_python_basics_demo() -> StudyPackage:
     path = Path(__file__).parents[1] / "data" / "demo_python_basics.json"
     with path.open(encoding="utf-8") as file:
-        return StudyPackage.model_validate(json.load(file))
+        course = StudyPackage.model_validate(json.load(file))
+        return course.model_copy(update={"questions": course.questions[:9], "learning_state": {}})
 
 
 def _read_tsv(content: str) -> list[list[str]]:

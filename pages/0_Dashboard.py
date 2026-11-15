@@ -250,7 +250,7 @@ with st.container(key="dashboard_actions"):
               else ":material/add_circle_outline:"),
         key="create_course_button",
         type="secondary",
-        use_container_width=True,
+        width="content",
     ):
         st.session_state.show_course_setup = not st.session_state.show_course_setup
         st.rerun()
@@ -266,7 +266,7 @@ if st.session_state.show_course_setup:
         )
 
         st.caption(tr("2 · Upload materials and extract text"))
-        st.caption(tr("Only the extracted text is saved with your course, not the original file."))
+        help_tip(tr("Only the extracted text is saved with your course, not the original file."))
         uploaded_file = st.file_uploader(
             tr("Upload course materials"),
             type=["pdf", "pptx", "txt", "png", "jpg", "jpeg"],
@@ -275,11 +275,11 @@ if st.session_state.show_course_setup:
             max_upload_size=5,
         )
 
-        st.caption(
+        help_tip(
             tr("PDF, PPTX, TXT, PNG or JPG/JPEG · up to 5 MiB per file · "
             "up to 50,000 characters of extracted text.")
         )
-        st.caption(tr(
+        help_tip(tr(
             "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text; "
             "reading text from images may not always be available. "
             "Scanned PDFs, PPTX slide notes and DOCX files are not supported."

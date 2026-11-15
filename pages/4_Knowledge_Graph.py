@@ -332,7 +332,6 @@ with details_column:
         render_topic_details(details, topic_stats, course)
         if details is not None:
             links = related_topics(course, selected_node_id)
-            st.divider()
             if st.button(tr("Practise this topic"), key=f"graph_practice_{course.course_id}_{selected_node_id}", type="primary"):
                 try:
                     stage_practice(st.session_state, course, selected_node_id)
@@ -343,7 +342,6 @@ with details_column:
                     st.switch_page("pages/2_Practice_Center.py")
 
             if radar is not None:
-                st.divider()
                 st.markdown(tr("**Learning Radar**"))
                 if radar_user is not None:
                     # One click flags the topic with a reason; to change the

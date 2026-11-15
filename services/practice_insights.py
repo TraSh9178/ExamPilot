@@ -141,15 +141,23 @@ def transfer_session(course, source, source_session, confirmed_ids):
     """Curated task labels suggest structural contrast; never generate unreviewed items."""
     if source.topic_id not in confirmed_ids:
         raise ValueError('Confirm this topic in Study Plan first.')
-    if not source.practice_structure:
+    from services.demo_updates import builtin_equivalent, catalog_questions
+    catalog = catalog_questions(course.course_id)
+    def structure(question):
+        if question.practice_structure:
+            return question.practice_structure
+        reference = catalog.get(question.id)
+        return reference.practice_structure if builtin_equivalent(question, reference) else None
+    source_structure = structure(source)
+    if not source_structure:
         raise ValueError('This question has no reviewed structure label; no transfer match can be selected.')
     by_id = {q.id:q for q in course.questions}
     by_id.setdefault(source.id, source)
     used = {family_id(by_id[qid], by_id) for qid in source_session.question_ids if qid in by_id}
     used.add(family_id(source, by_id))
     candidates = [q for q in available_questions(course)
-                  if q.topic_id == source.topic_id and q.practice_structure
-                  and q.practice_structure != source.practice_structure
+                  if q.topic_id == source.topic_id and structure(q)
+                  and structure(q) != source_structure
                   and family_id(q, by_id) not in used
                   and normalized_text(q.question) != normalized_text(source.question)]
     if not candidates:

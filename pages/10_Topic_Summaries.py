@@ -24,6 +24,7 @@ if not course.topics:
 for topic in course.topics:
     with st.container(border=True):
         st.markdown(f"**{topic.name}**")
-        st.write(topic.summary)
+        from services.math_text import write_summary
+        write_summary(topic.summary)
         if topic.source_pages:
             st.caption(tr("Source pages: ") + ", ".join(map(str, topic.source_pages)))

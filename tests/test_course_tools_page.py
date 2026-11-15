@@ -3,6 +3,7 @@
 The Study Plan page keeps two small edge buttons instead of the expanders;
 the Course tools page shows one tool at a time, chosen with one click.
 """
+from tests.tooltip_helpers import supporting_texts, tooltip_texts
 import re
 from pathlib import Path
 
@@ -165,7 +166,8 @@ def visible_texts(app) -> list[str]:
             texts += [item.label, item.proto.help]
             if kind in ("radio", "selectbox", "button_group"):
                 texts += list(item.options)
-    return [text for text in texts if text]
+    from tests.test_progress_charts import visible_text
+    return [visible_text(text) for text in texts if text]
 
 
 # The structure-label tooltip names two example labels; they are values a
@@ -348,7 +350,7 @@ def test_topic_summaries_page_shows_every_topic_in_course_order_and_nothing_else
         "**Series**", "Series summary.",
         "**Derivatives**", "Derivatives summary.",
     ]
-    assert [item.value for item in app.caption] == ["Source pages: 2, 3"]
+    assert supporting_texts(app) == ["Source pages: 2, 3"]
     # One bordered card per topic, directly on the page.
     cards = [
         node for node in app.main
@@ -392,7 +394,7 @@ def test_topic_summaries_page_in_chinese_has_no_english():
     assert not app.exception
     assert app.title[0].value == "知识点概要"
     assert app.button(key="topic_summaries_back").label == "返回学习计划"
-    assert [item.value for item in app.caption] == ["来源页：2, 3"]
+    assert supporting_texts(app) == ["来源页：2, 3"]
     assert english_words(visible_texts(app)) == []
 
 
@@ -406,7 +408,7 @@ def test_course_tools_page_has_back_button_title_caption_and_one_click_choice(mo
 
     assert not app.exception
     assert [item.value for item in app.title] == ["Course tools"]
-    assert app.caption[0].value == "Manage questions, account backups and source material when needed."
+    assert "Manage questions, account backups and source material when needed." in tooltip_texts(app)
     assert app.button(key="course_tools_back").label == "Back to Study Plan"
     assert edge_of(app, "course_tools_back") == "left"
     # One click per tool: a button group, not a dropdown and not tabs.
@@ -478,7 +480,7 @@ def test_review_list_shows_plain_status_words_and_pending_first():
     assert not any("[" in option or "legacy" in option.lower() for option in picker.options)
     assert (
         "Check the answer and explanation before approving; edits never change past results."
-        in [item.value for item in app.caption]
+        in supporting_texts(app)
     )
     # The classification stays tucked away, collapsed.
     classification = next(item for item in app.expander if item.label == "Question classification (advanced)")
@@ -593,7 +595,7 @@ def test_page_renders_for_any_mix_of_questions(reviews, tool):
     assert tool_markers(app, course) == {tool}
     if tool == "review":
         if reviews is None:
-            assert "No questions available for review." in [item.value for item in app.caption]
+            assert "No questions available for review." in supporting_texts(app)
             assert not app.selectbox
         else:
             assert len(app.selectbox(key="editor_question_c1").options) == 4
@@ -621,7 +623,7 @@ def test_source_tool_shows_the_saved_text_and_delete_form():
     app = course_tools_page(course, "source", document=material()).run()
 
     assert not app.exception
-    captions = [item.value for item in app.caption]
+    captions = supporting_texts(app)
     assert "lecture.pdf" in captions
     assert (
         "The text from your material is saved with this course. The original uploaded file is not stored."
@@ -649,7 +651,7 @@ def test_deleting_material_says_so_and_stays_on_the_source_tool():
     assert "course_document_c1" not in app.session_state
     assert [item.value for item in app.success] == ["Saved material deleted."]
     assert app.button_group(key=choice_key(course)).value == "source"
-    assert "No saved material for this course." in [item.value for item in app.caption]
+    assert "No saved material for this course." in supporting_texts(app)
 
 
 # ---- Chinese interface ------------------------------------------------------------
@@ -695,7 +697,7 @@ def test_chinese_source_tool_names_material_without_a_filename():
     app = course_tools_page(course, "source", chinese=True, document=material(None)).run()
 
     assert not app.exception
-    assert "课程资料" in [item.value for item in app.caption]
+    assert "课程资料" in supporting_texts(app)
     app.button(key="delete_material_c1").click().run()
     assert not app.exception
     assert english_words(visible_texts(app)) == []

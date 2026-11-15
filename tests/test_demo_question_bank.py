@@ -30,10 +30,10 @@ def test_bank_has_ten_distinct_questions_per_topic_with_review_gate(filename, ol
         assert question.question.strip() and question.explanation.strip()
         assert len({normalized_text(option) for option in question.options}) == 4
         assert question.source_pages == []  # Original demo content has no source-page claims.
-    assert [q.id for q in available_questions(course)] == [q.id for q in course.questions[:old_count]]
-    assert course.learning_state['question_reviews'] == {
-        q.id: 'pending' for q in course.questions[old_count:]
-    }
+    reviews = course.learning_state['question_reviews']
+    assert [q.id for q in available_questions(course)] == [q.id for q in course.questions if reviews.get(q.id, 'legacy') in {'legacy','approved'}]
+    assert any(status == 'pending' for status in reviews.values())
+    assert set(reviews) == {q.id for q in course.questions[old_count:]}
     for question in course.questions[old_count:]:
         course = review_question(course, question.id, 'approved')
     for topic in course.topics:
@@ -153,7 +153,7 @@ def test_anki_export_excludes_drafts_then_includes_approved_question(filename):
     from services.anki_export_service import export_anki_tsv
 
     course = load(filename)
-    pending = next(q for q in course.questions if q.id in course.learning_state['question_reviews'])
+    pending = next(q for q in course.questions if course.learning_state['question_reviews'].get(q.id) == 'pending')
     before = list(csv.reader(io.StringIO(export_anki_tsv(course)), delimiter='\t'))
     assert len(before) == len(available_questions(course))
     assert not any(row[0].startswith(pending.question + '\n') for row in before)

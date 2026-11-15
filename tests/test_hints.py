@@ -28,14 +28,14 @@ def test_demo_hints_cover_original_available_questions():
     }
 
     assert len(questions) == 126
-    pending = {
+    expanded = {
         qid
         for filename in ("sample_course.json", CALCULUS_DEMO, "demo_python_basics.json")
         for qid, status in read_data(filename).get("learning_state", {}).get("question_reviews", {}).items()
-        if status == "pending"
+        if status in {"pending", "approved"}
     }
-    assert len(pending) == 111
-    assert hint_bank.keys() == questions.keys() - pending
+    assert len(expanded) == 111
+    assert hint_bank.keys() == questions.keys() - expanded
     for question_id, hints in hint_bank.items():
         question = questions[question_id]
         assert 2 <= len(hints) <= MAX_HINTS

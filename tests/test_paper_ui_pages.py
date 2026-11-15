@@ -1,4 +1,5 @@
 """Student-facing pages use one-click choices and hide storage bookkeeping."""
+from tests.tooltip_helpers import supporting_texts, tooltip_texts
 
 from pathlib import Path
 from types import SimpleNamespace
@@ -108,7 +109,7 @@ def test_review_list_shows_plain_status_words_instead_of_internal_codes():
     assert not any("[" in option for option in options)
     assert (
         "Check the answer and explanation before approving; edits never change past results."
-        in [item.value for item in app.caption]
+        in supporting_texts(app)
     )
 
 
@@ -116,7 +117,7 @@ def test_study_plan_counts_ready_questions_without_prompting_a_review():
     app = study_plan(make_reviewed_course())
 
     assert not app.exception
-    captions = [item.value for item in app.caption]
+    captions = supporting_texts(app)
     # The page no longer prompts the student to review pending questions.
     assert not any("needs your check" in text or "need your check" in text for text in captions)
     assert "Review pending questions" not in [button.label for button in app.button]
@@ -128,7 +129,7 @@ def test_review_texts_are_translated():
     app = study_plan(make_reviewed_course(), chinese=True)
 
     assert not app.exception
-    captions = [item.value for item in app.caption]
+    captions = supporting_texts(app)
     assert not any("需要你检查" in text for text in captions)
     assert "2 道题可以练习" in captions
 
@@ -152,7 +153,7 @@ def test_anonymous_course_tools_do_not_mention_the_database():
     app = course_tools(make_reviewed_course(), "backup")
 
     assert not app.exception
-    captions = [item.value for item in app.caption]
+    captions = supporting_texts(app)
     assert "Log in to back up this course." in captions
     assert not any("database" in text.lower() for text in captions)
 

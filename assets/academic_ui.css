@@ -48,20 +48,6 @@
   margin: 0 0 1rem;
 }
 .st-key-dashboard_actions { max-width: 850px; padding: 0 0 1.6rem; }
-.st-key-dashboard_actions button {
-  min-height: 5.3rem !important;
-  border-radius: 1rem !important;
-  border-color: #dce7f7 !important;
-  justify-content: flex-start !important;
-  padding: 1rem 1.6rem !important;
-  box-shadow: 0 5px 18px rgba(34,88,160,.035);
-}
-.st-key-dashboard_actions button p { font-size: 1.15rem !important; font-weight: 700 !important; }
-.st-key-dashboard_actions [data-testid="stIconMaterial"] { font-size: 2rem !important; color: #2166db; }
-div.st-key-create_course_button { width: 100% !important; margin: 0; }
-div.st-key-create_course_button button { max-width: none !important; width: 100% !important; justify-content: flex-start !important; }
-div.st-key-create_course_button button > div,
-div.st-key-create_course_button button > div > span { justify-content: flex-start !important; }
 .st-key-dashboard_overview { margin: .5rem 0 1.5rem; }
 :is(.st-key-dashboard_overview, .st-key-progress_overview, .st-key-practice_result_overview) [data-testid="stMetric"] {
   background: rgba(255,255,255,.85);
@@ -132,7 +118,6 @@ div.st-key-create_course_button button > div > span { justify-content: flex-star
   [data-testid="stMain"] .exam-hero::after { width: 75%; opacity: .3; }
   [data-testid="stMain"] .exam-hero h1 { font-size: clamp(2.15rem, 7vw, 3rem); }
   [data-testid="stMain"] .exam-hero p { font-size: 1rem; }
-  .st-key-dashboard_actions button { min-height: 4.3rem !important; }
 }
 @media (max-width: 480px) {
   :root { --exam-font-page: 2rem; --exam-font-heading: 1.5rem; --exam-font-stat: 1.8rem; }
@@ -145,15 +130,8 @@ div.st-key-create_course_button button > div > span { justify-content: flex-star
   font-size: 1.5rem !important; padding: 0; line-height: 1.25;
 }
 
-.st-key-dashboard_actions div.st-key-create_course_button button {
-  min-height: 5.3rem !important;
-}
-.st-key-dashboard_actions button > div > span { gap: .8rem !important; }
 [class*="st-key-dashboard_course_card_"] [data-testid="stHorizontalBlock"]:has(.academic-course-icon) {
   flex-wrap: nowrap;
-}
-@media (max-width: 768px) {
-  .st-key-dashboard_actions div.st-key-create_course_button button { min-height: 4.3rem !important; }
 }
 
 [class*="st-key-study_topic_"] [data-testid="stCheckbox"] { padding-top: .3rem; }

@@ -145,8 +145,9 @@ def test_demo_variants_cover_original_questions_without_changing_numbers(
     )["questions"]
     # Reviewed original questions have simplified variants; new drafts use
     # the documented original-wording fallback until variants are authored.
-    assert set(variants) == {question.id for question in available_questions(package)}
-    for question in available_questions(package):
+    originals = [q for q in package.questions if q.id not in package.learning_state.get("question_reviews", {})]
+    assert set(variants) == {question.id for question in originals}
+    for question in originals:
         variant = variants[question.id]
         assert set(variant) == {"question", "options", "explanation"}
         assert len(variant["options"]) == len(question.options) == 4

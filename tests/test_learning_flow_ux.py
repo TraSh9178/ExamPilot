@@ -213,7 +213,7 @@ def test_explicit_new_practice_replaces_old_result_only_after_start(monkeypatch)
     app.run()
     next(b for b in app.button if b.label=='Start new practice').click().run()
     assert not app.exception
-    assert app.session_state['active_practice_calculus-i-demo']['session'].question_ids==['calc_q002']
+    assert set(app.session_state['active_practice_calculus-i-demo']['session'].question_ids)=={'calc_q002','calc_q013'}
     assert 'result' not in app.session_state['active_practice_calculus-i-demo']
     assert app.session_state['practice_history_calculus-i-demo']==history
 

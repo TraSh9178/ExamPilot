@@ -42,7 +42,7 @@ def test_upgrade_adds_graph_and_drafts_without_replacing_saved_content():
     for key in ('confirmed_scope', 'session_order'):
         assert updated.learning_state[key] == old.learning_state[key]
     assert updated.learning_state['question_reviews']['calc_q004'] == 'approved'
-    assert all(updated.learning_state['question_reviews'][q.id] == 'pending' for q in updated.questions[30:])
+    assert all(updated.learning_state['question_reviews'][q.id] == latest().learning_state['question_reviews'][q.id] for q in updated.questions[30:])
     assert demo_update(updated) == (updated, 0)
     # The persistence merge accepts preserved IDs and retains the original rows.
     assert _merge_course_packages(old, updated) == updated
@@ -76,7 +76,7 @@ def test_expanded_graph_is_connected_and_prerequisites_are_acyclic():
     assert 'calc_fundamental_theorem' in related_topics(course, 'calc_definite_integrals')['next_topics']
     assert {'calc_differentiation_rules', 'calc_chain_rule', 'calc_implicit_differentiation'}.issubset(
         {t.id for t in local_graph(course, 'calc_chain_rule').topics})
-    assert len(available_questions(course)) == 3
+    assert len(available_questions(course)) == 30
 
 
 def test_new_topic_is_searchable_and_has_teaching_summary():

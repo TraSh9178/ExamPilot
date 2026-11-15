@@ -1,3 +1,4 @@
+from tests.tooltip_helpers import supporting_texts, tooltip_texts
 from models.schemas import StudyPackage
 from io import BytesIO
 from pathlib import Path
@@ -87,16 +88,9 @@ def test_dashboard_extracts_txt_and_shows_limits_preview_and_source(monkeypatch)
     assert app.session_state["setup_document"]["sources"] == [
         {"filename": "notes.txt", "page": None}
     ]
-    assert any("50,000 characters" in item.value for item in app.caption)
-    assert any(
-        "UTF-8 TXT" in item.value
-        and "text-based PDF or PPTX" in item.value
-        for item in app.caption
-    )
-    assert any(
-        "notes.txt · TXT file (no page number)" in item.value
-        for item in app.caption
-    )
+    assert any("50,000 characters" in text for text in tooltip_texts(app))
+    assert any('UTF-8 TXT' in text and 'text-based PDF or PPTX' in text for text in supporting_texts(app))
+    assert any('notes.txt · TXT file (no page number)' in text for text in supporting_texts(app))
     assert "A local TXT fixture." in [item.value for item in app.text]
 
 
@@ -113,11 +107,11 @@ def test_dashboard_extracts_pdf_and_displays_actual_page_sources(monkeypatch):
     document = app.session_state["setup_document"]
     assert document["sources"] == [{"filename": "course.pdf", "page": 1}]
     assert document["pages"][0]["page"] == 1
-    assert any("course.pdf · Page 1" in item.value for item in app.caption)
+    assert any('course.pdf · Page 1' in text for text in supporting_texts(app))
     # Page and character counts of the extracted material are not shown.
     assert not any("PDF pages" in item.label for item in app.expander)
-    assert not any("Extracted text:" in item.value for item in app.caption)
-    assert not any(" characters" in item.value for item in app.markdown)
+    assert not any('Extracted text:' in text for text in supporting_texts(app))
+    assert not any(" characters" in item.value for item in app.markdown if "quiet-help-row" not in item.value)
 
 
 def test_dashboard_image_ocr_uses_image_labels_and_updated_copy(monkeypatch):
@@ -136,13 +130,10 @@ def test_dashboard_image_ocr_uses_image_labels_and_updated_copy(monkeypatch):
     assert not app.exception
     assert not any("Image (1)" in item.label for item in app.expander)
     assert not any("PDF pages" in item.label for item in app.expander)
-    assert any("scan.png · Image 1" in item.value for item in app.caption)
+    assert any('scan.png · Image 1' in text for text in supporting_texts(app))
     # The materials note says scanned PDFs are not read, without naming the OCR engine.
-    assert any(
-        "scanned pdfs" in item.value.lower()
-        for item in app.caption
-    )
-    assert not any("tesseract" in item.value.lower() for item in app.caption)
+    assert any('scanned pdfs' in text.lower() for text in supporting_texts(app))
+    assert not any('tesseract' in text.lower() for text in supporting_texts(app))
 
 
 def test_dashboard_failure_message_clears_old_document_and_disables_generation(
@@ -265,16 +256,10 @@ def test_dashboard_extracts_pptx_and_displays_actual_slide_sources(monkeypatch):
     assert document["pages"] == [
         {"page": 1, "text": "PPTX extraction fixture."}
     ]
-    assert any(
-        "slides.pptx · Slide 1" == item.value for item in app.caption
-    )
+    assert any('slides.pptx · Slide 1' == text for text in supporting_texts(app))
     assert not any("PPTX slides" in item.label for item in app.expander)
-    assert any("50,000 characters" in item.value for item in app.caption)
-    assert any(
-        "UTF-8 TXT" in item.value
-        and "text-based PDF or PPTX" in item.value
-        for item in app.caption
-    )
+    assert any("50,000 characters" in text for text in tooltip_texts(app))
+    assert any('UTF-8 TXT' in text and 'text-based PDF or PPTX' in text for text in supporting_texts(app))
 
 
 def test_single_scope_selector_requires_reconfirmation():

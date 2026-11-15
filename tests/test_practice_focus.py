@@ -1,4 +1,5 @@
 """Practice focus: one screen at a time, one question per page, a side panel that folds away."""
+from tests.tooltip_helpers import supporting_texts, tooltip_texts
 import re
 import time
 from copy import deepcopy
@@ -332,7 +333,7 @@ def test_review_step_from_the_session_menu_and_from_finish():
     assert list(table["Question"]) == [1, 2, 3]
     assert list(table["Check"]) == ["Guessed", "Unanswered", "Unanswered"]
     assert ("Go back to the questions to change these answers, or submit them as they are."
-            in [caption.value for caption in app.caption])
+            in supporting_texts(app))
     assert [(button.label, button.proto.type) for button in app.button] == [
         ("Back to questions", "secondary"), ("Submit answers", "primary"),
     ]
@@ -808,7 +809,7 @@ def test_question_screen_and_review_step_are_fully_chinese(mode):
     assert titles(app) == ["练习 · 检查"]
     assert "已作答 1 / 3" in page_markdown(app)
     assert {button.label for button in app.button} == {"返回题目", "提交答案"}
-    assert "可以返回题目修改这些答案，也可以按现在的答案提交。" in [c.value for c in app.caption]
+    assert "可以返回题目修改这些答案，也可以按现在的答案提交。" in supporting_texts(app)
     assert [value for value in shown_strings(app) if re.search(r"[A-Za-z]", value)] == []
 
 

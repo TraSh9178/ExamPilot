@@ -7,6 +7,7 @@ import streamlit as st
 from models.schemas import StudyPackage
 from services.ai_service import ask_tutor
 from services.i18n import LANGUAGE_KEY, tr
+from services.math_text import write_summary
 
 
 def render_topic_explanation(course: StudyPackage, topic_id: str) -> None:
@@ -26,21 +27,21 @@ def render_topic_explanation(course: StudyPackage, topic_id: str) -> None:
             steps, worked, mistake = lesson
             st.subheader(tr("Step-by-step explanation"))
             for number, step in enumerate(steps, 1):
-                st.write(f"{number}. {step}")
+                write_summary(f"{number}. {step}")
             with st.container(border=True, key="topic_worked_example"):
                 st.markdown('**' + tr('Worked example') + '**')
-                st.write(worked)
+                write_summary(worked)
             st.caption(tr('Common mistake') + ': ' + mistake)
         elif course.course_id in FILES:
             st.subheader(tr("Step-by-step explanation"))
-            st.write(topic.summary)
+            write_summary(topic.summary)
             first = next((q for q in course.questions if q.topic_id == topic_id), None)
             if first:
                 st.markdown('**' + tr('Worked example') + '**')
                 st.write(first.question)
                 st.write(first.explanation)
         else:
-            st.caption(tr("Go beyond the summary: understand the idea, then work through an example."))
+            help_tip(tr("Go beyond the summary: understand the idea, then work through an example."))
             if st.button(tr("Explain step by step"), key=f"graph_explain_{fingerprint}"):
                 language = "Simplified Chinese" if chinese else "English"
                 prompt = (

@@ -1,5 +1,6 @@
 """Practice history and Review answers: the last collapsed blocks of the practice page,
 each on a page of its own, plus the in-place reveal of a question's original wording."""
+from tests.tooltip_helpers import supporting_texts, tooltip_texts
 import json
 import re
 from copy import deepcopy
@@ -138,7 +139,7 @@ def test_history_shows_a_section_only_when_it_has_rows(drafts, history, sections
 def test_history_empty_state_and_no_course(monkeypatch):
     app = page_app(HISTORY)
     assert not app.exception
-    assert [caption.value for caption in app.caption] == [
+    assert supporting_texts(app) == [
         "No practice sessions yet. Finished and unfinished sessions will appear here."]
     assert [button.label for button in app.button] == ["Back to Practice"]
     assert not history_rows(app) and not app.subheader
@@ -217,16 +218,15 @@ def test_result_screen_has_no_tabs_and_a_review_answers_button_under_the_score()
     assert not app.tabs and not app.get("tab_container")
     keys = block_keys(app)
     order = [keys.index(key) for key in (
-        "practice_result_overview", "page_link_open_answer_review", "flight_next_topic",
+        "practice_result_overview", "result_review_action", "flight_next_topic",
         "practice_mistake_review",
     )]
     assert order == sorted(order)
     button = app.button(key="open_answer_review")
     assert (button.label, button.proto.icon) == ("Review answers", ":material/fact_check:")
-    assert keyed(app, "page_link_open_answer_review").proto.flex_container.justify == (
-        BlockProto.FlexContainer.Justify.JUSTIFY_END)
+    assert button.proto.type == "primary"
     # The summary, shown directly: next step, insights, review list, missed questions.
-    assert "Take the next step" in [caption.value for caption in app.caption]
+    assert "Take the next step" in subheaders(app)
     assert "Practice insights" in subheaders(app)
     assert app.button(key="review_mistakes_s") and app.button(key="priorities_insights")
     # The per-question answers are not on this screen any more.
@@ -263,7 +263,7 @@ def test_review_page_shows_one_question_with_everything_visible():
     assert keyed(app, "page_link_review_answers_back").proto.flex_container.justify == LEFT
     back = app.button(key="review_answers_back")
     assert (back.label, back.proto.icon) == ("Back to result", ":material/arrow_back:")
-    assert "Question 01 / 02" in [caption.value for caption in app.caption]
+    assert "Question 01 / 02" in supporting_texts(app)
     assert badges(app) == ["Q01"]
     assert [s.value for s in app.success] == ["✓ Your answer: A"]
     app.button(key="review_next_s").click().run()
@@ -273,7 +273,7 @@ def test_review_page_shows_one_question_with_everything_visible():
     assert subheaders(app) == ["Answer", "Explanation", "Ask about this explanation", "Reflect and explain your answer", "Source material"]
     assert [e.value for e in app.error] == ["✕ Your answer: B"]
     assert [s.value for s in app.success] == ["✓ Correct answer: A"]
-    captions = [caption.value for caption in app.caption]
+    captions = supporting_texts(app)
     assert "Hints used: 1 of 2" in captions and "Guessed · 1 hint · 42 s" in captions
     assert "Reason" in page_markdown(app)  # the explanation
     assert app.button_group(key="reason_s_q1") and app.text_area(key="explain_s_q1")
@@ -297,7 +297,7 @@ def test_review_page_shows_the_original_wording_of_a_simplified_question():
             "session": session, "questions": [question], "result": result, "warning": None, "settings": {}},
     }, scope=[question.topic_id])
     assert not app.exception
-    assert "Simplified wording" in [caption.value for caption in app.caption]
+    assert "Simplified wording" in supporting_texts(app)
     assert subheaders(app)[0] == "Original wording"
     markdown = page_markdown(app)
     assert question.question in markdown and all(option in markdown for option in question.options)
@@ -351,10 +351,10 @@ def test_reflection_is_shown_directly_and_saves_as_before():
     assert not app.expander
     assert "Reflect and explain your answer" in subheaders(app)
     assert ("Write your reasoning in your own words. This reflection is after feedback and never changes your score."
-            in [caption.value for caption in app.caption])
+            in supporting_texts(app))
     # Text typed into the form is only sent when it is saved, so the page says so before a page turn loses it.
     assert ("Save before you go to another question: text that is not saved is not kept."
-            in [caption.value for caption in app.caption])
+            in supporting_texts(app))
     app.button_group(key="reason_s_q1").set_value("misread")
     app.text_area(key="explain_s_q1").set_value("I read B as A.")
     next(b for b in app.button if b.label == "Save reflection").click().run()
@@ -379,7 +379,7 @@ def test_try_a_different_structure_goes_to_the_new_session(monkeypatch):
 def test_review_page_without_an_open_result():
     app = page_app(REVIEW)
     assert not app.exception
-    assert [caption.value for caption in app.caption] == ["No result to review yet. Finish a practice session first."]
+    assert supporting_texts(app) == ["No result to review yet. Finish a practice session first."]
     assert [button.label for button in app.button] == ["Back to result"]
     assert not badges(app)
 
