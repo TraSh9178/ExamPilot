@@ -109,9 +109,20 @@ with st.container(key="flight_header"):
         st.page_link(pages[0], label=tr("Home"), icon=":material/home:", width="stretch")
     with practice:
         st.page_link(pages[2], label=tr("Practice"), icon=":material/edit_note:", width="stretch")
-    with review, st.popover(tr("Review & tools"), width="stretch"):
-        for page in (pages[1], pages[3], pages[4], pages[5], pages[6]):
-            st.page_link(page, width="stretch")
+    with review:
+        review_pages = {
+            page.url_path: page
+            for page in (pages[1], pages[3], pages[4], pages[5], pages[6])
+            if page.url_path != navigation.url_path
+        }
+        destination = st.selectbox(
+            tr("Review & tools"), list(review_pages), index=None,
+            format_func=lambda path: review_pages[path].title,
+            placeholder=tr("Review & tools"), label_visibility="collapsed",
+            key=f"flight_review_destination_{navigation.url_path}",
+        )
+        if destination is not None:
+            st.switch_page(review_pages[destination])
     with account, st.popover(tr("Account"), icon=":material/account_circle:", width="stretch"):
         render_account_controls(account_page)
         with st.expander(tr("Accessibility settings")):
