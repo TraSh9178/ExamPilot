@@ -356,6 +356,28 @@ _TRANSLATIONS = {
     # paper UI: fixes
     "Open Study Plan": "打开学习计划", "Continue practice": "继续练习",
     "Calculus I · Limits": "微积分 I · 极限",
+    # paper UI: practice
+    "Hint": "提示", "Next hint": "下一条提示", "Previous": "上一题", "Next": "下一题",
+    "Learning Radar": "学习雷达", "Explore this topic": "探索此知识点", "Quick Notes": "速记要点",
+    "Focus controls": "专注计时", "Answered": "已作答",
+    "1 question": "1 道题", "Topic practice": "知识点练习", "Mock exam": "模拟考试",
+    "Saved practice": "已保存的练习", "Unfinished": "未完成",
+    "New practice: ": "新练习：", "New practice for your confirmed topics.": "为已确认的知识点开始新练习。",
+    "Could not create practice. Try another topic or check your exam scope in Study Plan.": "无法创建练习。请换一个知识点，或到学习计划检查考试范围。",
+    "Could not grade this practice. Please try again.": "无法为本次练习评分，请重试。",
+    "1 question available; included.": "仅有 1 道题可用，已加入。",
+    "1 missed question to practise; your score stays the same.": "有 1 道错题可再练习；成绩保持不变。",
+    "1 question could benefit from another look.": "有 1 道题值得再看一遍。",
+    "1 correct answer was marked Guessed. Revisit it before treating it as secure knowledge.": "有 1 道答对的题被标记为猜测；请复习后再认为自己已掌握。",
+    "No hints": "未用提示", "1 hint": "1 条提示", "Saved.": "已保存。",
+    "No similar question yet.": "暂时没有类似的题目。",
+    "Couldn't save your reflection. Your score is unchanged.": "反思未能保存；成绩不变。",
+    "Couldn't save to your account. Your work is kept on this device for now.": "未能保存到账户；你的内容暂时保留在此设备上。",
+    "Your answers were graded, but your practice notes couldn't be saved.": "答案已评分，但练习记录未能保存。",
+    "Mixed-topic smart review is recorded in Mock Exam mode.": "多知识点智能复习按模拟考试模式记录。",
+    "No approved review questions are in the confirmed scope. Review questions or confirm your scope in Study Plan first.": "已确认范围中没有可用的复习题。请先到学习计划审核题目或确认范围。",
+    "Review topic is outside the confirmed scope.": "复习知识点不在已确认范围内。",
+    "No missed questions in this confirmed topic scope.": "已确认范围中没有错题。",
 }
 
 _TRANSLATIONS.update(
@@ -513,6 +535,16 @@ _DYNAMIC = [
     (r"^An error occurred while .+\. Try again later\.$", r"处理请求时出错，请稍后重试。"),
     # paper UI: fixes
     (r"^Delete (.+)\? Its materials and practice progress will be removed from this session\.$", r"删除“\1”？课程资料和练习进度将从本次会话中移除。"),
+    # paper UI: practice
+    (r"^Q0?(\d+)$", r"第 \1 题"),
+    (r"^(\d+) questions$", r"\1 道题"),
+    (r"^(\d+)/(\d+) correct$", r"答对 \1/\2"),
+    (r"^Unfinished sessions \((\d+)\)$", r"未完成的场次（\1）"),
+    (r"^(\d+) questions available; all included\.$", r"仅有 \1 道题可用，已全部加入。"),
+    (r"^(\d+) missed questions to practise; your score stays the same\.$", r"有 \1 道错题可再练习；成绩保持不变。"),
+    (r"^(\d+) correct answers were marked Guessed\. Revisit them before treating them as secure knowledge\.$", r"有 \1 道答对的题被标记为猜测；请复习后再认为自己已掌握。"),
+    (r"^(\d+) hints$", r"\1 条提示"),
+    (r"^(\d+) s$", r"\1 秒"),
 ]
 
 
