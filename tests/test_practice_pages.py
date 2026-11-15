@@ -270,7 +270,7 @@ def test_review_page_shows_one_question_with_everything_visible():
     assert badges(app) == ["Q02"] and "Question 02 / 02" in [c.value for c in app.caption]
     # A missed question: everything about it is on the page, no expander and no tabs.
     assert not app.expander and not app.tabs
-    assert subheaders(app) == ["Answer", "Explanation", "Reflect and explain your answer", "Source material"]
+    assert subheaders(app) == ["Answer", "Explanation", "Ask about this explanation", "Reflect and explain your answer", "Source material"]
     assert [e.value for e in app.error] == ["✕ Your answer: B"]
     assert [s.value for s in app.success] == ["✓ Correct answer: A"]
     captions = [caption.value for caption in app.caption]
@@ -282,7 +282,7 @@ def test_review_page_shows_one_question_with_everything_visible():
     assert [text.value for text in app.text] == ["Page two says compare both values."]
     # The heading order reads top to bottom: answer, explanation, reflection, source.
     order = [subheader.value for subheader in app.subheader]
-    assert order == ["Answer", "Explanation", "Reflect and explain your answer", "Source material"]
+    assert order == ["Answer", "Explanation", "Ask about this explanation", "Reflect and explain your answer", "Source material"]
 
 
 def test_review_page_shows_the_original_wording_of_a_simplified_question():

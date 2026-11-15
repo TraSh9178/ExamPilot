@@ -8,6 +8,7 @@ from services.i18n import tr
 import streamlit as st
 
 from components.page_links import back_button
+from services.answer_followup import render_answer_followup
 from services.accessibility import display_question
 from services.hints import hints_for
 from services.practice_insights import session_insights
@@ -110,6 +111,7 @@ with st.container(key=turn_key), st.container(key=f"review_card_{question.id}"):
         st.subheader(tr("Explanation"))
         st.write(display.explanation)
 
+    render_answer_followup(course, question)
     reflection_controls(course, session, question, review, confirmed_topic_ids, practice_key)
 
     if question.source_pages:
