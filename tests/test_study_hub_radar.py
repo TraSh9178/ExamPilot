@@ -11,6 +11,7 @@ from streamlit.runtime.state.common import user_key_from_element_id
 from streamlit.testing.v1 import AppTest
 from streamlit.testing.v1.element_tree import Block
 
+from components.knowledge_graph import RADAR_CACHE_SECONDS
 from models.schemas import StudyPackage
 from services import learning_radar
 from tests.auth_helpers import TEST_USER, signed_in_app
@@ -404,7 +405,7 @@ def test_registered_app_navigates_from_study_plan_to_selected_practice(monkeypat
     assert app.selectbox(key="practice_topic_calculus-i-demo").value == "calc_derivatives"
 
 
-def test_two_reruns_within_fifteen_seconds_fetch_the_radar_once(monkeypatch):
+def test_two_reruns_within_the_cache_window_fetch_the_radar_once(monkeypatch):
     radar = RadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
 
     app = _study_page(_calculus_course(), signed_in=True)
@@ -417,7 +418,7 @@ def test_two_reruns_within_fifteen_seconds_fetch_the_radar_once(monkeypatch):
     assert app.session_state[CACHE_KEY]["user_id"] == TEST_USER.user_id
 
     snapshot = dict(app.session_state[CACHE_KEY])
-    snapshot["fetched_at"] -= 16
+    snapshot["fetched_at"] -= RADAR_CACHE_SECONDS + 1
     app.session_state[CACHE_KEY] = snapshot
     app.run()
 
