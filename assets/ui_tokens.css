@@ -1,5 +1,9 @@
 /* Shared primitives -> semantic roles -> component aliases. Also loaded in Pilot's shadow root. */
 :root, :host {
+  --ep-type-body: 1rem;
+  --ep-type-section: 1.35rem;
+  --ep-type-label: .875rem;
+  --ep-panel-motion: 240ms;
   --ep-cream-50: #FEF7EF;
   --ep-cream-100: #FAF3E9;
   --ep-cream-white: #FFFCF7;

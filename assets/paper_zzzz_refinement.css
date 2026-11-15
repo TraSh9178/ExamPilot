@@ -1,0 +1,89 @@
+/* Reading hierarchy and quiet supporting content. */
+[data-testid="stMain"] .st-key-example_footer [data-testid="stCaptionContainer"] {
+  font-size: .75rem; line-height: 1.4; text-align: right; margin-top: var(--ep-space-4);
+}
+[data-testid="stMain"] [class*="st-key-topic_example_card_"] { background: var(--ep-surface-panel); }
+[class*="st-key-topic_example_card_"] [data-testid="stRadio"] label {
+  border: 1px solid var(--ep-border); border-radius: var(--ep-radius-control);
+  padding: .65rem .85rem; margin-block: .25rem; background: var(--ep-surface-panel);
+}
+[class*="st-key-topic_example_card_"] [data-testid="stRadio"] label:has(input:checked) { border-color: var(--ep-action); background: var(--ep-surface-subtle); }
+[data-testid="stMain"] .st-key-learning_radar_ranking_panel h3 { font-size: var(--ep-type-section); margin-bottom: var(--ep-space-4); }
+.radar-ranked-row strong { font-size: 1rem; line-height: 1.4; }
+.radar-ranked-row span { font-size: .875rem; line-height: 1.4; }
+.radar-ranked-row small { font-size: .8rem; line-height: 1.5; }
+[class*="_self_check_row"] { padding-block: var(--ep-space-3); gap: var(--ep-space-3); }
+[class*="_practice_action"] { padding-block: var(--ep-space-4); border-top: 1px solid var(--ep-border); margin-top: var(--ep-space-4); }
+[class*="_explain_nav"] { border-top: 1px solid var(--ep-border); padding-top: var(--ep-space-4); margin-top: var(--ep-space-4); gap: var(--ep-space-6); }
+[data-testid="stMain"] .st-key-dashboard_courses_header { margin-top: var(--ep-space-6); }
+[data-testid="stMain"] .st-key-dashboard_actions { margin-block: var(--ep-space-4) var(--ep-space-6); }
+/* The margin is a transparent layer, not another sheet with a moving landscape.
+   Its grid space stays stable when hidden so the background and question do not resize. */
+[data-testid="stMain"] .st-key-flight_worksheet_margin {
+  background: transparent !important; background-image: none !important; border: 0;
+  box-shadow: none; opacity: 1; visibility: visible;
+  transition: opacity var(--ep-panel-motion) ease, visibility var(--ep-panel-motion);
+}
+[data-testid="stMain"]:has(.practice-panel-state[data-open="false"]) .st-key-flight_worksheet_margin {
+  opacity: 0; visibility: hidden; pointer-events: none;
+}
+[data-testid="stMain"] { background-attachment: fixed; }
+/* Treasure-map route: keep the drawing at its natural scale on narrow screens. */
+.paper-progress-route { display: block; width: 100%; min-width: 7rem; max-width: 38rem; height: 4.5rem; overflow: visible; }
+.route-line { fill: none; stroke: var(--ep-text-secondary); stroke-width: 1.4; stroke-dasharray: 3 6; }
+.route-stop { fill: var(--ep-surface-panel); stroke: var(--ep-action); stroke-width: 1.4; }
+.route-plane-static { display: none; }
+/* One shared central loading layer for explicit operations and Streamlit reruns. */
+[data-testid="stApp"]:has([data-testid="stStatusWidgetRunningIcon"]) [data-testid="stHeader"]::after { content: none !important; animation: none !important; }
+@keyframes paper-route-loading { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+@keyframes paper-loading-reveal { from { opacity: 0; } to { opacity: 1; } }
+[data-testid="stApp"]:is(:has([data-testid="stStatusWidgetRunningIcon"]), :has([data-testid="stSpinner"]))::before {
+  content: ""; position: fixed; inset: 0; z-index: 9990; pointer-events: none;
+  background: rgb(254 247 239 / 65%) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 120'%3E%3Cpath d='M8 60 C44 4 76 116 120 60 S196 4 232 60' fill='none' stroke='%23586475' stroke-width='1.5' stroke-dasharray='3 6'/%3E%3C/svg%3E") center / 240px 120px no-repeat;
+  backdrop-filter: blur(4px); opacity: 0; animation: paper-loading-reveal 150ms 200ms forwards;
+}
+[data-testid="stApp"]:is(:has([data-testid="stStatusWidgetRunningIcon"]), :has([data-testid="stSpinner"]))::after {
+  content: ""; position: fixed; top: calc(50% - 60px); left: calc(50% - 120px);
+  z-index: 9991; width: 38px; height: 28px; pointer-events: none;
+  background: var(--paper-plane) center / contain no-repeat;
+  offset-path: path('M8 60 C44 4 76 116 120 60 S196 4 232 60');
+  offset-rotate: auto 25deg; opacity: 0;
+  animation: paper-route-loading 2.6s ease-in-out infinite alternate, paper-loading-reveal 150ms 200ms forwards;
+}
+[data-testid="stSpinner"] [data-testid="stSpinnerIcon"] { display: none; }
+[data-testid="stSpinner"] { position: fixed; z-index: 9992; top: calc(50% + 85px); left: 50%; transform: translateX(-50%); max-width: min(85vw, 30rem); text-align: center; }
+@media (prefers-reduced-motion: reduce) {
+  .route-plane-moving { display: none; }
+  .route-plane-static { display: initial; }
+  [data-testid="stMain"] .st-key-flight_worksheet_margin { transition: none; }
+  [data-testid="stApp"]:is(:has([data-testid="stStatusWidgetRunningIcon"]), :has([data-testid="stSpinner"]))::after {
+    animation: none; offset-distance: 50%; opacity: 1;
+  }
+  [data-testid="stApp"]:is(:has([data-testid="stStatusWidgetRunningIcon"]), :has([data-testid="stSpinner"]))::before { animation: none; opacity: 1; }
+}
+.paper-radar-chart .radar-label { font-family: system-ui, sans-serif; font-weight: 500; }
+.st-key-learning_radar_page_chart [data-testid="stCaptionContainer"] { text-align: right; font-size: .75rem; }
+/* Optional explanations: one quiet question mark, revealed by hover or focus. */
+.quiet-help-row { display: flex; justify-content: flex-end; min-height: 1.5rem; }
+.quiet-help { position: relative; display: inline-flex; }
+.quiet-help button { width: 1.5rem; height: 1.5rem; border: 1px solid var(--ep-border); border-radius: 50%; background: transparent; color: var(--ep-text-secondary); padding: 0; font: 600 .8rem/1 system-ui; cursor: help; }
+.quiet-help button:focus-visible { outline: 2px solid var(--ep-focus); outline-offset: 3px; }
+.quiet-help-text { visibility: hidden; opacity: 0; position: absolute; z-index: 50; right: 0; bottom: calc(100% + .5rem); width: min(21rem, 78vw); padding: .75rem 1rem; border: 1px solid var(--ep-border); border-radius: var(--ep-radius-control); color: var(--ep-text-primary); background: var(--ep-surface-panel); box-shadow: 0 4px 20px rgb(19 34 79 / 10%); font: 400 .875rem/1.6 system-ui; text-align: left; pointer-events: none; }
+.quiet-help:is(:hover,:focus-within) .quiet-help-text { opacity: 1; visibility: visible; pointer-events: auto; }
+.quiet-help::before { content: ''; position: absolute; bottom: 100%; width: 100%; height: .6rem; }
+@media (pointer: coarse) { .quiet-help button { width: 2.75rem; height: 2.75rem; } }
+.st-key-learning_radar_mark_panel h3 { font-size: var(--ep-type-section); }
+/* Turn before the return trip so the loading plane never travels backwards. */
+@keyframes paper-route-loading {
+  0% { offset-distance: 0%; offset-rotate: auto 25deg; }
+  49.9% { offset-distance: 100%; offset-rotate: auto 25deg; }
+  50% { offset-distance: 100%; offset-rotate: auto 205deg; }
+  99.9% { offset-distance: 0%; offset-rotate: auto 205deg; }
+  100% { offset-distance: 0%; offset-rotate: auto 25deg; }
+}
+[data-testid="stApp"]:is(:has([data-testid="stStatusWidgetRunningIcon"]), :has([data-testid="stSpinner"]))::after {
+  animation: paper-route-loading 5.2s ease-in-out infinite, paper-loading-reveal 150ms 200ms forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-testid="stApp"]:is(:has([data-testid="stStatusWidgetRunningIcon"]), :has([data-testid="stSpinner"]))::after { animation: none; }
+}

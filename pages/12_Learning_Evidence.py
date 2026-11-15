@@ -3,6 +3,7 @@
 Opened from a topic's "View answers" button on Progress. Real practice only:
 the example report on the demo courses has no answers to show.
 """
+from services.ui_help import help_tip
 import streamlit as st
 
 from components.page_links import back_button
@@ -26,7 +27,7 @@ if course is None:
     st.page_link("pages/0_Dashboard.py", label=tr("Back to Dashboard"))
     st.stop()
 
-st.caption(tr("Your latest answer to each question behind your Learning DNA, topic by topic."))
+help_tip(tr("Your latest answer to each question behind your Learning DNA, topic by topic."))
 
 # The same widget key as on Progress, so the chosen mode carries over: the
 # "View answers" button keeps that key's value for this page as it switches.

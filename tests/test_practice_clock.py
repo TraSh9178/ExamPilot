@@ -73,7 +73,7 @@ def clock_state(app):
 
 
 def visible_text(html):
-    return re.sub(r"<[^>]+>", " ", html)
+    return re.sub(r"<[^>]+>", " ", re.sub(r"<style\b[^>]*>.*?</style>", "", html, flags=re.S))
 
 
 # 1 · One source of truth: settle_focus --------------------------------------------
@@ -257,7 +257,7 @@ def test_topic_practice_shows_the_clock_in_the_header_without_a_click():
     flex = header.proto.flex_container
     assert flex.direction == BlockProto.FlexContainer.Direction.HORIZONTAL and flex.wrap
     assert [c.value for c in find_block(app, "flight_progress_count").caption] == ["Question 01 / 02"]
-    assert any("flight-waypoints" in m.value for m in find_block(app, "flight_progress_track").markdown)
+    assert any("paper-progress-route" in m.value for m in find_block(app, "flight_progress_track").markdown)
     clock = find_block(app, "flight_progress_clock")
     assert any('class="flight-clock' in m.value for m in clock.markdown)
     assert [b.key for b in clock.button] == ["focus_pause_s"]
@@ -277,7 +277,7 @@ def test_mock_exam_shows_the_clock_until_the_answers_are_submitted():
     assert clock is not None and any('class="flight-clock' in m.value for m in clock.markdown)
     # The same header as Topic Practice: counter and flight path, no progress bar.
     assert not find_block(app, "flight_progress_track").get("progress")
-    assert any("flight-waypoints" in m.value for m in find_block(app, "flight_progress_track").markdown)
+    assert any("paper-progress-route" in m.value for m in find_block(app, "flight_progress_track").markdown)
     assert [c.value for c in find_block(app, "flight_progress_count").caption] == ["Question 01 / 02"]
     submit_answers(app)
     assert not app.exception

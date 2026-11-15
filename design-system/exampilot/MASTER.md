@@ -28,6 +28,18 @@ Design Token provides primitive → semantic → component architecture. Heurist
 
 ## Verification
 
+## Content and motion refinement
+
+The next heuristic pass prioritizes an uninterrupted demo (severity 3), explicit example selection (3), oversized chart labels (2), competing Lab actions (2), and redundant persistent explanations (2). All 15 Calculus topics now have offline bilingual reasoning steps, a worked example and a common mistake. Other demo topics retain their own course examples and explanation. No sample history is written into personal results.
+
+Optional instructions use a small question-mark tooltip with a native focus target and associated tooltip text. Hover/focus reveals it; leaving the target or focusing elsewhere hides it. Counts, errors, selected-course context and sample-data attribution remain visible. Topic examples start unselected, hide their picker after choosing, and offer Change example beneath the familiar question card.
+
+Practice progress follows a winding dotted route using the shared SVG plane. A single central loading layer replaces the header flight, with a blurred backdrop, operation text and a parked-plane reduced-motion fallback. The transparent practice margin fades while retaining its grid space, so the question and fixed landscape do not stretch or jump. Lab practice appears after self-assessment, before a left/right Back/Start again row. Home orders My courses, totals, course cards, Create course; Learning DNA remains available through Progress.
+
+Validation for this pass: 1574 passed, 20 skipped on Python 3.12. Browser checks covered example selection, offline teaching, self-check gating, tooltip focus/show/hide, 375px portrait and 812px landscape bounds, and both login/study loading states with a controlled local delay. Practice panel measurements before/after hiding were identical (x, y, width and background position). No real account database or AI calls were made. The app keeps its light paper theme; OS reduced-motion switching and system text enlargement were not emulated. Reduced-motion rules were reviewed in source.
+
+Skill search fit: the focused loading-feedback/reduced-motion results matched this work. The progressive-disclosure search was too broad; disclosure decisions use the user's explicit instructions and the general recognition/minimalism heuristics rather than an unrelated result.
+
 Follow-up section review: topic details now open a dedicated teaching page with offline course examples and optional AI explanation; the map focus survives the return. Learning DNA cards use a paper surface, a top rule and wider gutters. Concept Lab prediction choices have a bordered panel, followed by a separated primary action. Learning Radar uses a 2:1 chart/picker layout and a keyboard-focusable ranking region below; five 8rem rows fit its 40rem viewport. Counts, privacy thresholds and sample-data labelling are unchanged. Desktop and 375px browser checks confirmed the layout, five-row geometry and no horizontal overflow.
 
 Full Python 3.12 suite after integrating main: 1560 passed, 20 skipped. Browser walkthroughs cover desktop, 375px portrait and 812px landscape, including pause/return, retained answers, retained Pilot draft, mobile navigation, panel bounds and focused controls. Reduced-motion rules were inspected in source; OS preference switching was not emulated. No live AI request or production account data was used.

@@ -44,7 +44,7 @@ def step_widgets(topic: str, step: int, *, checked: bool = False) -> set[str]:
         }
     return {
         f"lab_{topic}_explanation", f"lab_{topic}_show_answer",
-        f"lab_{topic}_back_to_2", f"lab_{topic}_start_again", PRACTICE[topic],
+        f"lab_{topic}_back_to_2", f"lab_{topic}_start_again",
     }
 
 
@@ -319,7 +319,7 @@ def test_the_answer_waits_for_show_answer_then_says_how_the_prediction_went(topi
     block = _explain_block(app, topic)
     assert [node.value for node in _walk(block) if node.type == "markdown"][0] == f"##### {question}"
     assert app.text_area(key=f"lab_{topic}_explanation").label == "Your explanation"
-    assert "Only you see this. Write it first, then compare." in [item.value for item in app.caption]
+    assert any("Only you see this. Write it first, then compare." in m.value and 'role="tooltip"' in m.value for m in app.markdown)
     show = app.button(key=f"lab_{topic}_show_answer")
     assert show.label == "Show answer"
     assert not _answer_on_page(app, topic)
@@ -346,7 +346,7 @@ def test_the_answer_waits_for_show_answer_then_says_how_the_prediction_went(topi
         "I had it right", "I missed something",
     ]
     app.button(key=f"lab_{topic}_self_missed").click().run()
-    assert "Your self-check: I missed something" in [item.value for item in app.caption]
+    assert app.button(key=f"lab_{topic}_self_missed").proto.type == "primary"
     assert app.session_state[f"lab_{topic}_self_check"] == "missed"
 
     app.button(key=f"lab_{topic}_show_answer").click().run()
@@ -468,7 +468,7 @@ def test_every_step_is_chinese_with_the_chinese_interface(topic):
     joined = "\n".join(texts)
     for chinese in ("预测", "探索", "解释", "下一步：探索", "下一步：解释", "返回", "你的解释",
                     "只有你能看到。先写下来，再对照答案。", "收起答案", "我答对了", "我漏掉了一些",
-                    "你的自评：我答对了", "重新开始", "你的预测是“"):
+                    "重新开始", "你的预测是“"):
         assert chinese in joined, chinese
     assert _english_words(texts) == []
 
@@ -569,3 +569,15 @@ def test_a_double_click_on_show_answer_leaves_the_answer_shown(topic):
     app.button(key=f"lab_{topic}_show_answer").click().run()
     assert app.session_state[f"lab_{topic}_answer_shown"] is False
     assert app.button(key=f"lab_{topic}_show_answer").label == "Show answer"
+
+
+def test_practice_appears_only_after_self_check_and_before_the_navigation_row():
+    app = _lab(lab_limits_step=3)
+    assert not any(button.key == PRACTICE['limits'] for button in app.button)
+    app.button(key='lab_limits_show_answer').click().run()
+    assert not any(button.key == PRACTICE['limits'] for button in app.button)
+    app.button(key='lab_limits_self_right').click().run()
+    keys = [button.key for button in app.button]
+    assert keys.index(PRACTICE['limits']) < keys.index('lab_limits_back_to_2') < keys.index('lab_limits_start_again')
+    app.button(key='lab_limits_start_again').click().run()
+    assert not any(button.key == PRACTICE['limits'] for button in app.button)

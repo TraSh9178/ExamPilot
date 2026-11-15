@@ -1,3 +1,4 @@
+from services.ui_help import help_tip
 from services.i18n import tr
 import streamlit as st
 
@@ -16,7 +17,7 @@ from services.learning_flow import stage_practice
 apply_app_styles()
 
 st.title(tr("Study Plan"))
-st.caption(tr("Review course topics and choose the scope for your exam."))
+help_tip(tr("Review course topics and choose the scope for your exam."))
 
 course = st.session_state.get("current_course")
 
@@ -97,7 +98,7 @@ def render_most_flagged_topics(course, confirmed_key: str) -> None:
 
     with st.container(border=True, key="study_radar_panel"):
         st.subheader(tr("Most flagged topics · Top 3"))
-        st.caption(tr("Topics students marked \"I'm stuck here\" on the Knowledge Map."))
+        help_tip(tr("Topics students marked \"I'm stuck here\" on the Knowledge Map."))
         if not most_flagged:
             st.caption(tr("No topics have been flagged yet."))
         for rank, topic_radar in enumerate(most_flagged, start=1):

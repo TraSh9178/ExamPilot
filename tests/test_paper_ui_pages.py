@@ -189,10 +189,12 @@ def test_progress_page_keeps_legend_but_not_storage_notes():
 
     assert not app.exception
     captions = " ".join(item.value for item in app.caption)
-    assert "Below 60%: Weak" in captions
+    from tests.tooltip_helpers import tooltip_texts
+    help_copy = " ".join(tooltip_texts(app))
+    assert "Below 60%: Weak" in help_copy
     assert "Signed-in users" not in captions
     assert "excluded" not in captions
-    assert "Uses your latest answer to each question." in captions
+    assert "Uses your latest answer to each question." in help_copy
     assert not any(
         item.label == "Question labels and saved history" for item in app.expander
     )

@@ -1067,7 +1067,7 @@ def test_radar_ranking_lists_flagged_topics_most_flagged_first(monkeypatch):
     app = _radar_ranking(radar)
 
     assert not app.exception
-    assert "**Learning Radar**" in _markdown(app)
+    assert "Learning Radar" in [item.value for item in app.subheader]
     assert (
         "1. **Derivatives** — 8 students are stuck here\n"
         "2. **Applications of Derivatives** — 5 students are stuck here\n"
@@ -1971,7 +1971,7 @@ def test_knowledge_map_hides_storage_and_bookkeeping_captions(monkeypatch):
     assert "Live flags are unavailable right now." not in captions
     # The rest of the selected topic's radar section stays.
     assert "4 students are stuck here" in _markdown(app)
-    assert "**Connected topics**" in _markdown(app)
+    assert "**Connected topics**" not in _markdown(app)
 
 
 def test_failed_account_save_shows_no_database_reason(monkeypatch):

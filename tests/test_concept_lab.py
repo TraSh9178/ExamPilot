@@ -171,7 +171,8 @@ def test_practice_button_explains_missing_course_or_scope(monkeypatch, topic, fi
     monkeypatch.setattr(st, "page_link", lambda page, **kwargs: links.append(page))
     app = AppTest.from_file(str(PAGE_PATH))
     app.session_state["current_course"] = load_course(filename) if filename else None
-    app.session_state[EXPLAIN_STEP[topic]] = 3  # the practice button sits in step 3
+    app.session_state[EXPLAIN_STEP[topic]] = 3
+    app.session_state[EXPLAIN_STEP[topic].replace("_step", "_self_check")] = "right"
     app.run().button(key=f"concept_lab_practice_{topic}").click().run()
     assert not app.exception
     expected = (
@@ -199,7 +200,8 @@ def test_practice_button_sets_contract_and_practice_page_uses_it(monkeypatch, to
     app.session_state["confirmed_scope_calculus-i-demo"] = [t.id for t in course.topics]
     history = {"saved-session": {"result": "preserved"}}
     app.session_state["practice_history_calculus-i-demo"] = history
-    app.session_state[EXPLAIN_STEP[topic]] = 3  # the practice button sits in step 3
+    app.session_state[EXPLAIN_STEP[topic]] = 3
+    app.session_state[EXPLAIN_STEP[topic].replace("_step", "_self_check")] = "right"
     app.run().button(key=f"concept_lab_practice_{topic}").click().run()
     assert not app.exception
     assert destinations == ["pages/2_Practice_Center.py"]
@@ -225,7 +227,8 @@ def test_registered_app_navigates_from_lab_to_selected_practice(topic):
     app.session_state["confirmed_scope_calculus-i-demo"] = [
         "calc_limits", "calc_derivatives",
     ]
-    app.session_state[EXPLAIN_STEP[topic]] = 3  # the practice button sits in step 3
+    app.session_state[EXPLAIN_STEP[topic]] = 3
+    app.session_state[EXPLAIN_STEP[topic].replace("_step", "_self_check")] = "right"
     app.switch_page("pages/6_Concept_Lab.py").run()
     assert not app.exception
     assert app.title[0].value == "Concept Lab"

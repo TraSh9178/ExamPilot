@@ -1,5 +1,5 @@
 """Render evidence dimensions alongside the existing Progress statistics."""
-
+from services.ui_help import help_tip
 from services.i18n import tr
 import streamlit as st
 
@@ -93,14 +93,12 @@ def render_learning_dna(course, attempts, sessions, questions, mode, *, example=
     """
     title = f"{tr('Example')} · {tr('Learning DNA')}" if example else tr("Learning DNA")
     st.subheader(title)
-    st.caption(tr("See computation and conceptual understanding separately, with the answers behind each pattern."))
-    st.caption(tr("How to read this profile") + " · " + tr("These are question-based observations, not a validated cognitive diagnosis. Multiple-choice answers do not demonstrate that you can explain an idea in your own words."))
+    help_tip(tr("How to read this profile") + " · " + tr("These are question-based observations, not a validated cognitive diagnosis. Multiple-choice answers do not demonstrate that you can explain an idea in your own words.") + " " + tr("Uses your latest answer to each question. Fewer than 3 different questions shows as insufficient evidence."))
     try:
         profile, _excluded = evidence_profile(attempts, sessions, questions, mode)
     except ValueError:
         st.warning(tr("Learning DNA couldn't read this practice history."))
         return
-    st.caption(tr("Uses your latest answer to each question. Fewer than 3 different questions shows as insufficient evidence."))
     by_key = {(p.topic_id, p.dimension): p for p in profile}
     # One block around the topic cards: the stylesheet sets them side by side on a wide page.
     with st.container(key="learning_dna_cards"):

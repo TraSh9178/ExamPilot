@@ -1,3 +1,4 @@
+from services.ui_help import help_tip
 from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
@@ -44,7 +45,7 @@ def load_demo_package(filename: str, expected_course_id: str) -> StudyPackage:
 apply_app_styles()
 
 st.title(tr("Your study space"))
-st.caption(tr("Start with one question, or open a course you already study."))
+help_tip(tr("Start with one question, or open a course you already study."))
 
 initialize_courses(st.session_state)
 
@@ -102,6 +103,146 @@ if selected_course is not None:
                 st.session_state.pop(f"practice_entry_{selected_course.course_id}", None)
                 st.switch_page("pages/2_Practice_Center.py")
 
+with st.container(key="dashboard_courses_header"):
+    st.subheader(tr("My courses"))
+overview = st.container(key="dashboard_overview")
+
+courses = st.session_state.courses
+# Course creation reruns the page, updating these totals before the course cards.
+with overview:
+    overview_columns = st.columns(3)
+    with overview_columns[0]:
+        st.metric(tr("Courses"), len(courses))
+    with overview_columns[1]:
+        st.metric(
+            tr("Knowledge points"),
+            sum(len(course.topics) for course in courses),
+        )
+    with overview_columns[2]:
+        st.metric(
+            tr("Practice sessions"),
+            sum(
+                len(
+                    st.session_state.get(
+                        f"practice_history_{course.course_id}", {}
+                    )
+                )
+                for course in courses
+            ),
+        )
+
+if not courses:
+    st.info(tr("Create a course to get started."))
+else:
+    for row_start in range(0, len(courses), 2):
+        card_columns = st.columns(2)
+
+        for column, course in zip(
+            card_columns,
+            courses[row_start : row_start + 2],
+        ):
+            with column:
+                with st.container(
+                    border=True,
+                    key=f"dashboard_course_card_{course.course_id}",
+                ):
+                    stage = st.session_state.get(
+                        f"course_stage_{course.course_id}"
+                    )
+                    is_demo = any(
+                        course.course_id == demo_id
+                        for _, _, demo_id in DEMO_COURSES
+                    )
+                    st.caption(tr(
+                        "Generated course"
+                        if stage
+                        else ("Demo course" if is_demo else "Your course")
+                    ))
+                    course_icon, course_details = st.columns([1, 3.5], vertical_alignment="center")
+                    with course_icon:
+                        st.markdown(
+                            '<div class="academic-course-icon" aria-hidden="true">'
+                            + course_icon_svg(course.course_id, course.course_name)
+                            + '</div>',
+                            unsafe_allow_html=True,
+                        )
+                    with course_details:
+                        st.subheader(course.course_name)
+                        st.caption(
+                            tr(f"{len(course.topics)} topics · "
+                            f"{len(course.questions)} practice questions")
+                        )
+
+                    if stage == "topics_only":
+                        st.caption(tr("Next: review topics and choose your exam scope."))
+                    action_columns = st.columns([1, 1])
+                    with action_columns[0]:
+                        if st.button(
+                            tr("Open course"),
+                            type="primary",
+                            key=f"open_course_{course.course_id}",
+                            use_container_width=True,
+                        ):
+                            st.session_state.pop(
+                                f"pending_course_removal_{course.course_id}", None
+                            )
+                            select_course(
+                                st.session_state,
+                                course.course_id,
+                            )
+                            st.switch_page("pages/1_Study_Hub.py")
+
+                    if not is_demo:
+                        with action_columns[1]:
+                            if st.button(
+                                tr("Delete course"),
+                                icon=":material/delete:",
+                                key=f"remove_course_{course.course_id}",
+                                type="secondary",
+                                use_container_width=True,
+                                help=tr("Review a confirmation before deleting this course."),
+                            ):
+                                st.session_state[
+                                    f"pending_course_removal_{course.course_id}"
+                                ] = True
+                                st.rerun()
+                    if not is_demo and st.session_state.get(
+                        f"pending_course_removal_{course.course_id}", False
+                    ):
+                        st.warning(tr(
+                            f"Delete {course.course_name}? Its materials and practice "
+                            "progress will be removed from this session."
+                        ))
+                        confirmation_columns = st.columns(2)
+                        with confirmation_columns[0]:
+                            cancel_removal = st.button(
+                                tr("Cancel"),
+                                key=f"cancel_remove_course_{course.course_id}",
+                                type="secondary",
+                                use_container_width=True,
+                            )
+                        with confirmation_columns[1]:
+                            confirm_removal = st.button(
+                                tr("Confirm delete"),
+                                key=f"confirm_remove_course_{course.course_id}",
+                                type="secondary",
+                                use_container_width=True,
+                            )
+                        if cancel_removal:
+                            st.session_state.pop(
+                                f"pending_course_removal_{course.course_id}", None
+                            )
+                            st.rerun()
+                        if confirm_removal:
+                            st.session_state.pop(
+                                f"pending_course_removal_{course.course_id}", None
+                            )
+                            remove_course(
+                                st.session_state,
+                                course.course_id,
+                            )
+                            st.rerun()
+
 with st.container(key="dashboard_actions"):
     if st.button(
         tr("Close setup") if st.session_state.show_course_setup else tr("Create course"),
@@ -113,30 +254,6 @@ with st.container(key="dashboard_actions"):
     ):
         st.session_state.show_course_setup = not st.session_state.show_course_setup
         st.rerun()
-
-with st.container(key="dashboard_learning_dna"):
-    dna_course = selected_course
-    if dna_course is None and st.session_state["courses"]:
-        courses_by_id = {course.course_id: course for course in st.session_state["courses"]}
-        dna_course_id = st.selectbox(
-            tr("Course"), list(courses_by_id),
-            format_func=lambda course_id: courses_by_id[course_id].course_name,
-            key="learning_dna_course",
-        )
-        dna_course = courses_by_id[dna_course_id]
-    if st.button(
-        tr("View Learning DNA"), icon=":material/insights:",
-        key="learning_dna_open", disabled=dna_course is None,
-    ):
-        select_course(st.session_state, dna_course.course_id)
-        st.session_state[f"progress_tab_{dna_course.course_id}"] = "Learning DNA"
-        st.switch_page("pages/3_Performance.py")
-
-# Study totals: one always-visible row of small tiles (assets/paper_panels.css).
-overview = st.container(key="dashboard_overview")
-
-with st.container(key="dashboard_courses_header"):
-    st.subheader(tr("My courses"))
 
 if st.session_state.show_course_setup:
     with st.container(border=True, key="dashboard_course_setup"):
@@ -309,140 +426,3 @@ if st.session_state.show_course_setup:
             st.caption(
                 tr("Extract your material to preview the text before generating topics.")
             )
-
-courses = st.session_state.courses
-# Populate the overview after generation so it reflects a newly created course
-# immediately, while keeping it above the setup panel on screen.
-with overview:
-    overview_columns = st.columns(3)
-    with overview_columns[0]:
-        st.metric(tr("Courses"), len(courses))
-    with overview_columns[1]:
-        st.metric(
-            tr("Knowledge points"),
-            sum(len(course.topics) for course in courses),
-        )
-    with overview_columns[2]:
-        st.metric(
-            tr("Practice sessions"),
-            sum(
-                len(
-                    st.session_state.get(
-                        f"practice_history_{course.course_id}", {}
-                    )
-                )
-                for course in courses
-            ),
-        )
-
-if not courses:
-    st.info(tr("Create a course to get started."))
-else:
-    for row_start in range(0, len(courses), 2):
-        card_columns = st.columns(2)
-
-        for column, course in zip(
-            card_columns,
-            courses[row_start : row_start + 2],
-        ):
-            with column:
-                with st.container(
-                    border=True,
-                    key=f"dashboard_course_card_{course.course_id}",
-                ):
-                    stage = st.session_state.get(
-                        f"course_stage_{course.course_id}"
-                    )
-                    is_demo = any(
-                        course.course_id == demo_id
-                        for _, _, demo_id in DEMO_COURSES
-                    )
-                    st.caption(tr(
-                        "Generated course"
-                        if stage
-                        else ("Demo course" if is_demo else "Your course")
-                    ))
-                    course_icon, course_details = st.columns([1, 3.5], vertical_alignment="center")
-                    with course_icon:
-                        st.markdown(
-                            '<div class="academic-course-icon" aria-hidden="true">'
-                            + course_icon_svg(course.course_id, course.course_name)
-                            + '</div>',
-                            unsafe_allow_html=True,
-                        )
-                    with course_details:
-                        st.subheader(course.course_name)
-                        st.caption(
-                            tr(f"{len(course.topics)} topics · "
-                            f"{len(course.questions)} practice questions")
-                        )
-
-                    if stage == "topics_only":
-                        st.caption(tr("Next: review topics and choose your exam scope."))
-                    action_columns = st.columns([1, 1])
-                    with action_columns[0]:
-                        if st.button(
-                            tr("Open course"),
-                            type="primary",
-                            key=f"open_course_{course.course_id}",
-                            use_container_width=True,
-                        ):
-                            st.session_state.pop(
-                                f"pending_course_removal_{course.course_id}", None
-                            )
-                            select_course(
-                                st.session_state,
-                                course.course_id,
-                            )
-                            st.switch_page("pages/1_Study_Hub.py")
-
-                    if not is_demo:
-                        with action_columns[1]:
-                            if st.button(
-                                tr("Delete course"),
-                                icon=":material/delete:",
-                                key=f"remove_course_{course.course_id}",
-                                type="secondary",
-                                use_container_width=True,
-                                help=tr("Review a confirmation before deleting this course."),
-                            ):
-                                st.session_state[
-                                    f"pending_course_removal_{course.course_id}"
-                                ] = True
-                                st.rerun()
-                    if not is_demo and st.session_state.get(
-                        f"pending_course_removal_{course.course_id}", False
-                    ):
-                        st.warning(tr(
-                            f"Delete {course.course_name}? Its materials and practice "
-                            "progress will be removed from this session."
-                        ))
-                        confirmation_columns = st.columns(2)
-                        with confirmation_columns[0]:
-                            cancel_removal = st.button(
-                                tr("Cancel"),
-                                key=f"cancel_remove_course_{course.course_id}",
-                                type="secondary",
-                                use_container_width=True,
-                            )
-                        with confirmation_columns[1]:
-                            confirm_removal = st.button(
-                                tr("Confirm delete"),
-                                key=f"confirm_remove_course_{course.course_id}",
-                                type="secondary",
-                                use_container_width=True,
-                            )
-                        if cancel_removal:
-                            st.session_state.pop(
-                                f"pending_course_removal_{course.course_id}", None
-                            )
-                            st.rerun()
-                        if confirm_removal:
-                            st.session_state.pop(
-                                f"pending_course_removal_{course.course_id}", None
-                            )
-                            remove_course(
-                                st.session_state,
-                                course.course_id,
-                            )
-                            st.rerun()

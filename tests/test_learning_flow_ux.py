@@ -183,6 +183,7 @@ def test_map_to_derivatives_lab_to_practice_preserves_context_and_old_result(mon
     )}
     app=signed_in_app(ROOT/'app.py').run()
     for key,value in carried.items():app.session_state[key]=value
+    app.session_state['lab_derivatives_self_check']='right'
     app.session_state['lab_derivatives_step']=3  # practice sits in the explain step
     app.switch_page('pages/6_Concept_Lab.py').run()
     app.button(key='concept_lab_practice_calc_derivatives').click().run()

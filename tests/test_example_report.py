@@ -145,7 +145,7 @@ def test_demo_without_practice_shows_the_labelled_example(course_id, filename):
     markdown = [m.value for m in app.markdown if not m.value.startswith("<style")]
     assert visible_text(next(m for m in markdown if "progress-example-banner" in m)) == BANNER
     # The banner comes before the mode choice and the tiles.
-    assert markdown.index(next(m for m in markdown if "progress-example-banner" in m)) == 0
+    assert all("quiet-help-row" in m for m in markdown[:markdown.index(next(m for m in markdown if "progress-example-banner" in m))])
     headings = [s.value for s in app.subheader][1:]
     assert headings == ["Example · Mastery by topic", "Example · Accuracy by session",
                         "Example · Learning DNA", "Example · Time by topic"]

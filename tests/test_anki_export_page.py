@@ -216,7 +216,7 @@ def test_page_is_flashcards_with_one_card_and_a_small_export_button_on_the_right
     assert [item.value for item in app.title] == ["Flashcards"]
     headings = [item.value for kind in ("title", "header", "subheader") for item in app.get(kind)]
     assert not any("Export to Anki" in heading for heading in headings)
-    assert app.caption[0].value == "One card at a time, from your mistakes, weak topics and key ideas."
+    assert any("One card at a time, from your mistakes, weak topics and key ideas." in m.value and 'role="tooltip"' in m.value for m in app.markdown)
 
     key, card = _card(app)
     assert key == f"flashcard_none_{CID}"
@@ -686,7 +686,7 @@ def test_chinese_interface_translates_every_flashcard_string():
 
     assert not app.exception
     assert app.title[0].value == "复习卡片"
-    assert app.caption[0].value == "一次一张卡片，复习你的错题、薄弱知识点和知识要点。"
+    assert any("一次一张卡片，复习你的错题、薄弱知识点和知识要点。" in m.value for m in app.markdown)
     assert _decks(app).options == ["我的错题 · 2", "薄弱知识点 · 3", "知识要点 · 3", "全部题目 · 9"]
     assert _card_caption(app) == "第 1 / 2 张 · Variables and Expressions"
     assert "先想好答案，再翻开卡片。" in _card_text(app)

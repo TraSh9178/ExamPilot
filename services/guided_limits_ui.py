@@ -91,6 +91,7 @@ def render_guided_review(course, session, questions, result) -> bool:
                 st.success(tr("8 · Correct"))
                 st.caption(tr("Solved after a retry." if progress["retried"] else "Solved on your first try."))
             st.caption(tr("You practised factoring a difference of squares before taking the limit."))
+            _share_blocker(course, progress, key)
             return True
 
         st.markdown(tr("**First answer:** ") + first_answer)
@@ -108,24 +109,10 @@ def render_guided_review(course, session, questions, result) -> bool:
                 else:
                     progress["reason"] = reason
                     st.rerun()
+            _share_blocker(course, progress, key)
             return True
 
         st.info(tr(REASONS[progress["reason"]][1]))
-        user = current_user(st.session_state)
-        if user is not None and progress["reason"] in learning_radar.REASON_LABELS:
-            with st.expander(tr("Learning Radar · share this blocker")):
-                st.caption(tr("Add this topic and reason to the anonymous course totals."))
-                if progress.get("flag_saved"):
-                    st.caption(tr("Shared with Learning Radar."))
-                elif st.button(tr("Share anonymously"), key=f"{key}_flag"):
-                    outcome = learning_radar.set_flag(user.user_id, course.course_id, TOPIC_ID, progress["reason"])
-                    if outcome.success:
-                        progress["flag_saved"] = True
-                        forget_course_radar(st.session_state, course.course_id)
-                        st.rerun()
-                    else:
-                        st.warning(tr("Learning Radar is unavailable. You can still finish this review."))
-
         if not progress.get("step_done"):
             factor = st.radio(
                 tr("Which expression equals x² − 4?"),
@@ -141,6 +128,7 @@ def render_guided_review(course, session, questions, result) -> bool:
                     st.warning(tr("Choose an expression first."))
                 else:
                     st.warning(tr("Expand your choice. Does the middle term cancel?"))
+            _share_blocker(course, progress, key)
             return True
 
         st.markdown(tr("**The step you repaired:** x² − 4 = (x − 2)(x + 2)"))
@@ -162,4 +150,24 @@ def render_guided_review(course, session, questions, result) -> bool:
             else:
                 progress["retried"] = True
                 st.warning(tr("Try rewriting x² − 16 as a difference of squares."))
+        _share_blocker(course, progress, key)
     return True
+
+
+def _share_blocker(course, progress, key):
+    if "reason" not in progress:
+        return
+    user = current_user(st.session_state)
+    if user is not None and progress["reason"] in learning_radar.REASON_LABELS:
+        with st.expander(tr("Learning Radar · share this blocker")):
+            st.caption(tr("Add this topic and reason to the anonymous course totals."))
+            if progress.get("flag_saved"):
+                st.caption(tr("Shared with Learning Radar."))
+            elif st.button(tr("Share anonymously"), key=f"{key}_flag"):
+                outcome = learning_radar.set_flag(user.user_id, course.course_id, TOPIC_ID, progress["reason"])
+                if outcome.success:
+                    progress["flag_saved"] = True
+                    forget_course_radar(st.session_state, course.course_id)
+                    st.rerun()
+                else:
+                    st.warning(tr("Learning Radar is unavailable. You can still finish this review."))

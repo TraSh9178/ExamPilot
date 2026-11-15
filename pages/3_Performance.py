@@ -1,3 +1,4 @@
+from services.ui_help import help_tip
 from services.i18n import tr
 import streamlit as st
 
@@ -18,7 +19,7 @@ from services.practice_insights_ui import render_history_insights
 apply_app_styles()
 
 st.title(tr("Progress"))
-st.caption(tr("Review practice results and see which topics need more evidence."))
+help_tip(tr("Review practice results and see which topics need more evidence."))
 
 course = st.session_state.get("current_course")
 
@@ -145,7 +146,7 @@ with charts_block:
             kind="mastery",
             empty_text="This course has no topics yet.",
         )
-        st.caption(tr("Mastery uses each distinct question’s latest answer. Total accuracy still includes every graded attempt."))
+        help_tip(tr("Mastery uses each distinct question’s latest answer. Total accuracy still includes every graded attempt."))
 
     with st.container(border=True, key="progress_sessions"):
         st.subheader(heading("Accuracy by session"))
@@ -156,7 +157,7 @@ with charts_block:
             title=heading("Accuracy by session"),
             empty_text="No graded sessions in this mode yet.",
         )
-        st.caption(tr("Each dot is one graded session, oldest on the left."))
+        help_tip(tr("Each dot is one graded session, oldest on the left."))
 
 with dna_block:
     render_learning_dna(
@@ -165,7 +166,7 @@ with dna_block:
     )
 render_history_insights(report_course, history, mode, example=example is not None)
 
-st.caption(
+help_tip(
     tr("Insufficient evidence means fewer than 3 different questions for that topic "
     "in the selected mode. "
     "Below 60%: Weak · 60–79.99%: Developing · 80% or above: Mastered.")

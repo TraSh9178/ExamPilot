@@ -143,9 +143,9 @@ def test_home_study_totals_are_tiles_on_the_page_with_the_same_figures(chinese, 
     assert _wrappers(app, "dashboard_overview") == ()
     order = _top_level_keys(app)
     assert (
-        order.index("dashboard_learning_dna")
+        order.index("dashboard_courses_header")
         < order.index("dashboard_overview")
-        < order.index("dashboard_courses_header")
+        < order.index("dashboard_actions")
     )
     # One row of three tiles, each with its label.
     (row,) = _children(overview)

@@ -5,6 +5,7 @@ Each experiment is worked through one step at a time in the left column:
 step. Nothing here adds an exam attempt, a score or a mastery change, and
 nothing leaves the session.
 """
+from services.ui_help import help_tip
 import html
 
 import streamlit as st
@@ -218,7 +219,7 @@ def _prediction_outcome(topic):
         st.info(tr(f'Your prediction was “{tr(checked)}”; the experiment shows “{tr(correct)}”.'))
 
 
-def explanation(topic):
+def explanation(topic, practice_action=None):
     """The question, an optional private note, and the answer behind a button.
 
     Nothing of the answer is on the page until "Show answer" is clicked, so the
@@ -231,7 +232,7 @@ def explanation(topic):
         st.markdown(f"##### {tr(question)}")
         st.text_area(tr('Your explanation'), key=f'lab_{topic}_explanation',
                      on_change=keep_value, args=(f'lab_{topic}_explanation',))
-        st.caption(tr('Only you see this. Write it first, then compare.'))
+        help_tip(tr('Only you see this. Write it first, then compare.'))
         st.button(tr('Hide answer') if shown else tr('Show answer'), key=f'lab_{topic}_show_answer',
                   width='content', on_click=_set_answer_shown, args=(topic, not shown))
         if shown:
@@ -239,14 +240,16 @@ def explanation(topic):
                 st.latex(formula)
             st.write(tr(answer))
             _prediction_outcome(topic)
+            st.markdown('**' + tr('Self-check') + '**')
             with st.container(horizontal=True, horizontal_alignment='left', key=f'lab_{topic}_self_check_row'):
                 for choice, label in SELF_CHECKS.items():
                     st.button(tr(label), key=f'lab_{topic}_self_{choice}',
+                              type='primary' if st.session_state.get(f'lab_{topic}_self_check') == choice else 'secondary',
                               on_click=_set_self_check, args=(topic, choice))
-            chosen = st.session_state.get(f'lab_{topic}_self_check')
-            if chosen in SELF_CHECKS:
-                st.caption(tr('Your self-check: ') + tr(SELF_CHECKS[chosen]))
-    with st.container(horizontal=True, horizontal_alignment='left', key=f'lab_{topic}_explain_nav'):
+    if st.session_state.get(f'lab_{topic}_self_check') in SELF_CHECKS and practice_action is not None:
+        with st.container(key=f'lab_{topic}_practice_action'):
+            practice_action()
+    with st.container(horizontal=True, horizontal_alignment='distribute', key=f'lab_{topic}_explain_nav'):
         _back_button(topic, 2)
         st.button(tr('Start again'), key=f'lab_{topic}_start_again',
                   on_click=reset_experiment, args=(topic,))

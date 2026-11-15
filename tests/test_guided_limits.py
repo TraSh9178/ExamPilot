@@ -110,3 +110,22 @@ def test_guided_review_heading_and_unanswered_follow_chinese_setting():
     assert not app.exception
     assert "微积分 I · 极限" in [item.value for item in app.caption]
     assert "**第一次答案：** 未作答" in [item.value for item in app.markdown]
+
+
+def test_share_blocker_is_last_after_the_transfer_question(monkeypatch):
+    course = calculus()
+    question = guided_limits_ui.starter_question(course)
+    state = {'courses': [course]}
+    guided_limits_ui.start_demo(state, course, question)
+    session = state[f'active_practice_{COURSE_ID}']['session']
+    result = grade_exam(session, [question], {question.id: 3})
+    monkeypatch.setattr(guided_limits_ui, 'current_user', lambda _state: SimpleNamespace(user_id='tester'))
+    app = AppTest.from_string("import streamlit as st\nfrom services.guided_limits_ui import render_guided_review\nrender_guided_review(*st.session_state['fixture'])")
+    app.session_state['fixture'] = (course, session, [question], result)
+    app.session_state[f'guided_limits_{session.session_id}'] = {'reason':'start','step_done':True}
+    app.run()
+    assert not app.exception
+    # The sharing expander is the final block inside the review panel.
+    from tests.test_practice_clock import find_block
+    panel = find_block(app, 'guided_limits_review')
+    assert list(panel.children.values())[-1].type == 'expander'

@@ -16,7 +16,7 @@ from services.i18n import LANGUAGE_KEY
 from tests.auth_helpers import signed_in_app
 from tests.test_learning_flow_ux import calculus
 from tests.test_paper_practice import FakeRadarChart, badges, page_markdown
-from tests.test_practice_clock import clock_html, find_block
+from tests.test_practice_clock import clock_html, find_block, visible_text
 from tests.test_practice_insights import setup_course, start_app
 from tests.test_practice_page import (
     HISTORY_PAGE_PATH, carry_to, history_rows, keyed_button, make_practice_state, open_review, open_setup,
@@ -370,9 +370,10 @@ def test_side_panel_hides_and_shows_with_one_click_and_stays_as_chosen():
     assert (toggle.label, toggle.proto.icon) == ("Hide side panel", ":material/right_panel_close:")
     toggle.click().run()
     assert not app.exception
-    assert "flight_worksheet_margin" not in block_keys(app)
-    assert "Quick Notes" not in subheaders(app) and "Topic" not in [c.value for c in app.caption]
-    assert "practice_main_full" in block_keys(app)
+    assert "flight_worksheet_margin" in block_keys(app)
+    assert any('data-open="false"' in m.value for m in app.markdown)
+    assert "Quick Notes" in subheaders(app)
+    assert "practice_main_full" not in block_keys(app)
     toggle = app.button(key="practice_side_panel_toggle_insights")
     assert (toggle.label, toggle.proto.icon) == ("Show side panel", ":material/right_panel_open:")
     # Paging, any rerun and the review step keep the choice.
@@ -380,7 +381,8 @@ def test_side_panel_hides_and_shows_with_one_click_and_stays_as_chosen():
     app.run()
     open_review(app)
     app.button(key="worksheet_back_s").click().run()
-    assert "flight_worksheet_margin" not in block_keys(app) and "Quick Notes" not in subheaders(app)
+    assert "flight_worksheet_margin" in block_keys(app)
+    assert any('data-open="false"' in m.value for m in app.markdown) and "Quick Notes" in subheaders(app)
     app.button(key="practice_side_panel_toggle_insights").click().run()
     assert "flight_worksheet_margin" in block_keys(app) and "Quick Notes" in subheaders(app)
     assert "practice_main_full" not in block_keys(app)
@@ -397,11 +399,11 @@ def test_side_panel_choice_survives_leaving_the_page_and_returning():
     app.switch_page("pages/2_Practice_Center.py").run()
     assert "Quick Notes" in subheaders(app)
     app.button(key="practice_side_panel_toggle_course-1").click().run()
-    assert "Quick Notes" not in subheaders(app)
+    assert any('data-open="false"' in m.value for m in app.markdown)
     app.switch_page("pages/3_Performance.py").run()
     app.switch_page("pages/2_Practice_Center.py").run()
     assert not app.exception
-    assert "Quick Notes" not in subheaders(app)
+    assert any('data-open="false"' in m.value for m in app.markdown)
     assert app.button(key="practice_side_panel_toggle_course-1").label == "Show side panel"
 
 
@@ -433,10 +435,12 @@ def test_radar_panel_in_both_modes_notes_only_in_topic_practice(monkeypatch, mod
     assert "Learning Radar" in subheaders(app)
     assert ("Quick Notes" in subheaders(app)) == (mode == "topic")
     app.button(key=f"practice_side_panel_toggle_{course.course_id}").click().run()
-    # Hidden: nothing of the panel is drawn (the stuck menu under the question stays).
-    assert len(fake.charts) == 1
-    assert "Learning Radar" not in subheaders(app) and "Quick Notes" not in subheaders(app)
-    assert not keys_starting(app, f"worksheet_radar_{sid}")
+    # Hidden: the layer stays mounted and CSS fades it out without resizing the sheet.
+    assert len(fake.charts) == 2
+    assert any('data-open="false"' in m.value for m in app.markdown)
+    assert "Learning Radar" in subheaders(app)
+    assert ("Quick Notes" in subheaders(app)) == (mode == "topic")
+    assert keys_starting(app, f"worksheet_radar_{sid}")
     assert popover_labels(app) == ["This session", "Learning Radar"]
 
 
@@ -761,7 +765,7 @@ def chinese_course():
 def shown_strings(app):
     """Every interface string on the page. Radio options are left out: their A-D letters
     label the course's own options."""
-    values = titles(app) + [re.sub(r"<[^>]+>", " ", value) for value in page_markdown(app)]
+    values = titles(app) + [visible_text(value) for value in page_markdown(app)]
     for kind in ("caption", "info", "warning", "error", "success", "subheader"):
         values += [item.value for item in app.get(kind)]
     values += [expander.label for expander in app.expander] + popover_labels(app)

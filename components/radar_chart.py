@@ -40,7 +40,7 @@ _RUST = "#B5622E"
 _LINE = "#EEE7DF"
 _BADGE = "#F0EADA"
 _CARD = "#FFFCF7"
-_FONT_FAMILY = "Georgia, 'Times New Roman', serif"
+_FONT_FAMILY = "system-ui, sans-serif"
 
 _FONT_SIZE = 12
 _LINE_HEIGHT = 14
@@ -345,10 +345,10 @@ def radar_chart_svg(axes: Sequence[RadarAxis], *, size: int = 320) -> str:
     return "".join(parts)
 
 
-def _render_svg(axes: Sequence[RadarAxis]) -> None:
+def _render_svg(axes: Sequence[RadarAxis], size: int = 320) -> None:
     # The wrapping <div> keeps the markup one raw HTML block for Markdown.
     st.markdown(
-        f'<div class="paper-radar">\n{radar_chart_svg(axes)}\n</div>',
+        f'<div class="paper-radar">\n{radar_chart_svg(axes, size=size)}\n</div>',
         unsafe_allow_html=True,
     )
 
@@ -378,6 +378,7 @@ def render_course_radar_chart(
     *,
     focus_topic_id: str | None = None,
     limit: int = 6,
+    size: int = 320,
     key: str,
 ) -> None:
     """Draw the course's Learning Radar chart with its captions."""
@@ -387,7 +388,7 @@ def render_course_radar_chart(
     with st.container(key=key):
         if not axes:
             return
-        _render_svg(axes)
+        _render_svg(axes, size)
         st.caption(tr("Students stuck per topic"))
         if not any(axis.value > 0 for axis in axes):
             st.caption(tr("No topics have been flagged yet."))
