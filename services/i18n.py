@@ -317,6 +317,20 @@ _TRANSLATIONS = {
     "See computation and conceptual understanding separately, with the answers behind each pattern.": "分别查看计算与概念理解，以及各项判断依据的答案。",
     "These are question-based observations, not a validated cognitive diagnosis. Multiple-choice answers do not demonstrate that you can explain an idea in your own words.": "这些是基于题目的观察，并非经过验证的认知诊断；选择题无法证明你能用自己的话解释概念。",
     "Answer more different questions in both dimensions before comparing them.": "在两个维度上多做不同题目，再进行比较。",
+    # paper UI: radar
+    "Learning Radar": "学习雷达",
+    "See where students get stuck, and mark the topics that stop you.": "查看同学们在哪些知识点卡住，并标记让你卡住的知识点。",
+    "Learning Radar is available for the built-in demo courses.": "学习雷达仅适用于内置演示课程。",
+    "**Most flagged topics**": "**被标记最多的知识点**",
+    "Where are you stuck?": "你卡在哪个知识点？",
+    "Pick a topic": "选择知识点",
+    "Pick a topic above to mark it.": "在上方选择一个知识点进行标记。",
+    "Students stuck per topic": "各知识点卡住的学生人数",
+    "I'm stuck here because…": "我卡在这里，因为……",
+    "Just stuck": "就是没搞懂",
+    "You marked this topic.": "你已标记此知识点。",
+    "Couldn't update Learning Radar. Try again in a moment.": "暂时无法更新学习雷达，请稍后再试。",
+    "Connections kept in this session but not saved to your account. Use Save on the Study Plan page to retry.": "关联已保留在当前会话中，但未保存到账户。请在学习计划页面点击保存重试。",
 }
 
 _TRANSLATIONS.update(

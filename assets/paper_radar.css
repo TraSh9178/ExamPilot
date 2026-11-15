@@ -1,0 +1,93 @@
+/* Learning Radar: spider chart (components/radar_chart.py) and the one-click
+   "I'm stuck here" buttons. The SVG also carries these colours as attributes,
+   so it still draws correctly if this sheet is not loaded. */
+
+.paper-radar {
+    display: flex;
+    justify-content: center;
+    margin: 0.35rem 0 0.15rem;
+}
+
+.paper-radar .paper-radar-chart {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.paper-radar-chart .radar-disc {
+    fill: var(--paper-badge, #F0EADA);
+}
+
+.paper-radar-chart .radar-grid,
+.paper-radar-chart .radar-spoke {
+    stroke: var(--paper-line, #EEE7DF);
+}
+
+.paper-radar-chart .radar-tick {
+    fill: var(--ink-muted, #6B7280);
+}
+
+.paper-radar-chart .radar-shape {
+    fill: var(--accent-rust, #B5622E);
+    stroke: var(--accent-rust, #B5622E);
+}
+
+.paper-radar-chart .radar-point,
+.paper-radar-chart .radar-ring {
+    fill: var(--accent-rust, #B5622E);
+}
+
+.paper-radar-chart .radar-ring {
+    stroke: var(--accent-rust, #B5622E);
+}
+
+.paper-radar-chart .radar-point-focus {
+    stroke: var(--paper-card, #FFFCF7);
+}
+
+.paper-radar-chart .radar-label {
+    fill: var(--ink-body, #2A2F33);
+    font-family: var(--font-title, Georgia, "Times New Roman", serif);
+}
+
+/* Captions under the chart line up with it. */
+[class*="st-key-learning_radar_page_chart"] [data-testid="stCaptionContainer"],
+[class*="st-key-learning_radar_panel_chart"] [data-testid="stCaptionContainer"] {
+    text-align: center;
+}
+
+/* Reason buttons read as a row of small pills. */
+[class*="_stuck_reasons"] button:is(
+    [data-testid="stBaseButton-secondary"],
+    [data-testid="stBaseButton-primary"]
+) {
+    min-height: 2.25rem;
+    padding: 0.3rem 0.85rem;
+    border: 1px solid var(--paper-line, #EEE7DF);
+    border-radius: 999px;
+    background: var(--paper-card, #FFFCF7);
+    color: var(--ink, #13224F);
+    font-weight: 550;
+}
+
+[class*="_stuck_reasons"] button:is(
+    [data-testid="stBaseButton-secondary"],
+    [data-testid="stBaseButton-primary"]
+):not(:disabled):hover {
+    border-color: var(--accent-rust, #B5622E);
+    background: var(--paper-select, #FAE5D2);
+    color: var(--accent-rust, #B5622E);
+}
+
+[class*="_stuck_reasons"] button:is(
+    [data-testid="stBaseButton-secondary"],
+    [data-testid="stBaseButton-primary"]
+) :is(p, span) {
+    color: inherit !important;
+}
+
+[class*="_stuck_reasons"] button:focus-visible {
+    outline: 3px solid var(--accent-blue, #5D81A1);
+    outline-offset: 2px;
+}
