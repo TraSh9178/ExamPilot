@@ -230,6 +230,8 @@ if st.session_state.show_course_setup:
                 "setup_course_name", ""
             ).strip()
 
+            if st.session_state.pop("course_save_failed_notice", False):
+                st.warning(tr(SAVE_FAILED_MESSAGE))
             if st.session_state.pop("course_generation_notice", False):
                 st.success(
                     tr("Topics generated. Review them in Study Hub, "
@@ -280,7 +282,8 @@ if st.session_state.show_course_setup:
                             st.session_state, new_course
                         )
                         if sync_outcome is not None and not sync_outcome.success:
-                            st.warning(tr(SAVE_FAILED_MESSAGE))
+                            # Shown after the rerun below, which would wipe it now.
+                            st.session_state["course_save_failed_notice"] = True
 
                         st.success(
                             tr("Topics generated. Review them in Study Hub, "
