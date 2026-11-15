@@ -80,11 +80,13 @@ export default function(component) {
       state.x = view.left + view.width - size - 24;
       state.y = view.top + view.height - size - 24;
     }
-    const header = view.width <= 760
-      ? document.querySelector('.st-key-flight_header')?.getBoundingClientRect()
+    // On narrow screens the app header holds the sidebar expand button at the
+    // top-left; keep the launcher below it so the navigation stays reachable.
+    const appHeader = view.width <= 760
+      ? document.querySelector('[data-testid="stHeader"]')?.getBoundingClientRect()
       : null;
-    const upper = header && header.bottom > view.top
-      ? Math.max(view.top + margin, header.bottom + margin)
+    const upper = appHeader && appHeader.bottom > view.top
+      ? Math.max(view.top + margin, appHeader.bottom + margin)
       : view.top + margin;
     const lower = view.top + view.height - size - margin;
     state.x = clamp(state.x, view.left + margin, view.left + view.width - size - margin);
@@ -318,9 +320,6 @@ export default function(component) {
     state.validation = '';
     setTriggerValue('clear', { request_id: crypto.randomUUID(), session_id: data.session_id, course_id: courseId });
   });
-  on(document, 'scroll', () => {
-    if (viewport().width <= 760) position();
-  }, { capture: true, passive: true });
   on(window, 'resize', position);
   if (window.visualViewport) {
     on(window.visualViewport, 'resize', position);

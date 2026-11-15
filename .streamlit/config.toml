@@ -1,7 +1,19 @@
 [theme]
 base = "light"
-primaryColor = "#3C6483"
-backgroundColor = "#F8F4EA"
-secondaryBackgroundColor = "#FFFCF6"
-textColor = "#24354A"
+# Paper theme; the full palette lives in assets/paper_shell.css.
+# Primary is --accent-blue-dark so text drawn in it (tabs, links) keeps 4.5:1.
+primaryColor = "#4A6C8A"
+backgroundColor = "#FEF7EF"
+secondaryBackgroundColor = "#FAF3E9"
+textColor = "#2A2F33"
+linkColor = "#4A6C8A"
+borderColor = "#EEE7DF"
+showSidebarBorder = false
+baseRadius = "0.875rem"
+buttonRadius = "full"
 font = "sans serif"
+
+[theme.sidebar]
+backgroundColor = "#FEF7EF"
+secondaryBackgroundColor = "#FAF3E9"
+textColor = "#2A2F33"

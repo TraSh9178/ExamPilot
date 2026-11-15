@@ -406,6 +406,12 @@ _TRANSLATIONS.update(
                                                                                                                                                           '处不存在唯一的导数。'}
 )
 
+# paper UI: shell
+_TRANSLATIONS.update({
+    "Learning Radar": "学习雷达",
+    "Illustration of a university campus": "大学校园插画",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),

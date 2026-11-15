@@ -62,6 +62,40 @@ def test_logged_out_app_shows_account_forms_before_dashboard(monkeypatch) -> Non
     register.assert_not_called()
 
 
+def test_sign_in_page_shows_headline_campus_watercolour_then_account_card(monkeypatch) -> None:
+    import base64
+
+    import streamlit as st
+
+    logos = []
+    monkeypatch.setattr(st, "logo", lambda *args, **kwargs: logos.append((args, kwargs)))
+    app = AppTest.from_file(str(APP_PATH)).run()
+
+    assert_auth_gate(app)
+    assert [title.value for title in app.title] == ["Make your next study session count."]
+    campus = (APP_PATH.parent / "assets" / "illustrations" / "campus-watercolor.png").read_bytes()
+    art = next(item.value for item in app.markdown if 'class="auth-campus"' in item.value)
+    assert f'src="data:image/png;base64,{base64.b64encode(campus).decode("ascii")}"' in art
+    assert 'alt="Illustration of a university campus"' in art
+    assert not any("campus-illustration" in item.value for item in app.markdown)
+    # Headline and picture come first, then the Log in / Create account card.
+    main = list(app.main)
+    title_at = next(i for i, node in enumerate(main) if node.type == "title")
+    art_at = next(
+        i for i, node in enumerate(main)
+        if node.type == "markdown" and 'class="auth-campus"' in node.value
+    )
+    card_at = next(
+        i for i, node in enumerate(main)
+        if str(getattr(node.proto, "id", "")).endswith("-auth_forms")
+    )
+    assert title_at < art_at < card_at
+    # The sign-in page has no navigation, so it has no sidebar either.
+    assert not app.sidebar.children
+    assert [Path(args[0]).name for args, _ in logos] == ["brand-logo.svg"]
+    assert "icon_image" not in logos[0][1]
+
+
 def test_login_language_switch_translates_interface_without_database_calls(monkeypatch) -> None:
     login = Mock()
     register = Mock()
