@@ -224,6 +224,25 @@ def test_accessibility_settings_rest_on_the_bottom_edge_below_the_sidebar_waterc
     assert "padding-bottom: 0;" in css_rule(shell, '[data-testid="stSidebarUserContent"]')
 
 
+def test_stacked_blocks_keep_a_gap_between_them():
+    shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
+
+    # Markdown blocks without a paragraph lose 1rem below them; these three get it back.
+    pulled_together = re.search(r"((?:[^{}\n]+,\n)*[^{}\n]+) \{\n  margin-bottom: 0;\n\}", shell)
+    assert pulled_together
+    selectors = [selector.strip() for selector in pulled_together.group(1).split(",\n")]
+    assert selectors == [
+        '.st-key-account_sidebar [data-testid="stMarkdownContainer"]:has(> .account-sidebar-identity)',
+        '[class*="st-key-dashboard_course_card_"] [data-testid="stMarkdownContainer"]:has(> .academic-course-icon)',
+        '[class*="st-key-dashboard_course_card_"] > [data-testid="stElementContainer"]:first-child'
+        ' [data-testid="stCaptionContainer"]',
+    ]
+    expander = '[data-testid="stMain"] [data-testid="stLayoutWrapper"]:has(> [data-testid="stExpander"])'
+    assert "margin-top: .5rem;" in css_rule(shell, expander)
+    card_row = '[data-testid="stMain"] [data-testid="stHorizontalBlock"]:has([class*="st-key-dashboard_course_card_"])'
+    assert "margin-bottom: .5rem;" in css_rule(shell, card_row)
+
+
 def test_sidebar_hills_move_to_the_window_corner_when_the_sidebar_is_collapsed():
     shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
     main = '[data-testid="stMain"]'

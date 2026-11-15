@@ -227,6 +227,32 @@ a[data-testid="stSidebarNavLink"]:focus-visible {
   color: var(--exam-muted);
 }
 
+/* ---- Breathing room between stacked blocks -------------------------------- */
+/* st.markdown and st.caption pull the next element up by 1rem to cancel a
+   paragraph's bottom margin. These three hold no such paragraph, so the pull
+   left the control below touching them: the signed-in row above My account,
+   and the badge and icon above Open course on a course card. */
+.st-key-account_sidebar [data-testid="stMarkdownContainer"]:has(> .account-sidebar-identity),
+[class*="st-key-dashboard_course_card_"] [data-testid="stMarkdownContainer"]:has(> .academic-course-icon),
+[class*="st-key-dashboard_course_card_"] > [data-testid="stElementContainer"]:first-child [data-testid="stCaptionContainer"] {
+  margin-bottom: 0;
+}
+
+/* Home: a little more room between one row of course cards and the next. */
+[data-testid="stMain"] [data-testid="stHorizontalBlock"]:has([class*="st-key-dashboard_course_card_"]) {
+  margin-bottom: .5rem;
+}
+
+/* A framed expander needs more air above it than a line of text does. */
+[data-testid="stMain"] [data-testid="stLayoutWrapper"]:has(> [data-testid="stExpander"]) {
+  margin-top: .5rem;
+}
+
+/* Practice: and below the focus controls, which sit right above the question. */
+.st-key-flight_worksheet > [data-testid="stLayoutWrapper"]:has(> [data-testid="stExpander"]) {
+  margin-bottom: .5rem;
+}
+
 .account-sidebar-copy strong {
   color: var(--ink);
 }
