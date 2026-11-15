@@ -193,7 +193,8 @@ def test_practice_button_sets_contract_and_practice_page_uses_it(monkeypatch, to
     assert not app.exception
     assert destinations == ["pages/2_Practice_Center.py"]
     practice = AppTest.from_file(str(PAGE_PATH.with_name("2_Practice_Center.py")))
-    for key in ["current_course", "confirmed_scope_calculus-i-demo",
+    # The contract: the new-practice request and the preselected mode and topic.
+    for key in ["current_course", "confirmed_scope_calculus-i-demo", "practice_entry_calculus-i-demo",
                 "practice_mode_calculus-i-demo", "practice_topic_calculus-i-demo"]:
         practice.session_state[key] = app.session_state[key]
     practice.run()

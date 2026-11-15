@@ -8,6 +8,44 @@ from services.exam_engine import grade_exam
 
 
 PAGE_PATH = Path(__file__).resolve().parents[1] / "pages" / "2_Practice_Center.py"
+HISTORY_PAGE_PATH = PAGE_PATH.with_name("8_Practice_History.py")
+REVIEW_PAGE_PATH = PAGE_PATH.with_name("13_Answer_Review.py")
+
+
+def carry_to(app, page=REVIEW_PAGE_PATH):
+    """Open another page with the state that switching pages keeps (standalone AppTest).
+
+    Only plain session values are carried, as in the app: widgets belong to the page
+    that drew them.
+    """
+    cid = app.session_state["current_course"].course_id
+    target = AppTest.from_file(str(page))
+    for key in ("current_course", f"confirmed_scope_{cid}", f"active_practice_{cid}",
+                f"practice_history_{cid}", f"practice_drafts_{cid}", f"course_document_{cid}",
+                f"course_stage_{cid}", f"review_position_{cid}", f"practice_choice_{cid}",
+                "a11y_bilingual_zh", "a11y_simplify"):
+        if key in app.session_state:
+            target.session_state[key] = app.session_state[key]
+    return target.run()
+
+
+def history_rows(app):
+    """(label, button label) of each row on the Practice history page, top to bottom."""
+    from streamlit.testing.v1.element_tree import Block
+
+    rows = []
+
+    def walk(node):
+        block_id = getattr(getattr(node, "proto", None), "id", "") or ""
+        if isinstance(node, Block) and "-practice_history_row_" in block_id:
+            buttons = [button.label for button in node.button]
+            rows.append((node.markdown[0].value, buttons[0] if buttons else None))
+            return
+        for child in getattr(node, "children", {}).values():
+            walk(child)
+
+    walk(app.main)
+    return rows
 
 
 def keyed_button(app, prefix):
@@ -128,11 +166,14 @@ def test_practice_result_displays_correct_incorrect_and_unanswered_states(
     expected_error,
     expected_warning,
 ):
-    app = AppTest.from_file(str(PAGE_PATH))
+    result_screen = AppTest.from_file(str(PAGE_PATH))
     for key, value in make_practice_state(selected_index).items():
-        app.session_state[key] = value
-
-    app.run()
+        result_screen.session_state[key] = value
+    result_screen.run()
+    assert not result_screen.exception
+    # The answers are on the Review answers page, opened from the result screen.
+    assert result_screen.button(key="open_answer_review").label == "Review answers"
+    app = carry_to(result_screen)
 
     assert not app.exception
     success_text = [item.value for item in app.success]

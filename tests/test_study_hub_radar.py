@@ -352,6 +352,7 @@ def test_practice_now_on_confirmed_topic_preselects_topic_practice(monkeypatch):
     for key in [
         "current_course",
         "confirmed_scope_calculus-i-demo",
+        "practice_entry_calculus-i-demo",  # the request staged with the preselection
         "practice_mode_calculus-i-demo",
         "practice_topic_calculus-i-demo",
     ]:

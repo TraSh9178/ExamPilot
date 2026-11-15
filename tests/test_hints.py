@@ -8,7 +8,7 @@ from streamlit.testing.v1 import AppTest
 from models.schemas import StudyPackage
 from services.accessibility import BILINGUAL_KEY, display_text
 from services.hints import MAX_HINTS, hint_state_key, hints_for, validate_hints
-from tests.test_practice_page import submit_answers
+from tests.test_practice_page import carry_to, submit_answers
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE_PATH = ROOT / "pages" / "2_Practice_Center.py"
@@ -136,8 +136,10 @@ def test_topic_hints_reveal_in_order_preserve_answer_and_leave_score_unchanged(u
     submit_answers(app)
 
     assert not app.exception
-    assert f"Hints used: {len(revealed)} of {len(hints)}" in [item.value for item in app.caption]
     assert next(metric.value for metric in app.metric if metric.label == "Score") == "1 / 1"
+    # Hint use per question is on the Review answers page.
+    review = carry_to(app)
+    assert f"Hints used: {len(revealed)} of {len(hints)}" in [item.value for item in review.caption]
 
 
 @pytest.mark.parametrize("bilingual", [False, True])
@@ -175,8 +177,8 @@ def test_hint_text_shows_chinese_key_terms_only_when_toggle_is_on(bilingual):
     assert not app.exception
     expected_hints = (f"已使用提示：{len(hints)} / {len(hints)}" if bilingual
                       else f"Hints used: {len(hints)} of {len(hints)}")
-    assert expected_hints in [item.value for item in app.caption]
     assert next(metric.value for metric in app.metric if metric.label == ("得分" if bilingual else "Score")) == "1 / 1"
+    assert expected_hints in [item.value for item in carry_to(app).caption]
 
 
 @pytest.mark.parametrize(
@@ -192,4 +194,6 @@ def test_hints_are_absent_during_practice_and_review_when_unavailable(mode, use_
     submit_answers(app)
 
     assert not app.exception
-    assert not any(item.value.startswith("Hints used:") for item in app.caption)
+    review = carry_to(app)
+    assert not review.exception
+    assert not any(item.value.startswith("Hints used:") for item in review.caption)

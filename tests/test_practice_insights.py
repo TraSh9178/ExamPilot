@@ -12,6 +12,8 @@ from services.exam_engine import grade_exam
 
 ROOT=Path(__file__).resolve().parents[1]
 PAGE=ROOT/'pages/2_Practice_Center.py'
+REVIEW=ROOT/'pages/13_Answer_Review.py'  # answers, explanations and reflections
+HISTORY=ROOT/'pages/8_Practice_History.py'
 
 
 def setup_course():
@@ -22,14 +24,14 @@ def setup_course():
         {'id':'other','name':'Other','summary':'Other'}],relationships=[],questions=qs)
 
 
-def start_app(graded=False, picks=(0,1)):
+def start_app(graded=False, picks=(0,1), page=PAGE):
     course=setup_course()
     qs=course.questions[:2]
     session=ExamSession(session_id='s',mode='topic',question_ids=[q.id for q in qs])
     result=grade_exam(session,qs,{q.id:pick for q,pick in zip(qs,picks)})
     active={'session':session,'questions':qs,'warning':None,'settings':{}}
     if graded:active['result']=result
-    app=AppTest.from_file(str(PAGE))
+    app=AppTest.from_file(str(page))
     app.session_state['current_course']=course
     app.session_state['confirmed_scope_insights']=['t']
     app.session_state['active_practice_insights']=active
@@ -176,15 +178,17 @@ def test_submission_persists_confidence_and_hint_snapshots_without_changing_grad
 
 def test_reflection_saves_self_report_and_own_words_without_modifying_result(monkeypatch):
     monkeypatch.delenv('ANTHROPIC_API_KEY',raising=False)
-    app,course=start_app(graded=True)
+    app,course=start_app(graded=True,page=REVIEW)
     result=deepcopy(app.session_state['active_practice_insights']['result'])
+    app.button(key='review_next_s').click().run()  # q1, the missed question
     reasons=app.button_group(key='reason_s_q1')
     assert reasons.value is None
     assert reasons.options==['Knowledge gap','Careless error','Time pressure','Misread the question','Other','Not sure yet']
     reasons.set_value('time_pressure')
     app.text_area(key='explain_s_q1').set_value('I rushed the final comparison.')
     buttons=[b for b in app.button if b.label=='Save reflection']
-    buttons[1].click().run()
+    assert len(buttons)==1  # one question per screen
+    buttons[0].click().run()
     assert not app.exception
     saved=session_insights(app.session_state['current_course'],'s')['q1']
     assert saved['mistake_reason']=='time_pressure'
@@ -203,7 +207,7 @@ def test_ai_review_is_explicit_bounded_and_cannot_change_grade(monkeypatch):
         calls.append(text)
         return {'ok':True,'feedback':{'verdict':'partial','reasoning':'One step is missing.','next_step':'Explain the comparison.'}}
     monkeypatch.setattr(practice_insights_ui,'check_explanation',check)
-    app,_=start_app(graded=True)
+    app,_=start_app(graded=True,page=REVIEW)
     assert calls==[]
     app.text_area(key='explain_s_q0').set_value('I compared the values.')
     next(b for b in app.button if b.label=='Check explanation with AI').click().run()
@@ -229,15 +233,22 @@ def test_ai_service_validates_output_and_missing_configuration_without_network(m
     assert not ai_service.check_explanation(q,'A reason')['ok']
 
 
-def test_transfer_and_priority_buttons_launch_fresh_practice():
-    app,_=start_app(graded=True,picks=(1,0))
+def test_transfer_and_priority_buttons_launch_fresh_practice(monkeypatch):
+    import streamlit as st
+    from tests.test_practice_page import carry_to
+    destinations=[]
+    monkeypatch.setattr(st,'switch_page',lambda page:destinations.append(page))
+    app,_=start_app(graded=True,picks=(1,0),page=REVIEW)
     app.button(key='transfer_s_q0').click().run()
     assert not app.exception
     active=app.session_state['active_practice_insights']
     assert active['session'].question_ids==['q2']  # q1 was already in the source session.
     assert 'result' not in active
-    app.radio(key=f"answer_{active['session'].session_id}_q2").set_value(0).run()
-    assert not app.exception
+    # Review answers sends the student to the new session on the practice page.
+    assert destinations==['pages/2_Practice_Center.py']
+    practice=carry_to(app,PAGE)
+    practice.radio(key=f"answer_{active['session'].session_id}_q2").set_value(0).run()
+    assert not practice.exception
     app,_=start_app(graded=True)
     app.button(key='priorities_insights').click().run()
     assert not app.exception
@@ -245,13 +256,19 @@ def test_transfer_and_priority_buttons_launch_fresh_practice():
     assert active['session'].question_ids==['q1'] and 'result' not in active
 
 
-def test_saved_result_reopens_after_restoration_without_regrading():
+def test_saved_result_reopens_after_restoration_without_regrading(monkeypatch):
+    import streamlit as st
+    from tests.test_practice_page import carry_to
+    destinations=[]
+    monkeypatch.setattr(st,'switch_page',lambda page:destinations.append(page))
     app,_=start_app(graded=True)
     record=deepcopy(app.session_state['practice_history_insights']['s'])
     app.session_state['active_practice_insights']=None
     app.run()
-    app.button(key='open_saved_result_insights').click().run()
+    app=carry_to(app,HISTORY)  # saved sessions are reopened from Practice history
+    app.button(key='practice_history_open_s').click().run()
     assert not app.exception
+    assert destinations==['pages/2_Practice_Center.py']
     assert app.session_state['active_practice_insights']['result']==record['result']
     assert app.session_state['practice_history_insights']['s']==record
 
@@ -269,7 +286,8 @@ def test_hint_count_is_frozen_in_grade_snapshot_and_available_after_rerun():
     assert session_insights(app.session_state['current_course'],'s')['q0']['hints_used']==1
     app.session_state['hints_shown_s_q0']=0
     app.run()
-    assert 'Hints used: 1 of 2' in [c.value for c in app.caption]
+    from tests.test_practice_page import carry_to
+    assert 'Hints used: 1 of 2' in [c.value for c in carry_to(app).caption]
 
 
 def test_progress_review_and_time_use_selected_mode_and_latest_family():
@@ -295,7 +313,7 @@ def test_progress_review_and_time_use_selected_mode_and_latest_family():
 
 
 def test_answer_evidence_is_one_short_line_without_completion_claims():
-    app,course=start_app(graded=True,picks=(0,None))
+    app,course=start_app(graded=True,picks=(0,None),page=REVIEW)
     course=set_session_insights(course,'s',{'q0':{'confidence':'sure','hints_used':1,'focus_seconds':42.4},
                                             'q1':{'hints_used':0}})
     app.session_state['current_course']=course
@@ -303,17 +321,19 @@ def test_answer_evidence_is_one_short_line_without_completion_claims():
     assert not app.exception
     captions=[c.value for c in app.caption]
     assert 'Sure · 1 hint · 42 s' in captions
+    app.button(key='review_next_s').click().run()
+    captions+=[c.value for c in app.caption]
     assert 'No hints' in captions  # unanswered: no claim that it was completed without hints
     assert not any(c.startswith(('Answered questions','Completion evidence','In-app hints shown','Tracked focus time',
                                  'Confidence:','Hint exposure')) for c in captions)
     course=set_session_insights(course,'s',{'q0':{'hints_used':2}})
     app.session_state['current_course']=course
-    app.run()
+    app.button(key='review_previous_s').click().run()
     assert '2 hints' in [c.value for c in app.caption]
 
 
 def test_oversize_reflection_is_rejected_without_overwriting_course_or_grade():
-    app,course=start_app(graded=True)
+    app,course=start_app(graded=True,page=REVIEW)
     course.learning_state={'padding':'x'*511000}
     app.session_state['current_course']=course
     app.run()
