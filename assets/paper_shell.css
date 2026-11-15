@@ -3,6 +3,7 @@
    and before the page sheets paper_*.css (they win ties here). */
 :root {
   --paper-bg: #FEF7EF;
+  --paper-sidebar-width: 17rem;
   --paper-panel: #FAF3E9;
   --paper-card: #FFFCF7;
   --paper-badge: #F0EADA;
@@ -45,9 +46,48 @@
   color: var(--ink-body);
 }
 
+/* A single fixed-width layer keeps sidebar state out of the page layout. */
 section[data-testid="stSidebar"] {
-  background-color: var(--paper-bg);
-  border-right: 1px solid var(--paper-line);
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 120;
+  width: min(var(--paper-sidebar-width), calc(100vw - 3rem)) !important;
+  min-width: 0;
+  max-width: none;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  opacity: 1;
+  transform: translateX(0);
+  transition: transform 220ms ease, opacity 180ms ease, visibility 0s;
+}
+
+section[data-testid="stSidebar"][aria-expanded="false"] {
+  opacity: 0;
+  transform: translateX(-100%);
+  pointer-events: none;
+  visibility: hidden;
+  transition: transform 220ms ease, opacity 180ms ease, visibility 0s linear 220ms;
+}
+
+/* The resize handle would otherwise offer a drag on a fixed-width layer. */
+section[data-testid="stSidebar"] > div:not([data-testid]) {
+  pointer-events: none;
+}
+
+/* Reserve the same reading gutter with the panel open or closed on desktop. */
+@media (min-width: 980px) {
+  [data-testid="stAppViewContainer"]:has(section[data-testid="stSidebar"]):not(:has(.st-key-auth_forms)) [data-testid="stMain"] {
+    margin-inline-start: var(--paper-sidebar-width);
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  section[data-testid="stSidebar"],
+  section[data-testid="stSidebar"][aria-expanded="false"] {
+    transition: none;
+  }
 }
 
 /* The header carries the logo and sidebar button; content starts below it. */
@@ -186,36 +226,14 @@ a[data-testid="stSidebarNavLink"]:focus-visible {
 .st-key-sidebar_footer {
   padding-top: 0;
   border-top: 0;
-  background-color: rgb(254 247 239 / .9);
+  background-color: transparent;
 }
 
 /* ---- Accessibility settings: last, on the bottom edge of the sidebar ------ */
-/* The block takes whatever height the page list leaves free. Its ::before
-   (the watercolour, under "Watercolour margins") fills that space, which
-   rests the control itself on the bottom edge. */
 [data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_accessibility) {
-  flex: 1 0 auto;
+  margin-top: auto;
   padding: .5rem 0 1rem;
-  background-color: var(--paper-bg);
-}
-
-/* While open, the panel sticks to the bottom edge, so it opens upwards over
-   the page list instead of off the screen. Closed, it is simply the last
-   item and never covers the links above it. The paper-coloured shadow
-   fades whatever it covers along its top edge. */
-[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_accessibility details[open]) {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  box-shadow: 0 -.75rem .75rem -.25rem var(--paper-bg);
-}
-
-/* A very short window cannot hold the open panel; let it scroll with the list. */
-@media (max-height: 520px) {
-  [data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_accessibility details[open]) {
-    position: static;
-    box-shadow: none;
-  }
+  background-color: transparent;
 }
 
 /* ---- Account: a round avatar in the top-right corner ---------------------- */
@@ -614,53 +632,20 @@ label[data-baseweb="radio"]:focus-within {
 }
 
 /* ---- Watercolour margins --------------------------------------------------- */
-/* Painted as backgrounds, so they never take clicks; stMain is the scroll box,
-   so its background stays in place. */
-
-/* Sidebar: the hills fill the free space between the page list and the
-   accessibility settings, and bleed off the left edge of the sidebar. The
-   picture is drawn whole or not at all: it shrinks with the space it has and
-   disappears below 6rem, so it never sits behind a control. */
-.st-key-sidebar_accessibility::before {
-  content: "";
-  flex: 1 0 0px;
-  align-self: stretch;
-  min-height: 0;
-  /* Out to the sidebar edge, and a little into the gap above the control:
-     the foot of the hills is feathered, so it can sit close to it. */
-  margin: 0 0 -.25rem -1.25rem;
-  background-image: var(--paper-landscape-left, none);
-  background-repeat: no-repeat;
-  background-position: left bottom;
-  background-size: auto clamp(0px, calc((100% - 6rem) * 9999), min(100%, 196px));
-  pointer-events: none;
-}
-
-/* Main area: the mountains on the right, plus the sidebar's hills on the left
-   whenever the sidebar is not showing them (the two rules below). */
-[data-testid="stMain"] {
-  --paper-main-left: none;
-  background-image: var(--paper-main-left), var(--paper-landscape-right, none);
+/* Both hills belong to the app canvas. They have one origin, independent of
+   the navigation transform, scrolling, and the desktop reading gutter. */
+[data-testid="stAppViewContainer"] {
+  background-color: var(--paper-bg);
+  background-image: var(--paper-landscape-left, none), var(--paper-landscape-right, none);
   background-repeat: no-repeat;
   background-position: left bottom, right bottom;
   background-size: 228px auto, 354px auto;
 }
 
-/* The hills stay in the lower-left corner of the window while the sidebar is
-   collapsed... */
-[data-testid="stAppViewContainer"]:has(section[data-testid="stSidebar"][aria-expanded="false"]) [data-testid="stMain"] {
-  --paper-main-left: var(--paper-landscape-left, none);
+[data-testid="stMain"] {
+  background-color: transparent;
 }
 
-/* ...and on a window too short for the open sidebar to hold them: below
-   705px its free space is under the 6rem the picture needs. */
-@media (max-height: 704.98px) {
-  [data-testid="stMain"] {
-    --paper-main-left: var(--paper-landscape-left, none);
-  }
-}
-
-/* The pinned accessibility block brings its own bottom spacing. */
 [data-testid="stSidebarUserContent"] {
   padding-bottom: 0;
 }
@@ -673,13 +658,12 @@ label[data-baseweb="radio"]:focus-within {
   background-size: 192px auto !important;
 }
 
-[data-testid="stApp"]:has(.st-key-auth_forms) [data-testid="stMain"] {
+[data-testid="stAppViewContainer"]:has(.st-key-auth_forms) {
   background-image: none;
 }
 
 @media (max-width: 759.98px) {
-  .st-key-sidebar_accessibility::before,
-  [data-testid="stMain"] {
+  [data-testid="stAppViewContainer"] {
     background-image: none;
   }
 
