@@ -1,10 +1,13 @@
 import streamlit as st
 
+from components.knowledge_graph import load_course_radar, radar_count_text
 from models.schemas import StudyPackage
+from services import learning_radar
 from services.account_sync import (
     render_save_restore_controls,
     save_course_to_account,
 )
+from services.auth_session import current_user
 from services.question_editor import available_questions, review_question, status_for
 from services.course_state import save_course
 from services.ai_service import generate_questions, generation_available
@@ -51,6 +54,60 @@ def update_topic_selection(topic_id: str, checkbox_key: str) -> None:
     elif not st.session_state[checkbox_key] and topic_id in selected:
         selected.remove(topic_id)
     st.session_state[scope_key] = selected
+
+
+def render_most_flagged_topics(course, confirmed_key: str) -> None:
+    """Show a demo course's three most flagged topics with a practice shortcut.
+
+    The radar comes from the session cache shared with the Knowledge Map, so
+    reruns of this page do not query the database again.
+    """
+    user = current_user(st.session_state)
+    radar, _ = load_course_radar(
+        st.session_state,
+        course.course_id,
+        user.user_id if user is not None else None,
+    )
+    topic_names = {topic.id: topic.name for topic in course.topics}
+    most_flagged = [
+        topic_radar
+        for topic_radar in learning_radar.top_hard_topics(radar, limit=3)
+        if topic_radar.topic_id in topic_names
+        and topic_radar.real_count + topic_radar.sample_count > 0
+    ]
+
+    with st.container(border=True, key="study_radar_panel"):
+        st.subheader("Most flagged topics · Top 3")
+        st.caption("Topics students marked \"I'm stuck here\" on the Knowledge Map.")
+        if not most_flagged:
+            st.caption("No topics have been flagged yet.")
+        for rank, topic_radar in enumerate(most_flagged, start=1):
+            topic_id = topic_radar.topic_id
+            topic_name = topic_names[topic_id]
+            row = st.columns([3, 1], vertical_alignment="center")
+            row[0].markdown(
+                f"**{rank}. {topic_name}** — {radar_count_text(topic_radar)}"
+            )
+            if row[1].button(
+                "Practice now",
+                key=f"study_radar_practice_{course.course_id}_{topic_id}",
+            ):
+                # Topic Practice only offers topics from the confirmed scope.
+                if topic_id in (st.session_state.get(confirmed_key) or []):
+                    st.session_state[f"practice_mode_{course.course_id}"] = (
+                        "Topic Practice"
+                    )
+                    st.session_state[f"practice_topic_{course.course_id}"] = topic_id
+                    st.switch_page("pages/2_Practice_Center.py")
+                else:
+                    st.info(
+                        f"Confirm {topic_name} in your exam scope above, "
+                        "then select Practice now again."
+                    )
+        if radar.has_sample:
+            st.caption("Includes sample data")
+        if not radar.live:
+            st.caption("Live flags are unavailable right now.")
 
 
 if not course.topics:
@@ -229,6 +286,10 @@ if confirmed_topic_ids:
         st.info("No questions are available in the confirmed scope.")
 else:
     st.info("Confirm your topic selection before starting practice.")
+
+# Learning Radar is only available for the built-in demo courses.
+if learning_radar.radar_enabled(course.course_id):
+    render_most_flagged_topics(course, confirmed_key)
 
 with st.expander("Review and edit questions", expanded=any(status_for(course, q.id) == "pending" for q in course.questions)):
     editable = sorted([q for q in course.questions if status_for(course, q.id) != "superseded"], key=lambda q: status_for(course, q.id) != "pending")

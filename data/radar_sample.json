@@ -1,0 +1,44 @@
+{
+  "econ101": {
+    "supply_demand": {
+      "count": 4,
+      "reasons": {"concept": 2, "wording": 1}
+    },
+    "elasticity": {
+      "count": 7,
+      "reasons": {"calculation": 3, "concept": 2, "wording": 1}
+    },
+    "price_controls": {
+      "count": 3,
+      "reasons": {"concept": 1, "start": 1}
+    }
+  },
+  "calculus-i-demo": {
+    "calc_limits": {
+      "count": 5,
+      "reasons": {"concept": 2, "start": 2}
+    },
+    "calc_derivatives": {
+      "count": 8,
+      "reasons": {"calculation": 3, "concept": 2, "start": 2}
+    },
+    "calc_derivative_applications": {
+      "count": 6,
+      "reasons": {"start": 3, "wording": 2}
+    }
+  },
+  "python-basics-demo": {
+    "python-basics-topic-1": {
+      "count": 2,
+      "reasons": {"wording": 1}
+    },
+    "python-basics-topic-2": {
+      "count": 4,
+      "reasons": {"concept": 2, "start": 1}
+    },
+    "python-basics-topic-3": {
+      "count": 9,
+      "reasons": {"start": 4, "concept": 2, "calculation": 1}
+    }
+  }
+}
