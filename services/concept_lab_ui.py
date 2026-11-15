@@ -33,7 +33,10 @@ def prediction(topic):
         prompt = 'At x = 0, which statement describes f(x) = |x|?'
         choices = ['Continuous, but not differentiable at 0',
                    'Continuous and differentiable at 0', 'Discontinuous at 0']
-    with st.expander(tr('1 · Predict before exploring')):
+    # The first step of the flow is always on screen. Only the "Why ...?"
+    # explanations further down stay folded until the student has predicted.
+    with st.container(border=True, key=f'lab_{topic}_predict_step'):
+        st.markdown(f"**{tr('1 · Predict before exploring')}**")
         selected = st.radio(tr(prompt), choices, index=None, format_func={choice: tr(choice) for choice in choices}.get, horizontal=True,
                             key=f'lab_{topic}_prediction')
         if st.button(tr('Check my prediction'), key=f'lab_{topic}_check'):

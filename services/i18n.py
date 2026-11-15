@@ -513,6 +513,12 @@ _TRANSLATIONS.update({
     "Pause when you take a break.": "休息时可以暂停。",
 })
 
+# open panels
+_TRANSLATIONS.update({
+    "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text. Image text extraction requires Tesseract with English language support; scanned PDF OCR, PPTX slide notes and DOCX are not supported.": "使用 UTF-8 TXT、文字型 PDF/PPTX 或清晰的英文图片。图片文字提取需要支持英文的 Tesseract；暂不支持扫描 PDF 的 OCR、PPTX 备注或 DOCX。",
+    "#### Learning Radar": "#### 学习雷达",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),

@@ -131,20 +131,20 @@ with limits_tab:
             f"{selected['right_value']:.3f}",
         )
 
-    with st.expander(tr("Compare values from both sides")):
-        st.dataframe(
-            pd.DataFrame(limit_table(distances)).rename(
-                columns={
-                    "distance": tr("Distance"),
-                    "left_x": tr("Left x"),
-                    "left_value": tr("f(Left x)"),
-                    "right_x": tr("Right x"),
-                    "right_value": tr("f(Right x)"),
-                }
-            ),
-            hide_index=True,
-            width="stretch",
-        )
+    st.markdown(f"**{tr('Compare values from both sides')}**")
+    st.dataframe(
+        pd.DataFrame(limit_table(distances)).rename(
+            columns={
+                "distance": tr("Distance"),
+                "left_x": tr("Left x"),
+                "left_value": tr("f(Left x)"),
+                "right_x": tr("Right x"),
+                "right_value": tr("f(Right x)"),
+            }
+        ),
+        hide_index=True,
+        width="stretch",
+    )
     st.markdown(tr("**3 · Explain**"))
     with st.expander(tr("Why can a missing point still have a limit?")):
         st.latex(r"\frac{x^2-4}{x-2}=x+2\quad (x\ne2)")

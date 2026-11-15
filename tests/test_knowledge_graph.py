@@ -1001,7 +1001,8 @@ def test_radar_panel_lists_flagged_topics_most_flagged_first(monkeypatch):
     app = _graph_page(_calculus_course())
 
     assert not app.exception
-    assert "**Learning Radar**" in _markdown(app)
+    # The panel is always open; its title is a heading.
+    assert "#### Learning Radar" in _markdown(app)
     assert (
         "1. **Derivatives** — 8 students are stuck here\n"
         "2. **Applications of Derivatives** — 5 students are stuck here\n"
