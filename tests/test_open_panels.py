@@ -1,29 +1,29 @@
-"""Results, charts and the first step of a flow are on the page, not behind a click.
+"""Home's figures and notes are on the page; the Knowledge Map is only the map.
 
-Home's study totals and supported-materials note, the Knowledge Map's Learning
-Radar and the Concept Lab's prediction step and comparison table used to sit in
-expanders. Maintenance tools, long raw text and the "Why ...?" explanations
-(revealed after a prediction on purpose) stay folded.
+Home's study totals and supported-materials note used to sit in expanders.
+The Knowledge Map's Learning Radar panel is gone: a small right-edge button
+opens the Learning Radar page, which has the chart, ranking and stuck buttons.
+The Concept Lab's steps are tested in tests/test_concept_lab_steps.py.
 """
 
 import re
 from pathlib import Path
 
 import pytest
+import streamlit as st
+from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.testing.v1 import AppTest
 from streamlit.testing.v1.element_tree import Block
 
 from models.schemas import Question, StudyPackage
-from services import learning_radar, ui_style
+from services import ui_style
 from services.i18n import LANGUAGE_KEY
-from services.learning_flow import open_lab
 from tests.auth_helpers import TEST_USER, signed_in_app
-from tests.test_knowledge_graph import RadarFake, _calculus_course, _topic
+from tests.test_knowledge_graph import RadarFake, _calculus_course, _other_course, _topic
 
 ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD = ROOT / "pages" / "0_Dashboard.py"
 KNOWLEDGE_MAP = ROOT / "pages" / "4_Knowledge_Graph.py"
-CONCEPT_LAB = ROOT / "pages" / "6_Concept_Lab.py"
 PANELS_CSS = ROOT / "assets" / "paper_panels.css"
 CALCULUS_ID = "calculus-i-demo"
 
@@ -122,13 +122,13 @@ STUDY_TOTALS = [("Courses", "4"), ("Knowledge points", "22"), ("Practice session
 STUDY_TOTALS_ZH = [("课程", "4"), ("知识点", "22"), ("练习次数", "3")]
 
 SUPPORTED_MATERIALS = (
-    "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text. "
-    "Image text extraction requires Tesseract with English language support; "
-    "scanned PDF OCR, PPTX slide notes and DOCX are not supported."
+    "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text; "
+    "reading text from images may not always be available. "
+    "Scanned PDFs, PPTX slide notes and DOCX files are not supported."
 )
 SUPPORTED_MATERIALS_ZH = (
-    "使用 UTF-8 TXT、文字型 PDF/PPTX 或清晰的英文图片。"
-    "图片文字提取需要支持英文的 Tesseract；暂不支持扫描 PDF 的 OCR、PPTX 备注或 DOCX。"
+    "使用 UTF-8 TXT、文字型 PDF/PPTX 或清晰的英文图片；图片中的文字有时可能无法读取。"
+    "暂不支持扫描版 PDF、PPTX 备注或 DOCX 文件。"
 )
 
 
@@ -189,14 +189,16 @@ def test_home_supported_materials_is_a_visible_caption_of_two_sentences():
         "up to 50,000 characters of extracted text."
     )
     assert captions[formats + 1] == SUPPORTED_MATERIALS
-    # At most two sentences, and still everything the expander said.
+    # At most two sentences, and what the student needs to know.
     assert len(re.findall(r"[.!?](?:\s|$)", SUPPORTED_MATERIALS)) == 2
     for fact in (
         "UTF-8 TXT", "text-based PDF or PPTX", "clear images of English text",
-        "Image text extraction requires Tesseract with English language support",
-        "scanned PDF OCR", "PPTX slide notes", "DOCX are not supported",
+        "reading text from images may not always be available",
+        "Scanned PDFs", "PPTX slide notes", "DOCX files are not supported",
     ):
         assert fact in SUPPORTED_MATERIALS
+    # No server details: the OCR engine is not named.
+    assert not any("Tesseract" in value or "OCR" in value for value in captions)
 
 
 def test_home_long_extracted_text_stays_folded():
@@ -223,36 +225,36 @@ def test_home_open_panels_have_no_english_in_chinese():
     assert SUPPORTED_MATERIALS_ZH in captions
     assert SUPPORTED_MATERIALS not in captions
     assert len(re.findall(r"。", SUPPORTED_MATERIALS_ZH)) == 2
+    assert not any("Tesseract" in value or "OCR" in value for value in captions)
     labels = [item.label for item in app.metric]
     assert labels == [label for label, _ in STUDY_TOTALS_ZH]
-    # File formats and the OCR engine are names, not English UI text.
+    # File formats are names, not English UI text.
     assert _english_words(
-        [SUPPORTED_MATERIALS_ZH, *labels],
-        allowed=("UTF", "TXT", "PDF", "PPTX", "Tesseract", "OCR", "DOCX"),
+        [SUPPORTED_MATERIALS_ZH, *labels], allowed=("UTF", "TXT", "PDF", "PPTX", "DOCX"),
     ) == []
 
 
 # ---- Knowledge Map ----------------------------------------------------------------
 
-def _knowledge_map(*, chinese=False, signed_in=False, focus=None) -> AppTest:
+def _knowledge_map(*, chinese=False, signed_in=False, focus=None, course=None) -> AppTest:
     app = signed_in_app(KNOWLEDGE_MAP) if signed_in else AppTest.from_file(str(KNOWLEDGE_MAP))
     app.session_state[LANGUAGE_KEY] = chinese
-    course = _calculus_course()
+    course = course or _calculus_course()
     app.session_state["current_course"] = course
     if focus is not None:
         app.session_state[f"graph_pending_focus_{course.course_id}"] = focus
     return app.run()
 
 
-def _panel_markdown(app: AppTest) -> list[str]:
-    return [item.value for item in _block(app, "learning_radar_panel").markdown]
+def _visible(app: AppTest) -> list[str]:
+    texts = [item.value for item in app.markdown if not item.value.lstrip().startswith("<style")]
+    texts += [item.value for kind in ("caption", "subheader", "info") for item in app.get(kind)]
+    return texts
 
 
-def _panel_captions(app: AppTest) -> list[str]:
-    return [item.value for item in _block(app, "learning_radar_panel").caption]
-
-
-def test_learning_radar_is_open_under_its_own_heading(monkeypatch):
+def test_knowledge_map_has_no_radar_panel_and_a_right_edge_link_to_the_radar_page(monkeypatch):
+    destinations = []
+    monkeypatch.setattr(st, "switch_page", lambda page: destinations.append(page))
     RadarFake(
         monkeypatch,
         [_topic("calc_derivatives", real=3, sample=5), _topic("calc_limits", real=2)],
@@ -262,210 +264,81 @@ def test_learning_radar_is_open_under_its_own_heading(monkeypatch):
     app = _knowledge_map()
 
     assert not app.exception
-    assert "Learning Radar · community signals" not in _expander_labels(app)
+    assert _find(app.main, "learning_radar_panel") is None
+    assert _find(app.main, "learning_radar_panel_chart") is None
+    shown = _visible(app)
+    assert not any("Learning Radar" in value or "<svg" in value for value in shown)
+    assert not any(value.startswith("1. ") for value in shown)
+    for gone in ("Includes sample data", "Students stuck per topic",
+                 "Topics where students marked \"I'm stuck here\", most flagged first."):
+        assert gone not in shown
     assert app.expander == []
-    # The bordered card sits under the graph, with nothing folded around it.
-    assert "expander" not in _wrappers(app, "learning_radar_panel")
-    panel = _block(app, "learning_radar_panel")
-    assert panel.proto.flex_container.border
-    content = _children(panel)
-    assert content[0].type == "markdown" and content[0].value == "#### Learning Radar"
-    # Everything that was inside the expander, in the same order.
-    assert [child.type for child in content] == [
-        "markdown", "caption", "flex_container", "markdown", "caption",
-    ]
-    assert content[1].value == "Topics where students marked \"I'm stuck here\", most flagged first."
-    assert _key(content[2]) == "learning_radar_panel_chart"
-    assert '<div class="paper-radar">' in content[2].markdown[0].value
-    assert [item.value for item in content[2].caption] == ["Students stuck per topic"]
-    assert content[3].value == (
-        "1. **Derivatives** — 8 students are stuck here\n"
-        "2. **Limits** — 2 students are stuck here"
-    )
-    assert content[4].value == "Includes sample data"
+
+    # Under the map, in the graph column, pushed to the right edge.
+    holder = _block(app, "page_link_knowledge_map_learning_radar")
+    assert holder.proto.flex_container.justify == BlockProto.FlexContainer.Justify.JUSTIFY_END
+    trail = _wrappers(app, "page_link_knowledge_map_learning_radar")
+    assert trail == ("flex_container", "column")
+    graph_column = _find(app.main, "knowledge_graph_canvas")
+    assert graph_column is not None and graph_column[1] == trail
+    link = app.button(key="knowledge_map_learning_radar")
+    assert link.label == "Learning Radar"
+    assert link.proto.icon == ":material/radar:"
+    assert [button.label for button in holder.button] == ["Learning Radar"]
+
+    link.click().run()
+    assert destinations == ["pages/7_Learning_Radar.py"]
 
 
-def test_learning_radar_keeps_the_privacy_rule_when_open(monkeypatch):
-    hidden = learning_radar.TopicRadar(
-        topic_id="calc_limits", real_count=2, sample_count=0,
-        reasons={"concept": 2}, display_count=None,
-    )
-    RadarFake(monkeypatch, [hidden], has_sample=False)
+def test_no_radar_link_for_a_course_without_the_radar(monkeypatch):
+    RadarFake(monkeypatch, [_topic("topic-1", real=9)], enabled=False)
 
-    app = _knowledge_map()
+    app = _knowledge_map(course=_other_course())
 
     assert not app.exception
-    shown = _panel_markdown(app) + _panel_captions(app)
-    assert "1. **Limits** — Some students flagged this" in shown
-    # Neither the hidden count nor its reasons appear, and there is no sample note.
-    assert not any("2 student" in value or "Concept unclear" in value for value in shown)
-    assert "Includes sample data" not in shown
+    assert _find(app.main, "page_link_knowledge_map_learning_radar") is None
+    assert not any(button.key == "knowledge_map_learning_radar" for button in app.button)
 
 
-def test_marking_and_unmarking_a_topic_updates_the_open_ranking(monkeypatch):
+def test_badges_and_the_selected_topic_stuck_buttons_still_work(monkeypatch):
+    from components import knowledge_graph
+
+    rendered = []
+    monkeypatch.setattr(
+        knowledge_graph, "agraph",
+        lambda nodes, edges, config, node_scale: rendered.append(nodes) or None,
+    )
     radar = RadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
     flag = f"radar_flag_{CALCULUS_ID}_calc_derivatives"
 
     app = _knowledge_map(signed_in=True, focus="calc_derivatives")
     assert not app.exception
-    assert "1. **Derivatives** — 4 students are stuck here" in _panel_markdown(app)
+    assert {node.id: node.label for node in rendered[-1]}["calc_derivatives"] == "Derivatives\n🔥 4 stuck"
+    assert "4 students are stuck here" in _visible(app)
 
     app.button(key=f"{flag}_no_reason").click().run()
     assert not app.exception
     assert radar.calls["set_flag"] == [(TEST_USER.user_id, CALCULUS_ID, "calc_derivatives")]
-    assert "1. **Derivatives** — 5 students are stuck here" in _panel_markdown(app)
+    assert "5 students are stuck here" in _visible(app)
+    assert {node.id: node.label for node in rendered[-1]}["calc_derivatives"] == "Derivatives\n🔥 5 stuck"
 
     app.button(key=f"{flag}_clear").click().run()
     assert not app.exception
     assert radar.calls["clear_flag"] == [(TEST_USER.user_id, CALCULUS_ID, "calc_derivatives")]
-    assert "1. **Derivatives** — 4 students are stuck here" in _panel_markdown(app)
-    assert app.expander == []
+    assert "4 students are stuck here" in _visible(app)
+    # The Concept Lab link stays in the topic's details, and so does the radar link.
+    assert app.button(key=f"radar_concept_lab_{CALCULUS_ID}_calc_derivatives").label == "Open Concept Lab"
+    assert app.button(key="knowledge_map_learning_radar").label == "Learning Radar"
 
 
-def test_learning_radar_panel_has_no_english_in_chinese(monkeypatch):
-    RadarFake(
-        monkeypatch,
-        [_topic("calc_derivatives", real=3, sample=5), _topic("calc_limits", real=2, display=None)],
-        has_sample=True,
-    )
+def test_radar_link_is_chinese_with_the_chinese_interface(monkeypatch):
+    RadarFake(monkeypatch, [_topic("calc_derivatives", real=3, sample=5)], has_sample=True)
 
     app = _knowledge_map(chinese=True)
 
     assert not app.exception
-    markdown = _panel_markdown(app)
-    captions = _panel_captions(app) + [
-        item.value for item in _block(app, "learning_radar_panel_chart").caption
-    ]
-    assert markdown[0] == "#### 学习雷达"
-    assert "包含示例数据" in captions and "各知识点卡住的学生人数" in captions
-    ranking = markdown[-1]
-    assert "8 名学生在这里遇到困难" in ranking and "有学生标记了此知识点" in ranking
-    # Topic names are course content; the chart itself is markup.
-    topic_names = [topic.name for topic in _calculus_course().topics]
-    texts = [value for value in markdown if not value.lstrip().startswith("<")] + captions
-    assert _english_words(texts, allowed=topic_names) == []
-
-
-# ---- Concept Lab ------------------------------------------------------------------
-
-LAB_TOPICS = ("limits", "derivatives", "corner")
-WHY_EXPANDERS = [
-    "Why can a missing point still have a limit?",
-    "Why does the secant approach the tangent?",
-    "Why is the corner continuous but not differentiable?",
-]
-
-
-def _lab(chinese: bool = False, **state) -> AppTest:
-    app = AppTest.from_file(str(CONCEPT_LAB))
-    app.session_state[LANGUAGE_KEY] = chinese
-    for key, value in state.items():
-        app.session_state[key] = value
-    return app.run()
-
-
-@pytest.mark.parametrize("tab_index,topic", list(enumerate(LAB_TOPICS)))
-def test_predict_step_is_an_open_bordered_step_in_each_tab(tab_index, topic):
-    app = _lab()
-
-    assert not app.exception
-    assert "1 · Predict before exploring" not in _expander_labels(app)
-    step = _block(app, f"lab_{topic}_predict_step")
-    assert step.proto.flex_container.border
-    # In its tab and the controls column, not inside an expander.
-    assert _wrappers(app, f"lab_{topic}_predict_step") == (
-        "tab_container", "tab", "flex_container", "column",
-    )
-    assert _find(app.tabs[tab_index], f"lab_{topic}_predict_step") is not None
-    content = _children(step)
-    assert content[0].type == "markdown"
-    assert content[0].value == "**1 · Predict before exploring**"
-    assert [child.type for child in content[1:3]] == ["radio", "button"]
-    assert content[1].key == f"lab_{topic}_prediction"
-    assert content[2].key == f"lab_{topic}_check"
-
-
-def test_prediction_check_still_works_in_the_open_step():
-    app = _lab()
-    app.radio(key="lab_derivatives_prediction").set_value("Always zero").run()
-    app.button(key="lab_derivatives_check").click().run()
-
-    assert not app.exception
-    step = _block(app, "lab_derivatives_predict_step")
-    assert any("horizontal line" in item.value for item in step.info)
-    app.radio(key="lab_derivatives_prediction").set_value("The tangent slope at x₀").run()
-    app.button(key="lab_derivatives_check").click().run()
-    step = _block(app, "lab_derivatives_predict_step")
-    assert any("Your prediction matches" in item.value for item in step.success)
-
-
-def test_comparison_table_is_on_the_page_under_a_small_heading():
-    app = _lab()
-
-    assert not app.exception
-    assert "Compare values from both sides" not in _expander_labels(app)
-    limits = _children(app.tabs[0])
-    types = [child.type for child in limits]
-    heading = next(
-        index for index, child in enumerate(limits)
-        if child.type == "markdown" and child.value == "**Compare values from both sides**"
-    )
-    # The heading, then the table, then step 3 with its folded explanation.
-    assert types[heading + 1] == "dataframe"
-    assert limits[heading + 2].value == "**3 · Explain**"
-    assert types[heading + 3] == "expander"
-    table = limits[heading + 1].value
-    assert list(table.columns) == ["Distance", "Left x", "f(Left x)", "Right x", "f(Right x)"]
-    assert list(table["Distance"]) == [1, 0.5, 0.1, 0.05, 0.01, 0.001]
-
-
-def test_why_explanations_stay_folded_and_unchanged():
-    app = _lab()
-
-    assert not app.exception
-    assert _expander_labels(app) == WHY_EXPANDERS
-    assert not any(item.proto.expanded for item in app.expander)
-
-
-def test_tabs_and_sliders_still_work_with_the_open_panels():
-    state = {}
-    open_lab(state, CALCULUS_ID, "calc_derivatives")
-    app = _lab(**state)
-
-    assert not app.exception
-    # The requested topic opens its tab, as before.
-    assert app.get("tab_container")[0].proto.tab_container.default_tab_index == 1
-    app.slider(key="concept_lab_x0").set_value(2.0).run()
-    app.select_slider(key="concept_lab_h").set_value(0.001).run()
-    assert not app.exception
-    assert float(app.metric[3].value) == 7.0
-    assert abs(float(app.metric[2].value) - 7.0) < 0.01
-    app.select_slider(key="concept_lab_limit_distance").set_value(0.001).run()
-    assert not app.exception
-    assert float(app.metric[0].value) == pytest.approx(3.999)
-    assert len(app.dataframe[0].value) == 6
-    assert _block(app, "lab_limits_predict_step") is not None
-
-
-def test_concept_lab_open_panels_have_no_english_in_chinese():
-    app = _lab(chinese=True)
-
-    assert not app.exception
-    texts = []
-    for topic in LAB_TOPICS:
-        step = _block(app, f"lab_{topic}_predict_step")
-        texts += [item.value for item in step.markdown]
-        radio = app.radio(key=f"lab_{topic}_prediction")
-        texts += [radio.label, *radio.options]
-        texts.append(app.button(key=f"lab_{topic}_check").label)
-    assert texts[0] == "**1 · 实验前先预测**"
-    limits = _children(app.tabs[0])
-    heading = [child.value for child in limits if child.type == "markdown" and "对比" in child.value]
-    assert heading == ["**对比两侧数值**"]
-    columns = list(app.dataframe[0].value.columns)
-    assert columns == ["距离", "左侧 x", "左侧 f(x)", "右侧 x", "右侧 f(x)"]
-    # Single letters are mathematics (x, f, h); words would be English UI text.
-    assert _english_words([*texts, *heading, *columns]) == []
+    assert app.button(key="knowledge_map_learning_radar").label == "学习雷达"
+    assert _english_words([app.button(key="knowledge_map_learning_radar").label]) == []
 
 
 # ---- Styles ----------------------------------------------------------------------
@@ -499,11 +372,11 @@ def test_home_tiles_wrap_two_to_a_row_on_narrow_screens_using_paper_tokens():
     assert "white-space: normal;" in label and "overflow-wrap: anywhere;" in label
 
 
-def test_learning_radar_heading_keeps_its_gap_to_the_caption():
+def test_rules_for_the_removed_radar_panel_are_gone():
     css = PANELS_CSS.read_text(encoding="utf-8")
-    panel = '[data-testid="stMain"] .st-key-learning_radar_panel'
 
-    assert "var(--font-title)" in _rule(css, f"{panel} h4")
-    assert "margin-bottom: 0;" in _rule(
-        css, f'{panel} [data-testid="stMarkdownContainer"]:has(h4)'
-    )
+    assert "learning_radar_panel" not in css
+    # The Learning Radar page keeps its own containers, which this sheet never styled.
+    radar_page = (ROOT / "pages" / "7_Learning_Radar.py").read_text(encoding="utf-8")
+    for key in re.findall(r'key="(learning_radar_[a-z_]+)"', radar_page):
+        assert key not in css

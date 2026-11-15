@@ -153,9 +153,9 @@ if st.session_state.show_course_setup:
             "up to 50,000 characters of extracted text.")
         )
         st.caption(tr(
-            "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text. "
-            "Image text extraction requires Tesseract with English language support; "
-            "scanned PDF OCR, PPTX slide notes and DOCX are not supported."
+            "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text; "
+            "reading text from images may not always be available. "
+            "Scanned PDFs, PPTX slide notes and DOCX files are not supported."
         ))
 
         file_bytes = (

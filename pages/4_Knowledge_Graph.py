@@ -8,10 +8,10 @@ from components.knowledge_graph import (
     get_selected_topic_details,
     load_course_radar,
     radar_node_badges,
-    render_radar_panel,
     render_topic_details,
     render_topic_radar,
 )
+from components.page_links import open_page_button
 from components.radar_chart import render_stuck_buttons
 from services import learning_radar
 from services.account_sync import save_course_to_account
@@ -191,16 +191,15 @@ with graph_column:
         )
 
     if radar is not None:
-        # Always on screen, under its own heading: chart, ranking and notes.
-        with st.container(border=True, key="learning_radar_panel"):
-            render_radar_panel(
-                radar,
-                learning_radar.top_hard_topics(radar, limit=len(course.topics)),
-                topic_names,
-                course=course,
-                focus_topic_id=focus_id,
-                title="#### Learning Radar",
-            )
+        # The chart and ranking live on the Learning Radar page; the map
+        # keeps only the badges and, per topic, the stuck buttons.
+        open_page_button(
+            tr("Learning Radar"),
+            "pages/7_Learning_Radar.py",
+            key="knowledge_map_learning_radar",
+            icon=":material/radar:",
+            align="right",
+        )
 
     if not course.relationships:
         st.info(tr("This course has no topic relationships yet."))
