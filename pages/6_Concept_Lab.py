@@ -1,4 +1,8 @@
-"""Interactive Calculus I concept experiments for the public demo."""
+"""Interactive Calculus I concept experiments for the public demo.
+
+Each tab keeps its chart on the right and walks through one step at a time on
+the left: predict, explore, explain (services/concept_lab_ui.py).
+"""
 
 from services.i18n import tr
 
@@ -11,7 +15,10 @@ from services.concept_lab import (
 )
 from services.ui_style import apply_app_styles
 from services.learning_flow import stage_practice
-from services.concept_lab_ui import DISTANCES, prediction, observation
+from services.concept_lab_ui import (
+    DISTANCES, current_step, explanation, explore_navigation, keep_value, observation,
+    prediction, restore_values, step_indicator,
+)
 
 
 def practice_topic(topic_id: str, suffix: str = "") -> None:
@@ -31,13 +38,25 @@ def practice_topic(topic_id: str, suffix: str = "") -> None:
     st.switch_page("pages/2_Practice_Center.py")
 
 
+def start_step(topic: str) -> int:
+    """Show where this tab is in its three steps and return the current one."""
+    step = current_step(topic)
+    step_indicator(step)
+    return step
+
+
 apply_app_styles()
 
 st.title(tr("Concept Lab"))
 st.caption(tr("Predict, move the controls, then explain what changed."))
+# Values of steps that are not on screen (or were set before leaving the page).
+restore_values()
+# Written again on every run, not only the first: the browser shows a control's
+# own default unless the run that first draws it also sets its value, and the
+# controls first appear in step 2, after the chart has used these values.
 for key, value in {"concept_lab_limit_distance": 0.1, "concept_lab_x0": 1.0,
                    "concept_lab_h": 0.5, "concept_lab_zoom": True, "concept_lab_corner_h": 0.5}.items():
-    st.session_state.setdefault(key, value)
+    st.session_state[key] = st.session_state.get(key, value)
 
 requested_topic = st.session_state.get("concept_lab_topic_calculus-i-demo", "calc_limits")
 limits_label, derivatives_label = tr("Limits"), tr("Derivatives")
@@ -51,19 +70,27 @@ with limits_tab:
     st.latex(r"f(x)=\frac{x^2-4}{x-2},\quad x\ne 2")
     controls, visual = st.columns([1, 1.7], gap="large")
     with controls:
-        prediction("limits")
-        st.markdown(tr("**2 · Explore**"))
-        st.write(
-            tr("Move closer to x = 2 from both sides. Compare the two values as the distance shrinks.")
-        )
-
-        distances = DISTANCES
-        distance = st.select_slider(
-            tr("Distance from x = 2"),
-            options=distances,
-            key="concept_lab_limit_distance",
-        )
-        observation("limits", "concept_lab_limit_distance")
+        step = start_step("limits")
+        if step == 1:
+            prediction("limits")
+        elif step == 2:
+            st.write(
+                tr("Move closer to x = 2 from both sides. Compare the two values as the distance shrinks.")
+            )
+            st.select_slider(
+                tr("Distance from x = 2"),
+                options=DISTANCES,
+                key="concept_lab_limit_distance",
+                on_change=keep_value,
+                args=("concept_lab_limit_distance",),
+            )
+            observation("limits", "concept_lab_limit_distance")
+            explore_navigation("limits")
+        else:
+            explanation("limits")
+            practice_topic("calc_limits")
+    # The slider's value, also in the steps that do not draw the slider.
+    distance = st.session_state["concept_lab_limit_distance"]
     selected = limit_table([float(distance)])[0]
 
     # Plot two separate segments: the original function is not defined at x = 2.
@@ -72,8 +99,8 @@ with limits_tab:
         ("left", 1.0, 1.999),
         ("right", 2.001, 3.0),
     ):
-        for step in range(101):
-            x = start + (end - start) * step / 100
+        for point in range(101):
+            x = start + (end - start) * point / 100
             curve_rows.append(
                 {"x": x, "y": limit_example(x), "side": side}
             )
@@ -131,9 +158,11 @@ with limits_tab:
             f"{selected['right_value']:.3f}",
         )
 
-    with st.expander(tr("Compare values from both sides")):
+    if step == 2:
+        # Exploring data: too wide for the left column, so it runs under both.
+        st.markdown(f"**{tr('Compare values from both sides')}**")
         st.dataframe(
-            pd.DataFrame(limit_table(distances)).rename(
+            pd.DataFrame(limit_table(DISTANCES)).rename(
                 columns={
                     "distance": tr("Distance"),
                     "left_x": tr("Left x"),
@@ -145,32 +174,42 @@ with limits_tab:
             hide_index=True,
             width="stretch",
         )
-    st.markdown(tr("**3 · Explain**"))
-    with st.expander(tr("Why can a missing point still have a limit?")):
-        st.latex(r"\frac{x^2-4}{x-2}=x+2\quad (x\ne2)")
-        st.write(tr("The limit describes nearby values, not the value at the missing point. Both sides approach 4 even though f(2) is undefined."))
-
-    practice_topic("calc_limits")
 
 with derivatives_tab:
     st.subheader(tr("Derivatives: from secant to tangent"))
     st.write(tr("For f(x) = x³ − 5x, shrink h and compare the secant with the tangent at x₀."))
     controls, visual = st.columns([1, 1.7], gap="large")
     with controls:
-        prediction("derivatives")
-        st.markdown(tr("**2 · Explore**"))
-        x0 = st.slider("x₀", -3.0, 3.0, step=0.5, key="concept_lab_x0")
-        h = st.select_slider(
-            tr("h"), options=distances, key="concept_lab_h",
-        )
-        side = st.radio(tr("Approach from"), ["Right", "Left"], format_func={"Right": tr("Right"), "Left": tr("Left")}.get,
-                        horizontal=True, key="concept_lab_side")
-        h = float(h) if side == "Right" else -float(h)
-        st.caption(f"h = {h:g}")
-        observation("derivatives", "concept_lab_h")
-        zoom = st.toggle(tr("Zoom around x₀"), key="concept_lab_zoom")
-        if st.button(tr("Save this secant for comparison"), key="lab_save_secant"):
-            st.session_state['lab_saved_secant'] = {'x0': x0, 'h': h, 'slope': secant_slope(x0, h)}
+        step = start_step("derivatives")
+        if step == 1:
+            prediction("derivatives")
+        elif step == 2:
+            x0 = st.slider("x₀", -3.0, 3.0, step=0.5, key="concept_lab_x0",
+                           on_change=keep_value, args=("concept_lab_x0",))
+            h = st.select_slider(
+                tr("h"), options=DISTANCES, key="concept_lab_h",
+                on_change=keep_value, args=("concept_lab_h",),
+            )
+            side = st.radio(tr("Approach from"), ["Right", "Left"], format_func={"Right": tr("Right"), "Left": tr("Left")}.get,
+                            horizontal=True, key="concept_lab_side",
+                            on_change=keep_value, args=("concept_lab_side",))
+            h = float(h) if side == "Right" else -float(h)
+            st.caption(f"h = {h:g}")
+            observation("derivatives", "concept_lab_h")
+            st.toggle(tr("Zoom around x₀"), key="concept_lab_zoom",
+                      on_change=keep_value, args=("concept_lab_zoom",))
+            if st.button(tr("Save this secant for comparison"), key="lab_save_secant"):
+                st.session_state['lab_saved_secant'] = {'x0': x0, 'h': h, 'slope': secant_slope(x0, h)}
+            explore_navigation("derivatives")
+        else:
+            explanation("derivatives")
+            practice_topic("calc_derivatives")
+    # The controls' values, also in the steps that do not draw them.
+    x0 = st.session_state["concept_lab_x0"]
+    h = float(st.session_state["concept_lab_h"])
+    if st.session_state.get("concept_lab_side", "Right") != "Right":
+        h = -h
+    zoom = st.session_state["concept_lab_zoom"]
     slope = secant_slope(x0, h)
     exact, intercept = tangent_line(x0)
     saved = st.session_state.get('lab_saved_secant')
@@ -184,8 +223,8 @@ with derivatives_tab:
         dashes.append([2, 4])
     rows = []
     start, end = (x0 - 1.3, x0 + 1.3) if zoom else (-4.2, 4.2)
-    for step in range(201):
-        x = start + (end - start) * step / 200
+    for point in range(201):
+        x = start + (end - start) * point / 200
         rows.extend([
             {"x": x, "y": cubic(x), "Line": tr("Curve f(x)")},
             {"x": x, "y": cubic(x0) + slope * (x - x0), "Line": tr("Secant")},
@@ -221,23 +260,30 @@ with derivatives_tab:
             st.caption(tr('Saved comparison: ') + f"h = {saved['h']:g} · " + tr('Secant slope') + f" = {saved['slope']:.6f}")
         elif saved:
             st.caption(tr('x₀ changed. Save a new secant to compare slopes at the same point.'))
-    st.markdown(tr("**3 · Explain**"))
-    with st.expander(tr("Why does the secant approach the tangent?")):
-        st.latex(r"\frac{f(x_0+h)-f(x_0)}{h}\to f'(x_0)=3x_0^2-5")
-        st.write(tr("The secant measures change over an interval. Shrinking that interval from either side gives the instantaneous slope at x₀. The slope gap measures how far the two slopes are apart."))
-    practice_topic("calc_derivatives")
 
 
 with corner_tab:
-    st.subheader(tr("Continuous does not always mean differentiable"))
+    # The full title answers the step-1 question, so it waits until the student has predicted.
+    st.subheader(
+        tr("Continuous does not always mean differentiable") if current_step("corner") > 1
+        else tr("A corner at x = 0")
+    )
     st.latex(r"f(x)=|x|,\quad x_0=0")
     controls, visual = st.columns([1, 1.7], gap="large")
     with controls:
-        prediction("corner")
-        st.markdown(tr("**2 · Explore**"))
-        distance = st.select_slider(tr("Distance from the corner"), options=DISTANCES,
-                                    key="concept_lab_corner_h")
-        observation("corner", "concept_lab_corner_h")
+        step = start_step("corner")
+        if step == 1:
+            prediction("corner")
+        elif step == 2:
+            st.select_slider(tr("Distance from the corner"), options=DISTANCES,
+                             key="concept_lab_corner_h",
+                             on_change=keep_value, args=("concept_lab_corner_h",))
+            observation("corner", "concept_lab_corner_h")
+            explore_navigation("corner")
+        else:
+            explanation("corner")
+            practice_topic('calc_derivatives', '_corner')
+    distance = st.session_state["concept_lab_corner_h"]
     left, right = corner_slopes(float(distance))
     samples = [{'x': -1.2 + i*2.4/200, 'y': abs(-1.2+i*2.4/200)} for i in range(201)]
     curve = alt.Chart(pd.DataFrame(samples)).mark_line(color="#2166DB", strokeWidth=3).encode(x='x:Q', y='y:Q')
@@ -251,8 +297,6 @@ with corner_tab:
         a, b = st.columns(2)
         a.metric(tr('Left secant slope'), f'{left:.0f}')
         b.metric(tr('Right secant slope'), f'{right:.0f}')
-        st.info(tr('The two slopes disagree: no derivative at 0.'))
-    st.markdown(tr("**3 · Explain**"))
-    with st.expander(tr('Why is the corner continuous but not differentiable?')):
-        st.write(tr('The nearby heights approach f(0) = 0, so |x| is continuous. The left slopes stay −1 and the right slopes stay 1, so no single derivative exists at 0.'))
-    practice_topic('calc_derivatives', '_corner')
+        # This line answers the step-1 prediction, so it waits until the student has predicted.
+        if step > 1:
+            st.info(tr('The two slopes disagree: no derivative at 0.'))

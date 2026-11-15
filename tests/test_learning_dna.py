@@ -127,18 +127,28 @@ def test_progress_exposes_learning_dna_evidence(with_history):
     assert 'not a validated cognitive diagnosis' in captions
     if with_history:
         assert 'Computation answers are more consistent' in ' '.join(m.value for m in app.markdown)
-        assert len(next(frame.value for frame in app.dataframe if 'Dimension' in frame.value.columns))==6
+        # The answers behind the bars open on their own page.
+        assert app.button(key='learning_evidence_open_t').label=='View answers'
+        evidence=AppTest.from_file(str(ROOT/'pages/12_Learning_Evidence.py'))
+        for key in ('current_course','performance_mode_test-dna','practice_history_test-dna'):
+            evidence.session_state[key]=app.session_state[key]
+        evidence.run()
+        assert not evidence.exception
+        assert len(next(frame.value for frame in evidence.dataframe if 'Dimension' in frame.value.columns))==6
     else:
-        assert 'Insufficient evidence' in captions
+        from tests.test_progress_charts import bar_rows, chart
+        assert [row['value'] for row in bar_rows(chart(app,'dna'))]==['Not enough answers yet']*2
     app.radio(key='performance_mode_test-dna').set_value('Mock Exam').run()
     assert not app.exception
     assert not any("Dimension" in frame.value.columns for frame in app.dataframe)
+    assert not [b for b in app.button if b.label=='View answers']
 
 
 def test_review_ui_can_tag_an_untagged_question_without_rewriting_history():
     course,_=course_and_history()
     course.questions[0].cognitive_dimension=None
-    app=AppTest.from_file(str(ROOT/'pages/1_Study_Hub.py'))
+    # Question review lives on the Course tools page.
+    app=AppTest.from_file(str(ROOT/'pages/9_Course_Tools.py'))
     app.session_state['current_course']=course
     app.run()
     assert not app.exception
@@ -178,8 +188,9 @@ def test_profile_uses_saved_chronology_on_progress_page():
     app.session_state['practice_history_test-dna']=records
     app.run()
     assert not app.exception
-    computation=next(m for m in app.metric if m.label=='Computation')
-    assert computation.value=='67%'
+    from tests.test_progress_charts import bar_rows, chart
+    computation=bar_rows(chart(app,'dna'))[0]
+    assert computation['label']=='Computation' and computation['value']=='67%'
 
 
 def test_progress_for_old_untagged_history_does_not_infer_abilities():
@@ -193,7 +204,10 @@ def test_progress_for_old_untagged_history_does_not_infer_abilities():
     assert not app.exception
     assert 'excluded' not in ' '.join(c.value for c in app.caption)
     assert not any("Dimension" in frame.value.columns for frame in app.dataframe)
-    assert next(m for m in app.metric if m.label=='Computation').value=='—'
+    from tests.test_progress_charts import bar_rows, chart
+    computation=bar_rows(chart(app,'dna'))[0]
+    assert computation['label']=='Computation' and computation['value']=='Not enough answers yet'
+    assert computation['fill'] is None and computation['detail']=='0 different questions'
 
 
 def test_dashboard_entry_navigates_to_learning_dna_in_registered_app():
@@ -209,4 +223,15 @@ def test_dashboard_entry_navigates_to_learning_dna_in_registered_app():
     app.button(key='learning_dna_open').click().run()
     assert not app.exception
     assert app.title[0].value=='Progress'
-    assert 'Learning DNA' in [s.value for s in app.subheader]
+    # The section the student asked for is the first one under the figures.
+    sections=[s.value for s in app.subheader if s.value!=course.course_name]
+    assert sections[0]=='Learning DNA'
+    # The request holds for this visit, the answers page included, and ends on any other page.
+    app.switch_page('pages/12_Learning_Evidence.py').run()
+    assert app.session_state['progress_tab_test-dna']=='Learning DNA'
+    app.switch_page('pages/3_Performance.py').run()
+    assert [s.value for s in app.subheader if s.value!=course.course_name][0]=='Learning DNA'
+    app.switch_page('pages/1_Study_Hub.py').run()
+    assert 'progress_tab_test-dna' not in app.session_state
+    app.switch_page('pages/3_Performance.py').run()
+    assert [s.value for s in app.subheader if s.value!=course.course_name][0]=='Mastery by topic'

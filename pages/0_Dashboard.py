@@ -122,9 +122,8 @@ with st.container(key="dashboard_learning_dna"):
         st.session_state[f"progress_tab_{selected_course.course_id}"] = "Learning DNA"
         st.switch_page("pages/3_Performance.py")
 
-overview_details = st.expander(tr("Study totals"))
-with overview_details:
-    overview = st.container(key="dashboard_overview")
+# Study totals: one always-visible row of small tiles (assets/paper_panels.css).
+overview = st.container(key="dashboard_overview")
 
 with st.container(key="dashboard_courses_header"):
     st.subheader(tr("My courses"))
@@ -153,12 +152,11 @@ if st.session_state.show_course_setup:
             tr("PDF, PPTX, TXT, PNG or JPG/JPEG · up to 5 MiB per file · "
             "up to 50,000 characters of extracted text.")
         )
-        with st.expander(tr("Supported materials")):
-            st.caption(tr(
-                "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text. "
-                "Image text extraction requires Tesseract with English language support. "
-                "Scanned PDF OCR, PPTX slide notes and DOCX are not supported."
-            ))
+        st.caption(tr(
+            "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text; "
+            "reading text from images may not always be available. "
+            "Scanned PDFs, PPTX slide notes and DOCX files are not supported."
+        ))
 
         file_bytes = (
             uploaded_file.getvalue()

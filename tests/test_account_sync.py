@@ -475,7 +475,7 @@ def test_logout_and_account_switch_clear_previous_account_state(store):
 
 
 def test_practice_submit_saves_course_then_exam_for_signed_in_user(store):
-    from tests.test_practice_page import make_practice_state
+    from tests.test_practice_page import make_practice_state, submit_answers
 
     app = signed_in_app(PRACTICE_PATH)
     for key, value in make_practice_state(graded=False).items():
@@ -484,7 +484,7 @@ def test_practice_submit_saves_course_then_exam_for_signed_in_user(store):
     app.run()
 
     app.radio(key="answer_session-1_question-1").set_value(1)
-    next(b for b in app.button if b.label == "Submit answers").click().run()
+    submit_answers(app)
 
     assert not app.exception
     assert [c[0] for c in store.calls] == ["save_course", "save_exam"]
@@ -499,7 +499,7 @@ def test_practice_submit_saves_course_then_exam_for_signed_in_user(store):
 
 
 def test_practice_submit_failure_warns_and_keeps_local_history(store):
-    from tests.test_practice_page import make_practice_state
+    from tests.test_practice_page import make_practice_state, submit_answers
 
     store.fail.add("save_exam")
     app = signed_in_app(PRACTICE_PATH)
@@ -509,7 +509,7 @@ def test_practice_submit_failure_warns_and_keeps_local_history(store):
     app.run()
 
     app.radio(key="answer_session-1_question-1").set_value(1)
-    next(b for b in app.button if b.label == "Submit answers").click().run()
+    submit_answers(app)
 
     assert not app.exception
     assert "session-1" in app.session_state["practice_history_course-1"]
@@ -525,9 +525,18 @@ def study_hub_app(course):
     return app
 
 
+def course_tools_app(course):
+    """Course tools with the account backup tool chosen, where Save/Restore live."""
+    app = signed_in_app(ROOT / "pages" / "9_Course_Tools.py")
+    app.session_state["courses"] = [course]
+    app.session_state["current_course"] = course
+    app.session_state[f"course_tools_choice_{course.course_id}"] = "backup"
+    return app
+
+
 def test_study_hub_save_button_reports_success_and_failure(store):
     course = make_course()
-    app = study_hub_app(course)
+    app = course_tools_app(course)
     app.run()
 
     app.button(key="database_save_course-1").click().run()
@@ -544,7 +553,7 @@ def test_study_hub_save_button_reports_success_and_failure(store):
 def test_study_hub_restore_button_replaces_course_and_reports_failure(store):
     saved = make_course("course-1", "Saved Name")
     seed(store, TEST_USER, saved, make_exam(saved, "s1"))
-    app = study_hub_app(make_course("course-1", "Local Name"))
+    app = course_tools_app(make_course("course-1", "Local Name"))
     app.run()
 
     app.button(key="database_restore_course-1").click().run()
@@ -559,7 +568,7 @@ def test_study_hub_restore_button_replaces_course_and_reports_failure(store):
 
 
 def test_study_hub_restore_of_unsaved_course_says_nothing_is_saved(store):
-    app = study_hub_app(make_course("course-1", "Local Name"))
+    app = course_tools_app(make_course("course-1", "Local Name"))
     app.run()
 
     app.button(key="database_restore_course-1").click().run()
@@ -732,7 +741,7 @@ def test_dashboard_save_failure_warning_survives_the_rerun(store, monkeypatch):
 
 def test_study_hub_save_says_restore_first_when_a_failed_restore_blocks_saving(store):
     course = make_course()
-    app = study_hub_app(course)
+    app = course_tools_app(course)
     app.run()
     state = app.session_state[account_sync.STATE_KEY]
     state["failed_course_ids"].add(course.course_id)

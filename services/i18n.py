@@ -489,6 +489,118 @@ _TRANSLATIONS.update({
     "Illustration of a university campus": "大学校园插画",
 })
 
+# flashcards
+_TRANSLATIONS.update({
+    "Flashcards": "复习卡片",
+    "One card at a time, from your mistakes, weak topics and key ideas.": "一次一张卡片，复习你的错题、薄弱知识点和知识要点。",
+    "Previous card": "上一张", "Next card": "下一张",
+    "This course has no questions to review yet.": "此课程还没有可复习的题目。",
+    "Cards to review": "要复习的卡片",
+    "My mistakes": "我的错题", "Weak topics": "薄弱知识点", "Key ideas": "知识要点", "All questions": "全部题目",
+    "After some practice, your mistakes will appear here as their own deck.": "练习之后，你的错题会单独成组，出现在这里。",
+    "Think of your answer first, then flip the card.": "先想好答案，再翻开卡片。",
+    "Recall what you know about this idea, then flip the card.": "先回想你对这个知识点的了解，再翻开卡片。",
+    "Key idea": "知识要点", "Answer": "答案",
+    "Last time you left this blank.": "上次你没有作答。",
+    "Show answer": "看答案", "Show question": "看题目", "Start over": "从头再来",
+})
+
+# practice clock
+_TRANSLATIONS.update({
+    "Session": "本次用时",
+    "Pause": "暂停",
+    "Resume": "继续",
+    "Pause when you take a break.": "休息时可以暂停。",
+})
+
+# focus pages
+_TRANSLATIONS.update({
+    "Practice history": "练习记录",
+    "Answers behind Learning DNA": "学习画像的依据",
+    "Why it works": "为什么是这样",
+})
+
+# anki export page
+_TRANSLATIONS.update({
+    "Back to Flashcards": "返回复习卡片",
+})
+
+
+# progress charts
+_TRANSLATIONS.update({
+    "Mastery by topic": "各知识点掌握情况",
+    "Accuracy by session": "各次练习正确率",
+    # Replaces the earlier wording so the three chart headings read alike.
+    "Time by topic": "各知识点用时",
+    "Example": "示例",
+    "Example report": "示例报告",
+    "These numbers are sample data. Finish a practice session to see your own.": "这些数字是示例数据。完成一次练习后就会显示你自己的结果。",
+    "Not enough answers yet": "作答还不够",
+    "No graded sessions in this mode yet.": "此模式下还没有已评分的练习。",
+    "Each dot is one graded session, oldest on the left.": "每个点代表一次已评分的练习，最早的在最左边。",
+})
+
+# course tools page
+_TRANSLATIONS.update({
+    "Back to Study Plan": "返回学习计划",
+    "Choose a tool": "选择工具",
+    "Question review saved.": "题目审核已保存。",
+    "Course material": "课程资料",
+    "Review and approve your generated questions in Course tools before starting practice.": "开始练习前请在课程工具中检查并批准生成的题目。",
+    "Question, explanation and four distinct options are required.": "题干、解析和四个互不相同的选项都必须填写。",
+    "This question duplicates a different question family.": "这道题与另一道已有题目重复。",
+})
+
+# practice focus
+_TRANSLATIONS.update({
+    "Finish": "完成",
+    "Review and submit": "检查并交卷",
+    "Back to questions": "返回题目",
+    "Return to your session": "回到当前练习",
+    "New practice": "新的练习",
+    "This session": "本次练习",
+    "Hide side panel": "收起右栏",
+    "Show side panel": "展开右栏",
+    "Practice · Review": "练习 · 检查",
+    "Go back to the questions to change these answers, or submit them as they are.": "可以返回题目修改这些答案，也可以按现在的答案提交。",
+})
+
+# learning evidence page
+_TRANSLATIONS.update({
+    "Back to Progress": "返回学习进度",
+    "View answers": "查看作答",
+    "Your latest answer to each question behind your Learning DNA, topic by topic.": "学习画像所依据的每道题的最近一次作答，按知识点列出。",
+    "No answers behind Learning DNA in this mode yet.": "此模式下还没有学习画像所依据的作答。",
+})
+
+# concept lab steps; home materials note
+_TRANSLATIONS.update({
+    "A corner at x = 0": "x = 0 处的尖点",
+    "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text; reading text from images may not always be available. Scanned PDFs, PPTX slide notes and DOCX files are not supported.": "使用 UTF-8 TXT、文字型 PDF/PPTX 或清晰的英文图片；图片中的文字有时可能无法读取。暂不支持扫描版 PDF、PPTX 备注或 DOCX 文件。",
+    "Steps": "步骤", "Predict": "预测", "Explore": "探索", "Explain": "解释",
+    "Back": "返回", "Next: explore": "下一步：探索", "Next: explain": "下一步：解释",
+    "Your explanation": "你的解释",
+    "Only you see this. Write it first, then compare.": "只有你能看到。先写下来，再对照答案。",
+    "Hide answer": "收起答案",
+    "Your prediction was right.": "你的预测是对的。",
+    "I had it right": "我答对了", "I missed something": "我漏掉了一些",
+    "Your self-check: ": "你的自评：", "Start again": "重新开始",
+})
+
+# practice pages
+_TRANSLATIONS.update({
+    "Save before you go to another question: text that is not saved is not kept.": "换到别的题之前请先保存：没有保存的文字不会保留。",
+    "Back to Practice": "返回练习",
+    "Back to result": "返回成绩",
+    "Unfinished sessions": "未完成的场次",
+    "Finished sessions": "已完成的场次",
+    "Open result": "查看成绩",
+    "No practice sessions yet. Finished and unfinished sessions will appear here.": "还没有练习记录。完成和未完成的练习都会显示在这里。",
+    "No result to review yet. Finish a practice session first.": "还没有可以查看的成绩。请先完成一次练习。",
+    "Original wording": "原始表述",
+    "Hide original wording": "收起原始表述",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
@@ -561,6 +673,26 @@ _DYNAMIC = [
     (r"^(\d+) correct answers were marked Guessed\. Revisit them before treating them as secure knowledge\.$", r"有 \1 道答对的题被标记为猜测；请复习后再认为自己已掌握。"),
     (r"^(\d+) hints$", r"\1 条提示"),
     (r"^(\d+) s$", r"\1 秒"),
+    # flashcards
+    (r"^Card (\d+) of (\d+) · (.+)$", r"第 \1 / \2 张 · \3"),
+    (r"^Card (\d+) of (\d+)$", r"第 \1 / \2 张"),
+    (r"^Last time you chose ([A-D])\.$", r"上次你选了 \1。"),
+    # practice clock
+    (r"^Session time (.+)$", r"本次用时 \1"),
+    # progress charts
+    (r"^(\d+) different questions?$", r"\1 道不同题目"),
+    (r"^(\d+) answers?$", r"\1 次作答"),
+    (r"^(\d+) correct out of (\d+) answers?$", r"\2 次作答中答对 \1 次"),
+    (r"^Session (\d+): (\d+)%$", r"第 \1 次练习：\2%"),
+    (r"^Latest session: (\d+)%$", r"最近一次练习：\1%"),
+    (r"^(\d+) min (\d+) s$", r"\1 分 \2 秒"),
+    # practice focus
+    (r"^Practice · (.+)$", r"练习 · \1"),
+    (r"^(\d+) of (\d+) answered$", r"已作答 \1 / \2"),
+    # learning evidence page: the practice result's time bars keep one decimal place
+    (r"^(\d+\.\d) s$", r"\1 秒"),
+    # concept lab steps (the choices arrive already translated)
+    (r"^Your prediction was “(.+)”; the experiment shows “(.+)”\.$", r"你的预测是“\1”；实验表明是“\2”。"),
 ]
 
 

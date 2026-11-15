@@ -3,11 +3,13 @@
 from services.i18n import tr
 import time
 from copy import deepcopy
+from html import escape
 
 import streamlit as st
 
 from services.practice_insights import (CONFIDENCE, REASONS, ResponseInsight, analytics,
-    before_submit, focus_question, session_insights, set_session_insights, settle_focus, transfer_session, priority_session)
+    before_submit, clock_text, focus_question, session_insights, session_seconds, set_session_insights,
+    settle_focus, transfer_session, priority_session)
 from services.hints import hint_state_key
 from services.course_state import save_course
 from services.account_sync import save_course_with_history
@@ -35,15 +37,49 @@ def save_rows(course, sid, rows):
     return updated
 
 
+CLOCK_ICON = (
+    '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"'
+    ' stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.25"></circle>'
+    '<path d="M8 4.75V8l2.25 1.5"></path></svg>'
+)
+# paper_practice.css holds this many copies of the clock's keyframes, flight-clock-run-0 and up.
+CLOCK_RESTARTS = 4
+CLOCK_RESTART_KEY = 'practice_clock_restart'
+
+
+def clock_markup(seconds, running, restart=0):
+    """Session clock box. The text is the server value; CSS counts on from --clock-base while running.
+
+    The page keeps the same DOM node across reruns, so its CSS animation would keep its old
+    start time. Each render switches to the next keyframes name, which starts it from zero.
+    """
+    base = int(max(0, seconds))
+    text = clock_text(base)
+    classes = ['flight-clock', 'is-running' if running else 'is-paused', f'restart-{restart % CLOCK_RESTARTS}']
+    if base >= 3600:
+        classes.append('has-hours')
+    return (
+        f'<div class="{" ".join(classes)}" role="timer" aria-label="{escape(tr(f"Session time {text}"))}"'
+        f' style="--clock-base: {base}">'
+        f'<span class="flight-clock-icon" aria-hidden="true">{CLOCK_ICON}</span>'
+        f'<span class="flight-clock-label">{escape(tr("Session"))}</span>'
+        f'<span class="flight-clock-time"><span class="flight-clock-static">{text}</span></span></div>'
+    )
+
+
 def start_focus_controls(active):
+    """Session clock and its one-click pause, in the header above the question."""
     now = time.monotonic()
     if 'focus_timer' not in active:
         focus_question(active, active['questions'][0].id, now)
     settle_focus(active, now)
-    with st.expander(tr('About focus time')):
-        st.caption(tr('Focus time is an estimate for the selected question, capped at 120 seconds between interactions. Pause when taking a break; it does not measure attention.'))
     timer = active['focus_timer']
-    if st.button(tr('Resume focus timer') if timer['since'] is None else tr('Pause focus timer'), key=f"focus_pause_{active['session'].session_id}"):
+    running = timer['since'] is not None
+    restart = (st.session_state.get(CLOCK_RESTART_KEY, 0) + 1) % CLOCK_RESTARTS
+    st.session_state[CLOCK_RESTART_KEY] = restart
+    st.markdown(clock_markup(session_seconds(active), running, restart), unsafe_allow_html=True, width='content')
+    if st.button(tr('Pause') if running else tr('Resume'), key=f"focus_pause_{active['session'].session_id}",
+                 help=tr('Pause when you take a break.')):
         if timer['since'] is None:
             timer['since'] = now
         else:
@@ -53,10 +89,8 @@ def start_focus_controls(active):
 
 
 def answer_controls(active, question, course_id):
+    """Confidence for the question on screen; the focus timer follows that question on its own."""
     sid = active['session'].session_id
-    if st.button(tr('Work on this question'), key=f'focus_{sid}_{question.id}'):
-        focus_question(active, question.id, time.monotonic())
-        st.rerun()
     # One click records confidence; no selection (None) means "not recorded".
     key = f'confidence_{sid}_{question.id}'
     st.segmented_control(tr('How confident are you?'), [value for value in CONFIDENCE if value is not None],
@@ -72,7 +106,7 @@ def checklist(active):
     st.subheader(tr('Review before submit'))
     if rows:
         st.dataframe([{tr(key): ', '.join(tr(flag.strip()) for flag in value.split(',')) if key == 'Check' else value for key, value in row.items()} for row in rows], hide_index=True, width='stretch')
-        st.caption(tr('You can change these answers above or submit them as they are.'))
+        st.caption(tr('Go back to the questions to change these answers, or submit them as they are.'))
     else:
         st.caption(tr('No unanswered, unsure or guessed answers to review.'))
 
@@ -109,12 +143,16 @@ def result_overview(course, session, questions, result):
         st.info(tr(f"{guesses} correct answers were marked Guessed. Revisit them before treating them as secure knowledge."))
     if data['topic_seconds']:
         names={t.id:t.name for t in course.topics}
-        with st.expander(tr('Time breakdown')):
-            st.markdown(tr('**Tracked focus time by topic**'))
-            st.dataframe([{tr('Topic'):names.get(t,tr('Topic')),tr('Tracked seconds'):round(seconds,1)}
-                for t,seconds in sorted(data['topic_seconds'].items(),key=lambda p:-p[1])],hide_index=True,width='stretch')
-            slowest=max(questions,key=lambda q:rows.get(q.id,{}).get('focus_seconds') or 0)
-            st.caption(tr('Longest tracked question: ') + slowest.question)
+        # Shown directly: where the time went is part of the result, not a detail to dig for.
+        heading=tr('**Tracked focus time by topic**')
+        st.markdown(heading)
+        # The same bars as Progress, with the seconds as precise as the old table;
+        # screen readers hear the chart named with the heading's words.
+        from components.progress_charts import render_bar_chart, time_rows
+        render_bar_chart(heading.strip('*'),
+            time_rows(data['topic_seconds'],names,tr('Topic'),tr,precise=True),kind='time')
+        slowest=max(questions,key=lambda q:rows.get(q.id,{}).get('focus_seconds') or 0)
+        st.caption(tr('Longest tracked question: ') + slowest.question)
     render_priorities(course, data['priorities'])
 
 
@@ -134,12 +172,12 @@ def render_priorities(course, priorities):
     if priorities:
         st.caption(tr('1 question could benefit from another look.') if len(priorities) == 1
                    else tr(f"{len(priorities)} questions could benefit from another look."))
-        with st.expander(tr("Why this review order")):
-            st.caption(tr('Priority uses incorrect/unanswered responses, confidence, hints and relative tracked time. It is a transparent practice suggestion, not a diagnosis.'))
-            names={t.id:t.name for t in course.topics}
-            st.dataframe([{tr('Rank'):i,tr('Topic'):names.get(r['topic_id'],tr('Topic')),
-                           tr('Question'):r['question'],tr('Why review'):', '.join(tr(reason) for reason in r['reasons'])}
-                          for i,r in enumerate(priorities,1)],hide_index=True,width='stretch')
+        # The list is the point of this section, so it is on the page, not behind a click.
+        names={t.id:t.name for t in course.topics}
+        st.dataframe([{tr('Rank'):i,tr('Topic'):names.get(r['topic_id'],tr('Topic')),
+                       tr('Question'):r['question'],tr('Why review'):', '.join(tr(reason) for reason in r['reasons'])}
+                      for i,r in enumerate(priorities,1)],hide_index=True,width='stretch')
+        st.caption(tr('Priority uses incorrect/unanswered responses, confidence, hints and relative tracked time. It is a transparent practice suggestion, not a diagnosis.'))
         st.button(tr('Practise review priorities'), key=f'priorities_{course.course_id}',
             on_click=launch_priority, args=(course, priorities))
         if error := st.session_state.pop('priority_launch_error', None):
@@ -172,62 +210,87 @@ def evidence_line(saved):
     return ' · '.join(parts)
 
 
+def transfer_once(course, question, session, confirmed, practice_key):
+    """"Try a different structure" from this result only: a repeated click, when the new
+    session is already open, does not start another one."""
+    active = st.session_state.get(practice_key)
+    if active and active['session'].session_id == session.session_id and 'result' in active:
+        launch_transfer(course, question, session, confirmed, practice_key)
+
+
+def answer_evidence(course, session, question):
+    """The recorded confidence, hints and time of one answer, as one short caption."""
+    saved=ResponseInsight.model_validate(session_insights(course,session.session_id).get(question.id,{}))
+    if line := evidence_line(saved):
+        st.caption(line)
+
+
 def reflection_controls(course, session, question, review, confirmed, practice_key):
+    """Reason and own-words explanation for one answer, shown directly under a heading.
+
+    The one-line evidence (confidence, hints, time) is answer_evidence(), shown with the answer.
+    """
     sid=session.session_id
     rows=deepcopy(session_insights(course,sid))
     saved=ResponseInsight.model_validate(rows.get(question.id,{}))
-    if line := evidence_line(saved):
-        st.caption(line)
-    with st.expander(tr('Reflect and explain your answer')):
-        st.caption(tr('Write your reasoning in your own words. This reflection is after feedback and never changes your score.'))
-        with st.form(f'reflection_{sid}_{question.id}'):
-            reason=saved.mistake_reason
-            if not review['is_correct']:
-                # No pill selected (None) keeps the reason "not recorded".
-                reason=st.pills(tr('Why did you miss this question?'),[v for v in REASONS if v is not None],
-                    default=reason,format_func=lambda v:tr(REASONS[v]),
-                    key=f'reason_{sid}_{question.id}')
-            text=st.text_area(tr('Explain your answer'),value=saved.explanation,max_chars=4000,
-                key=f'explain_{sid}_{question.id}')
-            save=st.form_submit_button(tr('Save reflection'))
-            ai=st.form_submit_button(tr('Check explanation with AI'),disabled=not generation_available())
-        if not generation_available():
-            st.caption(tr('AI checking is not configured. You can still write and save your explanation.'))
-        else:
-            st.caption(tr('AI checking sends this explanation and question to the configured Claude service. Its feedback may be wrong; verify it against your material.'))
-        if save or ai:
-            row=saved.model_copy(update={'mistake_reason':reason,'explanation':text})
-            if text != saved.checked_explanation:
-                row.feedback=None
-                row.checked_explanation=None
-            if ai:
-                with st.spinner(tr('Checking your reasoning…')):
-                    response=check_explanation(question, text)
-                if response['ok']:
-                    from services.practice_insights import ExplanationFeedback
-                    row.feedback=ExplanationFeedback.model_validate(response['feedback'])
-                    row.checked_explanation=text
-                else:
-                    st.error(tr(response['message']))
-            rows[question.id]=row.model_dump(mode='json')
-            updated = save_rows(course,sid,rows)
-            if updated is not None:
-                st.success(tr('Saved.'))
-                saved=row
-        if saved.feedback is not None and saved.checked_explanation==saved.explanation:
-            st.markdown(tr('**AI reasoning feedback — not a grade**'))
-            st.write(tr(saved.feedback.verdict.replace('_',' ').capitalize()))
-            st.write(saved.feedback.reasoning)
-            st.write(saved.feedback.next_step)
+    st.subheader(tr('Reflect and explain your answer'))
+    st.caption(tr('Write your reasoning in your own words. This reflection is after feedback and never changes your score.'))
+    # A form sends nothing until it is submitted, so text typed here is gone once the page turns.
+    st.caption(tr('Save before you go to another question: text that is not saved is not kept.'))
+    with st.form(f'reflection_{sid}_{question.id}'):
+        reason=saved.mistake_reason
+        if not review['is_correct']:
+            # No pill selected (None) keeps the reason "not recorded".
+            reason=st.pills(tr('Why did you miss this question?'),[v for v in REASONS if v is not None],
+                default=reason,format_func=lambda v:tr(REASONS[v]),
+                key=f'reason_{sid}_{question.id}')
+        text=st.text_area(tr('Explain your answer'),value=saved.explanation,max_chars=4000,
+            key=f'explain_{sid}_{question.id}')
+        save=st.form_submit_button(tr('Save reflection'))
+        ai=st.form_submit_button(tr('Check explanation with AI'),disabled=not generation_available())
+    if not generation_available():
+        st.caption(tr('AI checking is not configured. You can still write and save your explanation.'))
+    else:
+        st.caption(tr('AI checking sends this explanation and question to the configured Claude service. Its feedback may be wrong; verify it against your material.'))
+    if save or ai:
+        row=saved.model_copy(update={'mistake_reason':reason,'explanation':text})
+        if text != saved.checked_explanation:
+            row.feedback=None
+            row.checked_explanation=None
+        if ai:
+            with st.spinner(tr('Checking your reasoning…')):
+                response=check_explanation(question, text)
+            if response['ok']:
+                from services.practice_insights import ExplanationFeedback
+                row.feedback=ExplanationFeedback.model_validate(response['feedback'])
+                row.checked_explanation=text
+            else:
+                st.error(tr(response['message']))
+        rows[question.id]=row.model_dump(mode='json')
+        updated = save_rows(course,sid,rows)
+        if updated is not None:
+            st.success(tr('Saved.'))
+            saved=row
+    if saved.feedback is not None and saved.checked_explanation==saved.explanation:
+        st.markdown(tr('**AI reasoning feedback — not a grade**'))
+        st.write(tr(saved.feedback.verdict.replace('_',' ').capitalize()))
+        st.write(saved.feedback.reasoning)
+        st.write(saved.feedback.next_step)
     if not review['is_correct']:
         st.button(tr('Try a different structure'), key=f'transfer_{sid}_{question.id}',
-            on_click=launch_transfer, args=(course, question, session, confirmed, practice_key))
+            on_click=transfer_once, args=(course, question, session, confirmed, practice_key))
         if error := st.session_state.pop('transfer_launch_error', None):
             st.info(tr(error))
 
 
-def render_history_insights(course, history, mode):
+def render_history_insights(course, history, mode, example=False):
+    """Time by topic and the next review on the Progress page, shown without a click.
+
+    With ``example`` the history is sample data: the time chart says so and the
+    per-question review list (which would start practice) is left out.
+    """
     if not history: return
+    from components.progress_charts import render_bar_chart, time_rows
     ordered=list(course.learning_state.get('session_order',[]))
     ordered.extend(sid for sid in history if sid not in ordered)
     latest={}
@@ -249,11 +312,12 @@ def render_history_insights(course, history, mode):
             seconds=session_insights(course,sid).get(q.id,{}).get('focus_seconds')
             if seconds is not None:total_seconds[q.topic_id]=total_seconds.get(q.topic_id,0.0)+seconds
     if total_seconds:
-        with st.expander(tr('Time by topic')):
-            st.subheader(tr('Tracked focus time by topic'))
+        title=f"{tr('Example')} · {tr('Time by topic')}" if example else tr('Time by topic')
+        with st.container(border=True,key='progress_time'):
+            st.subheader(title)
+            render_bar_chart(title,time_rows(total_seconds,names,tr('Topic'),tr),kind='time')
             st.caption(tr('Totals across recorded sessions in this mode; missing time is not treated as zero.'))
-            st.dataframe([{tr('Topic'):names.get(t,tr('Topic')),tr('Tracked seconds'):round(seconds,1)}
-                for t,seconds in sorted(total_seconds.items(),key=lambda p:-p[1])],hide_index=True,width='stretch')
+    if example: return
     qs=[value[0] for value in latest.values()]
     attempts=[value[1] for value in latest.values()]
     rows={q.id:r for q,a,r in latest.values()}

@@ -23,7 +23,7 @@ def expected_sidebar_titles() -> list[str]:
     titles = ["Home", "Study Plan", "Practice", "Progress", "Knowledge Map"]
     if RADAR_PAGE.exists():
         titles.append("Learning Radar")
-    return [*titles, "Concept Lab", "Export to Anki"]
+    return [*titles, "Concept Lab", "Flashcards"]
 
 
 def record_calls(monkeypatch, name: str) -> list[tuple[tuple, dict]]:
@@ -94,7 +94,13 @@ def test_sidebar_lists_pages_in_study_order(monkeypatch):
     assert position == "sidebar"
     assert [page.title for page in visible] == expected_sidebar_titles()
     assert visible[0]._default
-    assert [(page.title, page.url_path) for page in hidden] == [("My account", "account")]
+    # Hidden: the account page, then the focus pages whose files exist.
+    from services.page_registry import existing_focus_pages
+
+    assert [(page.title, page.url_path) for page in hidden] == [
+        ("My account", "account"),
+        *[(title, url_path) for _, title, url_path in existing_focus_pages()],
+    ]
     if RADAR_PAGE.exists():
         radar = next(page for page in visible if page.title == "Learning Radar")
         assert radar.icon == ":material/radar:"
@@ -110,7 +116,7 @@ def test_learning_radar_is_left_out_until_its_page_file_exists(monkeypatch):
     visible, _, _ = sidebar_navigation(monkeypatch)
 
     assert "Learning Radar" not in [page.title for page in visible]
-    assert [page.title for page in visible][-2:] == ["Concept Lab", "Export to Anki"]
+    assert [page.title for page in visible][-2:] == ["Concept Lab", "Flashcards"]
 
 
 def test_sidebar_titles_follow_the_interface_language(monkeypatch):
@@ -122,7 +128,7 @@ def test_sidebar_titles_follow_the_interface_language(monkeypatch):
     (pages,), _ = calls[-1]
     titles = [page.title for page in pages if page.visibility == "visible"]
     assert titles[:3] == ["首页", "学习计划", "练习"]
-    assert titles[-1] == "导出到 Anki"
+    assert titles[-1] == "复习卡片"
 
 
 def test_brand_logo_and_responsive_sidebar_are_configured(monkeypatch):
@@ -151,27 +157,200 @@ def test_top_header_row_is_gone_and_breadcrumb_stays():
     assert not app.exception
     main_ids = block_ids(app.main)
     assert not any(block.endswith("-flight_header") for block in main_ids)
-    assert "popover" not in block_types(app.main)
+    # No navigation menus: the only popover left is the account avatar's.
+    assert block_types(app.main).count("popover") == 1
+    assert block_types(find_block(app.main, "account_menu")) == ["popover"]
     assert not [box for box in app.main.selectbox if (box.key or "").startswith("flight_review")]
     assert not [link for link in app.main.get("page_link") if link.proto.label in {"Home", "Practice"}]
     assert any(block.endswith("-flight_course_context") for block in main_ids)
     assert "Calculus I Demo  /  Home" in [caption.value for caption in app.main.caption]
 
 
-def test_sidebar_footer_holds_account_status_and_accessibility():
+def find_block(node, key: str) -> Block | None:
+    """Return the first keyed container below node whose key is `key`."""
+    for child in node.children.values():
+        if isinstance(child, Block):
+            if child.proto is not None and getattr(child.proto, "id", "").endswith(f"-{key}"):
+                return child
+            found = find_block(child, key)
+            if found is not None:
+                return found
+    return None
+
+
+def test_sidebar_holds_save_status_then_accessibility_last_and_no_account_block():
     app = signed_in_app(APP_PATH).run()
 
     assert not app.exception
-    footer = [block for block in block_ids(app.sidebar) if block.endswith("-sidebar_footer")]
-    assert footer
+    sidebar_keys = ("sidebar_footer", "account_sidebar", "flight_sync_status", "sidebar_accessibility")
     order = [
         block.rsplit("-", 1)[-1] for block in block_ids(app.sidebar)
-        if block.endswith(("-account_sidebar", "-flight_sync_status"))
+        if block.endswith(tuple(f"-{key}" for key in sidebar_keys))
     ]
-    assert order[0] == "account_sidebar"
-    assert app.sidebar.button(key="logout_button").label == "Log out"
+    # Save status sits in the footer; accessibility is its own block after it.
+    assert order == ["sidebar_footer", "flight_sync_status", "sidebar_accessibility"]
+    footer = find_block(app.sidebar, "sidebar_footer")
+    accessibility = find_block(app.sidebar, "sidebar_accessibility")
+    assert not footer.expander
+    assert [item.label for item in accessibility.expander] == ["Accessibility settings"]
+    assert [item.key for item in accessibility.toggle] == ["a11y_simplify", "_ui_chinese_toggle"]
     assert [item.label for item in app.sidebar.expander] == ["Accessibility settings"]
-    assert [item.key for item in app.sidebar.toggle] == ["a11y_simplify", "_ui_chinese_toggle"]
+    # The account moved to the avatar menu; nothing of it is left in the sidebar.
+    assert not app.sidebar.get("page_link")
+    assert not [button for button in app.sidebar.button if button.key == "logout_button"]
+    assert not any("SIGNED IN AS" in item.value for item in app.sidebar.markdown)
+
+
+def test_account_actions_stay_inside_the_avatar_popover():
+    from tests.auth_helpers import TEST_USER
+
+    app = signed_in_app(APP_PATH).run()
+
+    assert not app.exception
+    menu = find_block(app.main, "account_menu")
+    (popover,) = [child for child in menu.children.values() if isinstance(child, Block)]
+    # The avatar button shows only the initial; the two actions are inside its menu.
+    assert popover.type == "popover"
+    assert popover.proto.popover.label == TEST_USER.username[:1].upper()
+    assert [link.proto.label for link in popover.get("page_link")] == ["My account"]
+    assert popover.button(key="logout_button").label == "Log out"
+    assert not popover.get("checkbox")
+    # Nowhere else on the page.
+    assert [link.proto.label for link in app.main.get("page_link")].count("My account") == 1
+    assert [button.key for button in app.main.button].count("logout_button") == 1
+
+
+def test_account_avatar_is_a_round_button_fixed_in_the_top_right_corner():
+    shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
+
+    corner = css_rule(shell, ".st-key-account_menu")
+    assert "position: fixed;" in corner
+    assert "top: .5rem;" in corner
+    # A fixed distance that clears the visitor toolbar, then the exact position
+    # beside Streamlit's leftmost header button where the browser supports it.
+    assert corner.index("right: 8.75rem;") < corner.index("right: calc(anchor(--header-tools left, 8rem) + .75rem);")
+    assert "anchor-name: --header-tools;" in shell
+    button = css_rule(shell, '.st-key-account_menu [data-testid="stPopover"] button')
+    assert "border-radius: 50%;" in button
+    assert "width: 2.75rem;" in button and "height: 2.75rem;" in button
+    # Both rows of the menu start from the left edge.
+    rows = (
+        '[data-testid="stPopoverBody"]:has(.account-menu-identity)'
+        ' :is([data-testid="stPageLink"] a, .st-key-logout_button button)'
+    )
+    assert "justify-content: flex-start;" in css_rule(shell, rows)
+
+
+def css_rule(stylesheet: str, selector: str) -> str:
+    """Return the declarations of the first top-level rule with this exact selector."""
+    match = re.search(rf"(?m)^{re.escape(selector)} \{{\n(.*?)\n\}}", stylesheet, re.DOTALL)
+    assert match, f"no rule for {selector}"
+    return match.group(1)
+
+
+def test_accessibility_settings_rest_on_the_bottom_edge_below_the_sidebar_watercolour():
+    shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
+    wrapper = '[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]'
+
+    closed = css_rule(shell, f"{wrapper}:has(> .st-key-sidebar_accessibility)")
+    # The block grows into the height the page list leaves free, which rests
+    # the settings on the bottom edge.
+    assert "flex: 1 0 auto;" in closed
+    # Opaque, so nothing shows through the open panel; not sticky while closed,
+    # so on a short window it never covers the links above it.
+    assert "background-color: var(--paper-bg);" in closed
+    assert "position:" not in closed
+    opened = css_rule(shell, f"{wrapper}:has(> .st-key-sidebar_accessibility details[open])")
+    assert "position: sticky;" in opened
+    assert "bottom: 0;" in opened
+
+    # The watercolour is drawn in that free space, above the control, not
+    # behind the whole sidebar, so it can never sit under a control.
+    painting = css_rule(shell, ".st-key-sidebar_accessibility::before")
+    assert "var(--paper-landscape-left" in painting
+    assert "flex: 1 0 0px;" in painting
+    assert "background-position: left bottom;" in painting
+    assert "clamp(0px," in painting
+    assert "var(--paper-landscape-left" not in css_rule(shell, 'section[data-testid="stSidebar"]')
+    assert "padding-bottom: 0;" in css_rule(shell, '[data-testid="stSidebarUserContent"]')
+
+
+def test_stacked_blocks_keep_a_gap_between_them():
+    shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
+
+    # Markdown blocks without a paragraph lose 1rem below them; these three get it back.
+    pulled_together = re.search(r"((?:[^{}\n]+,\n)*[^{}\n]+) \{\n  margin-bottom: 0;\n\}", shell)
+    assert pulled_together
+    selectors = [selector.strip() for selector in pulled_together.group(1).split(",\n")]
+    assert selectors == [
+        '[data-testid="stMarkdownContainer"]:has(> .account-menu-identity)',
+        '[class*="st-key-dashboard_course_card_"] [data-testid="stMarkdownContainer"]:has(> .academic-course-icon)',
+        '[class*="st-key-dashboard_course_card_"] > [data-testid="stElementContainer"]:first-child'
+        ' [data-testid="stCaptionContainer"]',
+    ]
+    expander = '[data-testid="stMain"] [data-testid="stLayoutWrapper"]:has(> [data-testid="stExpander"])'
+    assert "margin-top: .5rem;" in css_rule(shell, expander)
+    card_row = '[data-testid="stMain"] [data-testid="stHorizontalBlock"]:has([class*="st-key-dashboard_course_card_"])'
+    assert "margin-bottom: .5rem;" in css_rule(shell, card_row)
+
+
+def test_loading_shows_the_brand_plane_instead_of_a_round_spinner():
+    shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
+
+    # The inlined plane is the brand mark: same polygons, same colours.
+    plane = re.search(r'--paper-plane: url\("data:image/svg\+xml,([^"]+)"\);', shell)
+    assert plane
+    brand = (ASSETS / "brand-plane.svg").read_text(encoding="utf-8")
+    polygons = re.findall(r'<polygon points="([^"]+)" fill="#([0-9A-F]{6})"/>', brand)
+    assert len(polygons) == 3
+    for points, fill in polygons:
+        assert f"points='{points}' fill='%23{fill}'" in plane.group(1)
+
+    # st.spinner: no ring, the plane flies on a short track.
+    ring = css_rule(shell, '[data-testid="stSpinner"] [data-testid="stSpinnerIcon"]')
+    assert "border: 0;" in ring and "animation: none;" in ring
+    flying = css_rule(shell, '[data-testid="stSpinner"] [data-testid="stSpinnerIcon"]::after')
+    assert "var(--paper-plane)" in flying and "paper-plane-patrol" in flying
+
+    # App running: Streamlit's figure is hidden and one plane crosses the window,
+    # unless a spinner on the page already shows one.
+    assert "display: none;" in css_rule(shell, '[data-testid="stStatusWidgetRunningIcon"]')
+    crossing = css_rule(
+        shell,
+        '[data-testid="stApp"]:has([data-testid="stStatusWidgetRunningIcon"])'
+        ':not(:has([data-testid="stSpinner"])) [data-testid="stHeader"]::after',
+    )
+    assert "var(--paper-plane)" in crossing and "paper-plane-crossing" in crossing
+    assert "pointer-events: none;" in crossing
+    for name in ("paper-plane-patrol", "paper-plane-crossing"):
+        assert f"@keyframes {name} {{" in shell
+    reduced = shell[shell.index("@media (prefers-reduced-motion: reduce)"):]
+    assert reduced.count("animation: none;") == 2
+
+
+def test_sidebar_hills_move_to_the_window_corner_when_the_sidebar_is_collapsed():
+    shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
+    main = '[data-testid="stMain"]'
+
+    # The main area always paints two layers; the left one is empty by default.
+    base = css_rule(shell, main)
+    assert "--paper-main-left: none;" in base
+    assert "background-image: var(--paper-main-left), var(--paper-landscape-right, none);" in base
+    assert "background-position: left bottom, right bottom;" in base
+    collapsed = css_rule(
+        shell,
+        '[data-testid="stAppViewContainer"]'
+        ':has(section[data-testid="stSidebar"][aria-expanded="false"]) ' + main,
+    )
+    assert "--paper-main-left: var(--paper-landscape-left, none);" in collapsed
+    # The sign-in page and narrow screens still clear the whole background.
+    assert "background-image: none;" in css_rule(
+        shell, f'[data-testid="stApp"]:has(.st-key-auth_forms) {main}'
+    )
+    narrow = re.search(r"@media \(max-width: 759\.98px\) \{\n(.*?)\n\}\n", shell, re.DOTALL)
+    assert narrow and re.search(
+        r"\[data-testid=\"stMain\"\] \{\n\s+background-image: none;", narrow.group(1)
+    )
 
 
 def test_injected_styles_include_paper_shell_and_landscape_illustrations():

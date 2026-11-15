@@ -8,6 +8,71 @@ from services.exam_engine import grade_exam
 
 
 PAGE_PATH = Path(__file__).resolve().parents[1] / "pages" / "2_Practice_Center.py"
+HISTORY_PAGE_PATH = PAGE_PATH.with_name("8_Practice_History.py")
+REVIEW_PAGE_PATH = PAGE_PATH.with_name("13_Answer_Review.py")
+
+
+def carry_to(app, page=REVIEW_PAGE_PATH):
+    """Open another page with the state that switching pages keeps (standalone AppTest).
+
+    Only plain session values are carried, as in the app: widgets belong to the page
+    that drew them.
+    """
+    cid = app.session_state["current_course"].course_id
+    target = AppTest.from_file(str(page))
+    for key in ("current_course", f"confirmed_scope_{cid}", f"active_practice_{cid}",
+                f"practice_history_{cid}", f"practice_drafts_{cid}", f"course_document_{cid}",
+                f"course_stage_{cid}", f"review_position_{cid}", f"practice_choice_{cid}",
+                "a11y_bilingual_zh", "a11y_simplify"):
+        if key in app.session_state:
+            target.session_state[key] = app.session_state[key]
+    return target.run()
+
+
+def history_rows(app):
+    """(label, button label) of each row on the Practice history page, top to bottom."""
+    from streamlit.testing.v1.element_tree import Block
+
+    rows = []
+
+    def walk(node):
+        block_id = getattr(getattr(node, "proto", None), "id", "") or ""
+        if isinstance(node, Block) and "-practice_history_row_" in block_id:
+            buttons = [button.label for button in node.button]
+            rows.append((node.markdown[0].value, buttons[0] if buttons else None))
+            return
+        for child in getattr(node, "children", {}).values():
+            walk(child)
+
+    walk(app.main)
+    return rows
+
+
+def keyed_button(app, prefix):
+    """The one button on the page whose key starts with this prefix."""
+    return next(button for button in app.button if (button.key or "").startswith(prefix))
+
+
+def open_review(app):
+    """The question screen's "This session" menu: Review and submit."""
+    keyed_button(app, "worksheet_review_").click().run()
+    return app
+
+
+def submit_answers(app):
+    """What a student does to grade a session: open the review step, then Submit answers."""
+    if not any((button.key or "").startswith("practice_submit_") for button in app.button):
+        open_review(app)
+    keyed_button(app, "practice_submit_").click().run()
+    return app
+
+
+def open_setup(app):
+    """Change settings (question screen) or New practice (result screen)."""
+    keyed_button(app, "practice_change_settings_" if any(
+        (button.key or "").startswith("practice_change_settings_") for button in app.button
+    ) else "practice_new_").click().run()
+    return app
 
 
 def make_practice_state(
@@ -73,13 +138,18 @@ def make_practice_state(
         else {"previous-session": {"result": "saved"}}
     )
 
-    return {
+    state = {
         "current_course": course,
         "confirmed_scope_course-1": ["topic-1"],
         "active_practice_course-1": active_practice,
         "practice_history_course-1": history,
-        "answer_session-1_question-1": selected_index,
     }
+    if graded:
+        state["answer_session-1_question-1"] = selected_index
+    # A session in progress gets its answers from the radio, as in the app. (A value put
+    # in Session State before the radio first existed is kept by Streamlit under the bare
+    # key and comes back over later choices once the radio leaves the screen.)
+    return state
 
 
 @pytest.mark.parametrize(
@@ -96,11 +166,14 @@ def test_practice_result_displays_correct_incorrect_and_unanswered_states(
     expected_error,
     expected_warning,
 ):
-    app = AppTest.from_file(str(PAGE_PATH))
+    result_screen = AppTest.from_file(str(PAGE_PATH))
     for key, value in make_practice_state(selected_index).items():
-        app.session_state[key] = value
-
-    app.run()
+        result_screen.session_state[key] = value
+    result_screen.run()
+    assert not result_screen.exception
+    # The answers are on the Review answers page, opened from the result screen.
+    assert result_screen.button(key="open_answer_review").label == "Review answers"
+    app = carry_to(result_screen)
 
     assert not app.exception
     success_text = [item.value for item in app.success]
@@ -126,16 +199,26 @@ def test_changing_settings_does_not_discard_active_practice_or_history():
         app.session_state[key] = value
 
     app.run()
+    # The student answers on the question screen (the page keeps answers that
+    # are not on screen in the session's drafts).
+    app.radio(key="answer_session-1_question-1").set_value(1).run()
+    # Settings are not on the question screen; the session menu opens them.
+    open_setup(app)
     app.radio(key="practice_mode_course-1").set_value("Topic Practice").run()
     app.number_input(key="practice_count_course-1").set_value(4).run()
 
     assert not app.exception
     assert app.session_state["active_practice_course-1"] is active
     assert app.session_state["practice_history_course-1"] is history
-    assert app.session_state["answer_session-1_question-1"] == 1
+    # Off screen, the answer is kept in the session's drafts.
+    assert active["_draft_widgets"]["answer_session-1_question-1"] == 1
     assert app.session_state["active_practice_course-1"]["session"].session_id == (
         "session-1"
     )
+    app.button(key="practice_return_previous").click().run()
+    assert not app.exception
+    assert app.session_state["active_practice_course-1"] is active
+    assert app.radio(key="answer_session-1_question-1").value == 1
 
 
 def test_change_settings_start_keeps_graded_history():
@@ -146,6 +229,7 @@ def test_change_settings_start_keeps_graded_history():
         app.session_state[key] = value
 
     app.run()
+    open_setup(app)  # "New practice" on the result screen
     app.radio(key="practice_mode_course-1").set_value("Topic Practice").run()
     app.number_input(key="practice_count_course-1").set_value(1).run()
     next(

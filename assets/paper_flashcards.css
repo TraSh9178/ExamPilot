@@ -1,0 +1,212 @@
+/* Paper UI: flashcards page. One paper card, a row of three buttons under it,
+   and a page-turn or flip each time the card changes.
+
+   The card container's key names the last move and alternates a/b:
+   flashcard_next_a_<course>, flashcard_next_b_<course>, flashcard_prev_..,
+   flashcard_flip_.., and flashcard_none_<course> on arrival or a deck switch.
+   Streamlit may keep the same DOM node and only swap its class, and a CSS
+   animation restarts only when animation-name changes, so the a and b keys use
+   identical keyframes under different names. A rerun that keeps the key (for
+   example opening the export) does not replay the animation. */
+
+/* ---- Deck choice ------------------------------------------------------------ */
+[data-testid="stMain"] [class*="st-key-flashcards_deck_"] [data-baseweb="button-group"] {
+  flex-wrap: wrap;
+}
+
+/* ---- The card --------------------------------------------------------------- */
+[data-testid="stMain"] [class*="st-key-flashcard_"] {
+  min-height: clamp(15rem, 38vh, 21rem);
+  padding: clamp(1.1rem, 3vw, 1.9rem) clamp(1.1rem, 3.5vw, 2.25rem) !important;
+  border: 1px solid var(--paper-line, #EEE7DF) !important;
+  border-radius: 18px !important;
+  background: var(--paper-card, #FFFCF7) !important;
+  box-shadow: 0 1px 0 var(--paper-line, #EEE7DF), 0 14px 28px -22px rgba(19, 34, 79, .45);
+  gap: .65rem;
+}
+
+[data-testid="stMain"] [class*="st-key-flashcard_"] [data-testid="stCaptionContainer"] {
+  color: var(--ink-muted, #6B7280);
+}
+
+[data-testid="stMain"] [class*="st-key-flashcard_"] .flashcard-eyebrow,
+[data-testid="stMain"] [class*="st-key-flashcard_"] .flashcard-label {
+  margin: 0 0 .35rem;
+  color: var(--accent-rust-text, #9A5426);
+  font-size: .8rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* Question or topic: the card's heading, in the title serif. */
+[data-testid="stMain"] [class*="st-key-flashcard_"] .flashcard-heading {
+  margin: 0 0 1rem;
+  color: var(--ink, #13224F);
+  font-family: var(--font-title, Georgia, "Times New Roman", serif);
+  font-size: clamp(1.2rem, 2.4vw, 1.45rem);
+  line-height: 1.45;
+  /* Keeps the indentation of code questions. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Answer options: plain read-only lines. */
+[data-testid="stMain"] [class*="st-key-flashcard_"] .flashcard-options {
+  display: grid;
+  gap: .45rem;
+}
+[data-testid="stMain"] [class*="st-key-flashcard_"] .flashcard-option {
+  padding: .45rem .8rem;
+  border-radius: 10px;
+  background: var(--paper-panel, #FAF3E9);
+  color: var(--ink-body, #2A2F33);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Back of the card: the question again, small, then the answer. */
+[data-testid="stMain"] [class*="st-key-flashcard_"] .flashcard-recap {
+  margin: 0 0 1rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--paper-line, #EEE7DF);
+  color: var(--ink-muted, #6B7280);
+  font-size: .92rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+[data-testid="stMain"] [class*="st-key-flashcard_"] .flashcard-answer {
+  margin: 0 0 .6rem;
+  padding: .55rem .85rem;
+  border-left: 3px solid var(--accent-rust, #B5622E);
+  border-radius: 0 10px 10px 0;
+  background: var(--paper-select, #FAE5D2);
+  color: var(--ink, #13224F);
+  font-family: var(--font-title, Georgia, "Times New Roman", serif);
+  font-size: 1.15rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+[data-testid="stMain"] [class*="st-key-flashcard_"] .flashcard-last {
+  margin: 0 0 .75rem;
+  color: var(--accent-rust-text, #9A5426);
+  font-size: .92rem;
+}
+[data-testid="stMain"] [class*="st-key-flashcard_"] :is(.flashcard-explanation, .flashcard-summary) {
+  color: var(--ink-body, #2A2F33);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+[data-testid="stMain"] [class*="st-key-flashcard_"] .flashcard-summary {
+  font-size: 1.08rem;
+}
+
+/* st.markdown pulls the next element up by 1rem to cancel a paragraph's
+   bottom margin. The card's blocks end in a div, not a paragraph, so without
+   this the hint under the options sat on top of the last option. */
+[data-testid="stMain"] [class*="st-key-flashcard_"] [data-testid="stMarkdownContainer"]:has(> div:last-child) {
+  margin-bottom: 0;
+}
+
+/* ---- Buttons under the card ------------------------------------------------- */
+/* Grouped in the middle like a player's controls, which also keeps Next card
+   clear of the floating Pilot button in the lower-right corner. */
+[data-testid="stMain"] [class*="st-key-flashcards_actions_"] {
+  justify-content: center !important;
+  column-gap: .75rem;
+  margin-top: .35rem;
+  row-gap: .5rem;
+}
+
+/* ---- Page turn and flip ----------------------------------------------------- */
+/* The turning edge moves away from the reader, so the card never grows past
+   its column (no sideways scrolling on a phone while it turns). */
+[data-testid="stMain"] [class*="st-key-flashcard_next_a_"] {
+  transform-origin: left center;
+  animation: flashcard-next-a .45s cubic-bezier(.2, .7, .3, 1) backwards;
+}
+[data-testid="stMain"] [class*="st-key-flashcard_next_b_"] {
+  transform-origin: left center;
+  animation: flashcard-next-b .45s cubic-bezier(.2, .7, .3, 1) backwards;
+}
+[data-testid="stMain"] [class*="st-key-flashcard_prev_a_"] {
+  transform-origin: right center;
+  animation: flashcard-prev-a .45s cubic-bezier(.2, .7, .3, 1) backwards;
+}
+[data-testid="stMain"] [class*="st-key-flashcard_prev_b_"] {
+  transform-origin: right center;
+  animation: flashcard-prev-b .45s cubic-bezier(.2, .7, .3, 1) backwards;
+}
+/* The flip is a flat turn about the horizontal axis (no perspective), so the
+   card only gets shorter while it turns and never wider than its column. */
+[data-testid="stMain"] [class*="st-key-flashcard_flip_a_"] {
+  transform-origin: center center;
+  animation: flashcard-flip-a .4s cubic-bezier(.2, .7, .3, 1) backwards;
+}
+[data-testid="stMain"] [class*="st-key-flashcard_flip_b_"] {
+  transform-origin: center center;
+  animation: flashcard-flip-b .4s cubic-bezier(.2, .7, .3, 1) backwards;
+}
+
+@keyframes flashcard-next-a {
+  from { opacity: 0; transform: perspective(1200px) rotateY(55deg); }
+  to { opacity: 1; transform: perspective(1200px) rotateY(0deg); }
+}
+@keyframes flashcard-next-b {
+  from { opacity: 0; transform: perspective(1200px) rotateY(55deg); }
+  to { opacity: 1; transform: perspective(1200px) rotateY(0deg); }
+}
+@keyframes flashcard-prev-a {
+  from { opacity: 0; transform: perspective(1200px) rotateY(-55deg); }
+  to { opacity: 1; transform: perspective(1200px) rotateY(0deg); }
+}
+@keyframes flashcard-prev-b {
+  from { opacity: 0; transform: perspective(1200px) rotateY(-55deg); }
+  to { opacity: 1; transform: perspective(1200px) rotateY(0deg); }
+}
+@keyframes flashcard-flip-a {
+  from { opacity: .35; transform: rotateX(80deg); }
+  to { opacity: 1; transform: rotateX(0deg); }
+}
+@keyframes flashcard-flip-b {
+  from { opacity: .35; transform: rotateX(80deg); }
+  to { opacity: 1; transform: rotateX(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-testid="stMain"] [class*="st-key-flashcard_"] {
+    animation: none !important;
+  }
+}
+
+/* ---- Narrow screens ---------------------------------------------------------- */
+/* The three buttons share the row and may wrap; none is wider than the column. */
+@media (max-width: 759.98px) {
+  [data-testid="stMain"] [class*="st-key-flashcard_"] {
+    min-height: 13rem;
+  }
+  [data-testid="stMain"] [class*="st-key-flashcards_actions_"] {
+    gap: .5rem;
+  }
+  [data-testid="stMain"] [class*="st-key-flashcards_actions_"] > * {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+  [data-testid="stMain"] [class*="st-key-flashcards_actions_"] [data-testid="stButton"] {
+    width: 100%;
+  }
+  [data-testid="stMain"] [class*="st-key-flashcards_actions_"] button {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding-left: .6rem !important;
+    padding-right: .6rem !important;
+  }
+  [data-testid="stMain"] [class*="st-key-flashcards_actions_"] button p {
+    white-space: normal;
+  }
+}

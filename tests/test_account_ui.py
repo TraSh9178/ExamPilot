@@ -83,21 +83,33 @@ def test_account_page_displays_canonical_read_only_identity():
     assert "clears when you log out" in " ".join(caption.value for caption in app.caption)
 
 
-def test_sidebar_identifies_the_signed_in_account_and_links_to_account():
+def test_avatar_menu_identifies_the_signed_in_account_and_links_to_account():
     app = signed_in_app(APP_PATH).run()
 
     assert not app.exception
-    sidebar_text = " ".join(item.value for item in app.sidebar.markdown)
-    assert TEST_USER.username in sidebar_text
-    assert "SIGNED IN AS" in sidebar_text
-    assert [link.proto.label for link in app.sidebar.get("page_link")] == ["My account"]
-    assert app.sidebar.button(key="logout_button").label == "Log out"
-    # Account controls live only in the sidebar, not in a top header row.
-    assert not [link for link in app.main.get("page_link") if link.proto.label == "My account"]
-    assert not [button for button in app.main.button if button.key == "logout_button"]
+    # The account lives in the avatar menu of the main area, not in the sidebar.
+    menu_text = " ".join(item.value for item in app.main.markdown if not item.value.startswith("<style"))
+    assert TEST_USER.username in menu_text
+    assert "SIGNED IN AS" in menu_text
+    assert [link.proto.label for link in app.main.get("page_link")] == ["My account"]
+    assert app.main.button(key="logout_button").label == "Log out"
+    assert not app.sidebar.get("page_link")
+    assert not [button for button in app.sidebar.button if button.key == "logout_button"]
+    assert TEST_USER.username not in " ".join(item.value for item in app.sidebar.markdown)
 
 
-def test_accessibility_settings_sit_in_the_sidebar_under_the_account():
+def test_uploaded_avatar_is_painted_on_the_menu_button():
+    app = signed_in_app(APP_PATH)
+    _add_avatar(app)
+    app.run()
+
+    assert not app.exception
+    styles = [item.value for item in app.main.markdown if item.value.startswith("<style>.st-key-account_menu")]
+    assert len(styles) == 1
+    assert 'background-image: url("data:image/png;base64,' in styles[0]
+
+
+def test_accessibility_settings_sit_in_the_sidebar_and_follow_the_language():
     app = signed_in_app(APP_PATH).run()
 
     assert not app.exception
@@ -109,17 +121,18 @@ def test_accessibility_settings_sit_in_the_sidebar_under_the_account():
 
     assert not app.exception
     assert [item.label for item in app.sidebar.expander] == ["无障碍设置"]
-    assert app.sidebar.button(key="logout_button").label == "退出登录"
+    assert app.main.button(key="logout_button").label == "退出登录"
+    assert [link.proto.label for link in app.main.get("page_link")] == ["我的账户"]
 
 
-@pytest.mark.parametrize("logout_location", ["sidebar", "account_page"])
+@pytest.mark.parametrize("logout_location", ["avatar_menu", "account_page"])
 def test_account_logout_clears_avatar_identity_and_private_study_state(logout_location):
-    app = signed_in_app(APP_PATH) if logout_location == "sidebar" else _account_app()
+    app = signed_in_app(APP_PATH) if logout_location == "avatar_menu" else _account_app()
     _add_avatar(app)
     app.session_state["private_account_test_state"] = "private answer"
     app.run()
 
-    key = "logout_button" if logout_location == "sidebar" else "account_logout_button"
+    key = "logout_button" if logout_location == "avatar_menu" else "account_logout_button"
     app.button(key=key).click().run()
 
     assert not app.exception

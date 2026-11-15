@@ -319,10 +319,8 @@ def test_panel_sits_between_start_practice_and_question_review(monkeypatch):
         lambda node: node.type == "button" and node.label == "Start practice"
     )
     panel = index_of(lambda node: _block_key(node) == PANEL_KEY)
-    review = index_of(
-        lambda node: node.type == "expander"
-        and node.label == "Course tools"
-    )
+    # Question review now sits behind the small Course tools button.
+    review = index_of(lambda node: _block_key(node) == "page_link_open_course_tools")
     assert scope < start < panel < review
 
 
@@ -354,6 +352,7 @@ def test_practice_now_on_confirmed_topic_preselects_topic_practice(monkeypatch):
     for key in [
         "current_course",
         "confirmed_scope_calculus-i-demo",
+        "practice_entry_calculus-i-demo",  # the request staged with the preselection
         "practice_mode_calculus-i-demo",
         "practice_topic_calculus-i-demo",
     ]:
@@ -404,7 +403,8 @@ def test_registered_app_navigates_from_study_plan_to_selected_practice(monkeypat
     assert not app.exception
     assert app.title[0].value == "Practice"
     assert app.radio(key="practice_mode_calculus-i-demo").value == "Topic Practice"
-    assert app.selectbox(key="practice_topic_calculus-i-demo").value == "calc_derivatives"
+    # Two confirmed topics: the knowledge point is a one-click pill.
+    assert app.button_group(key="practice_topic_calculus-i-demo").value == "calc_derivatives"
 
 
 def test_two_reruns_within_the_cache_window_fetch_the_radar_once(monkeypatch):

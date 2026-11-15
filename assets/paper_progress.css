@@ -1,0 +1,289 @@
+/* Progress page: the example banner and the charts drawn by
+   components/progress_charts.py. Bars show status by pattern as well as
+   hue (solid, tinted with an outline, striped, empty dashed track) and a
+   text chip names it. The session chart's SVG also carries these colours as
+   attributes, so it still draws correctly if this sheet is not loaded. */
+
+/* ---- Example banner --------------------------------------------------------- */
+.progress-example-banner {
+  margin: .25rem 0 .5rem;
+  padding: .7rem 1rem;
+  border: 1px solid var(--paper-line);
+  border-left: 4px solid var(--accent-rust);
+  border-radius: 10px;
+  background: var(--paper-select);
+  color: var(--ink-body);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.progress-example-banner strong {
+  color: var(--accent-rust-text);
+}
+
+/* ---- Section cards ---------------------------------------------------------- */
+[data-testid="stMain"] :is(.st-key-progress_mastery, .st-key-progress_sessions, .st-key-progress_time) {
+  background: var(--paper-card);
+  min-width: 0;
+}
+
+/* ---- Shared chart frame ----------------------------------------------------- */
+.progress-chart {
+  max-width: 100%;
+  min-width: 0;
+  margin: .2rem 0 .4rem;
+  color: var(--ink-body);
+}
+
+.progress-chart p {
+  margin: 0;
+}
+
+.progress-chart-heading {
+  margin-bottom: .45rem !important;
+  color: var(--ink);
+  font-family: var(--font-title);
+  font-size: 1.05rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.progress-chart-empty,
+.progress-chart-note {
+  color: var(--ink-muted);
+  font-size: .92rem;
+}
+
+/* ---- Horizontal bars -------------------------------------------------------- */
+.progress-bars {
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+}
+
+.progress-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  min-width: 0;
+}
+
+.progress-bar-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .2rem .6rem;
+  min-width: 0;
+}
+
+.progress-bar-label {
+  min-width: 0;
+  color: var(--ink);
+  font-family: var(--font-title);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.progress-bar-value {
+  min-width: 0;
+  margin-left: auto;
+  color: var(--ink-body);
+  font-size: .92rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.progress-bar-value strong {
+  color: var(--ink);
+}
+
+.progress-bar-detail {
+  color: var(--ink-muted);
+}
+
+.progress-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 .55rem;
+  border: 1px solid var(--ink-muted);
+  border-radius: 999px;
+  color: var(--ink-muted);
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.55;
+  white-space: nowrap;
+}
+
+.progress-chip.is-mastered {
+  border-color: var(--accent-blue-fill);
+  background: var(--accent-blue-fill);
+  color: #FFFFFF;
+}
+
+.progress-chip.is-developing {
+  border: 2px solid var(--accent-blue-fill);
+  background: var(--paper-card);
+  color: var(--accent-blue-dark);
+}
+
+.progress-chip.is-weak {
+  border-color: var(--accent-rust-text);
+  background: var(--paper-select);
+  color: var(--accent-rust-text);
+}
+
+.progress-chip.is-empty {
+  border-style: dashed;
+  background: transparent;
+  color: var(--ink-muted);
+}
+
+.progress-track {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: .85rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--paper-badge);
+}
+
+/* No evidence: an empty dashed track with a light hatch, never a coloured bar. */
+.progress-track.is-empty {
+  border: 1px dashed var(--ink-muted);
+  background: repeating-linear-gradient(-45deg, transparent 0 .3rem, var(--paper-line) .3rem .45rem), var(--paper-card);
+}
+
+.progress-fill {
+  display: block;
+  box-sizing: border-box;
+  height: 100%;
+  min-width: .35rem;
+  max-width: 100%;
+  border-radius: inherit;
+  background: var(--accent-blue-fill);
+}
+
+.progress-fill.is-mastered,
+.progress-fill.is-plain {
+  background: var(--accent-blue-fill);
+}
+
+/* Developing: a tinted bar with a solid outline. */
+.progress-fill.is-developing {
+  border: 2px solid var(--accent-blue-fill);
+  background: var(--paper-select);
+  background: color-mix(in srgb, var(--accent-blue-fill) 32%, var(--paper-card));
+}
+
+/* Weak: rust stripes. */
+.progress-fill.is-weak {
+  background: repeating-linear-gradient(-45deg, var(--accent-rust-text) 0 .35rem, var(--accent-rust) .35rem .55rem);
+}
+
+/* ---- Accuracy by session ---------------------------------------------------- */
+.progress-sessions .progress-sessions-svg {
+  display: block;
+  width: 100%;
+  max-width: 32rem;
+  height: auto;
+  overflow: visible;
+}
+
+.progress-sessions-svg :is(.ps-grid, .ps-axis) {
+  stroke: var(--ink-muted);
+}
+
+.progress-sessions-svg :is(.ps-tick, .ps-value, .ps-empty) {
+  fill: var(--ink-muted);
+  font-family: var(--font-title);
+}
+
+.progress-sessions-svg .ps-line {
+  stroke: var(--accent-blue-fill);
+}
+
+.progress-sessions-svg .ps-dot {
+  fill: var(--accent-blue-fill);
+  stroke: var(--paper-card);
+}
+
+.progress-sessions-svg .ps-dot-latest {
+  fill: var(--accent-rust-text);
+}
+
+.progress-sessions-svg .ps-value-latest {
+  fill: var(--accent-rust-text);
+}
+
+.progress-session-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem .45rem;
+  margin: .4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progress-session-values li {
+  margin: 0;
+  padding: 0 .5rem;
+  border-radius: 999px;
+  background: var(--paper-badge);
+  color: var(--ink-body);
+  font-size: .85rem;
+  white-space: nowrap;
+}
+
+/* ---- The three figures -------------------------------------------------------
+   A long label wraps between words instead of being cut off, and when the
+   page is too narrow for three tiles side by side they wrap onto a second row
+   rather than squeezing the figures. */
+[data-testid="stMain"] .st-key-progress_overview [data-testid="stMetricLabel"],
+[data-testid="stMain"] .st-key-progress_overview [data-testid="stMetricLabel"] * {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-overflow: clip;
+}
+
+[data-testid="stMain"] .st-key-progress_overview [data-testid="stHorizontalBlock"] {
+  flex-wrap: wrap;
+}
+
+[data-testid="stMain"] .st-key-progress_overview [data-testid="stColumn"] {
+  flex: 1 1 12rem;
+  min-width: 12rem;
+}
+
+/* ---- Learning DNA: topic cards side by side when the page is wide enough ------ */
+[data-testid="stMain"] .st-key-learning_dna_cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  align-items: stretch;
+  gap: 1rem;
+}
+
+[data-testid="stMain"] .st-key-learning_dna_cards > * {
+  width: auto;
+  min-width: 0;
+}
+
+/* ---- Narrow screens: every section full width, nothing wider than the page --- */
+@media (max-width: 759.98px) {
+  .progress-bar-value {
+    flex: 1 1 100%;
+    margin-left: 0;
+    text-align: left;
+  }
+
+  .progress-sessions .progress-sessions-svg {
+    max-width: 100%;
+  }
+
+  [data-testid="stMain"] :is(.st-key-progress_mastery, .st-key-progress_sessions, .st-key-progress_time) {
+    width: 100%;
+  }
+}

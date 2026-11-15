@@ -1,10 +1,15 @@
 from services.i18n import tr
 import streamlit as st
 
-from services.mastery_engine import (
-    calculate_topic_stats,
-    get_mastery_status,
+from components.progress_charts import (
+    mastery_rows,
+    render_bar_chart,
+    render_example_banner,
+    render_session_chart,
+    session_points,
 )
+from services.example_report import example_report_for
+from services.mastery_engine import calculate_topic_stats
 from services.ui_style import apply_app_styles
 from services.learning_dna_ui import render_learning_dna
 from services.practice_insights_ui import render_history_insights
@@ -28,6 +33,21 @@ with st.container(key="progress_course_heading"):
 history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})
 
+# A built-in demo course with no graded session yet shows a labelled example.
+# It lives in these local variables only and disappears with the first real session.
+example = example_report_for(course, history)
+report_course = course
+if example is not None:
+    history = example.history
+    report_course = example.course
+    render_example_banner()
+
+
+def heading(text):
+    """Section heading; sections that show example numbers say so."""
+    return f"{tr('Example')} · {tr(text)}" if example is not None else tr(text)
+
+
 sessions = [
     record["session"] for record in history.values()
 ]
@@ -39,7 +59,7 @@ attempts = [
 
 # Include all course questions, plus those saved in graded sessions.
 questions_by_id = {
-    question.id: question for question in course.questions
+    question.id: question for question in report_course.questions
 }
 for record in history.values():
     for question in record["questions"]:
@@ -100,35 +120,9 @@ if not history:
     )
 
 # Prefer persisted chronology when restoring histories; keep new local sessions last.
-order = course.learning_state.get("session_order", [])
+order = report_course.learning_state.get("session_order", [])
 ordered_ids = [sid for sid in order if sid in history]
 ordered_ids.extend(sid for sid in history if sid not in ordered_ids)
-overview_tab, dna_tab, details_tab = st.tabs(
-    [tr("Overview"), tr("Learning DNA"), tr("Practice details")],
-    default=tr(st.session_state.get(f"progress_tab_{course.course_id}", "Overview")),
-)
-with dna_tab:
-    render_learning_dna(
-        course, attempts, [history[sid]["session"] for sid in ordered_ids],
-        list(questions_by_id.values()), mode,
-    )
-with overview_tab:
-    render_history_insights(course, history, mode)
-
-status_labels = {
-    "unattempted": "Unattempted",
-    "insufficient_evidence": "Insufficient evidence",
-    "weak": "Weak",
-    "developing": "Developing",
-    "mastered": "Mastered",
-}
-status_colors = {
-    "unattempted": "gray",
-    "insufficient_evidence": "violet",
-    "weak": "red",
-    "developing": "orange",
-    "mastered": "green",
-}
 
 stats_by_topic = {
     item.topic_id: item
@@ -136,59 +130,46 @@ stats_by_topic = {
     if item.mode == mode
 }
 
-with overview_tab:
-    st.subheader(tr("Topic overview"))
-    st.dataframe([
-        {tr("Topic"): topic.name,
-         tr("Status"): tr(status_labels[get_mastery_status(stats_by_topic[topic.id])]) if topic.id in stats_by_topic else tr("Unattempted"),
-         tr("Different questions"): stats_by_topic[topic.id].unique_attempted if topic.id in stats_by_topic else 0,
-         tr("Latest-answer accuracy"): "—" if topic.id not in stats_by_topic or stats_by_topic[topic.id].evidence_accuracy is None else f"{stats_by_topic[topic.id].evidence_accuracy:.0f}%"}
-        for topic in course.topics
-    ], hide_index=True, width="stretch")
+# "View Learning DNA" on Home opens this page for that section, so it comes
+# first on that visit (app.py forgets the request when the student moves on).
+dna_first = st.session_state.get(f"progress_tab_{course.course_id}") == "Learning DNA"
+first_block, second_block = st.container(), st.container()
+charts_block, dna_block = (second_block, first_block) if dna_first else (first_block, second_block)
 
-with details_tab:
-    for topic in course.topics:
-        topic_stats = stats_by_topic.get(topic.id)
+with charts_block:
+    with st.container(border=True, key="progress_mastery"):
+        st.subheader(heading("Mastery by topic"))
+        render_bar_chart(
+            heading("Mastery by topic"),
+            mastery_rows(report_course.topics, stats_by_topic, tr),
+            kind="mastery",
+            empty_text="This course has no topics yet.",
+        )
+        st.caption(tr("Mastery uses each distinct question’s latest answer. Total accuracy still includes every graded attempt."))
 
-        if topic_stats is None:
-            attempted = 0
-            correct = 0
-            accuracy = None
-            status = "unattempted"
-        else:
-            attempted = topic_stats.attempted
-            correct = topic_stats.correct
-            accuracy = topic_stats.accuracy
-            status = get_mastery_status(topic_stats)
+    with st.container(border=True, key="progress_sessions"):
+        st.subheader(heading("Accuracy by session"))
+        render_session_chart(
+            session_points(
+                history[sid] for sid in ordered_ids if history[sid]["session"].mode == mode
+            ),
+            title=heading("Accuracy by session"),
+            empty_text="No graded sessions in this mode yet.",
+        )
+        st.caption(tr("Each dot is one graded session, oldest on the left."))
 
-        with st.container(border=True, key=f"progress_topic_{topic.id}"):
-            st.subheader(topic.name)
-            topic_columns = st.columns([1, 1, 1.5])
-            topic_columns[0].metric(tr("Answers"), attempted)
-            topic_columns[1].metric(
-                tr("Accuracy"),
-                "—" if accuracy is None else f"{accuracy:.2f}%",
-            )
-            with topic_columns[2]:
-                st.caption(tr("Mastery"))
-                st.badge(tr(status_labels[status]), color=status_colors[status])
-            if topic_stats is not None:
-                evidence = topic_stats.unique_attempted if topic_stats.unique_attempted is not None else attempted
-                recent = topic_stats.evidence_accuracy
-                st.caption(tr("Different questions") + f": {evidence} · " + tr("Latest-answer accuracy") + ": " + ("—" if recent is None else f"{recent:.2f}%"))
-            st.caption(tr(
-                (
-                    f"{correct} correct out of {attempted} answers."
-                    if attempted
-                    else "No answers recorded in this mode."
-                )
-            ))
+with dna_block:
+    render_learning_dna(
+        report_course, attempts, [history[sid]["session"] for sid in ordered_ids],
+        list(questions_by_id.values()), mode, example=example is not None,
+    )
+render_history_insights(report_course, history, mode, example=example is not None)
 
-    st.caption(
-        tr("Insufficient evidence means fewer than 3 different questions for that topic "
-        "in the selected mode. "
-        "Below 60%: Weak · 60–79.99%: Developing · 80% or above: Mastered."
-   ) )
+st.caption(
+    tr("Insufficient evidence means fewer than 3 different questions for that topic "
+    "in the selected mode. "
+    "Below 60%: Weak · 60–79.99%: Developing · 80% or above: Mastered.")
+)
 if st.button(tr("Start practice"), type="primary"):
     from services.learning_flow import stage_practice
     stage_practice(st.session_state, course)

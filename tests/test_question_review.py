@@ -5,7 +5,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 from models.schemas import Question
 from services.question_review import validate_question_content, create_mistake_review, question_sources
-from tests.test_practice_page import make_practice_state, PAGE_PATH
+from tests.test_practice_page import make_practice_state, PAGE_PATH, REVIEW_PAGE_PATH, submit_answers
 
 
 def question(stem="What is x²?", options=None):
@@ -85,7 +85,7 @@ def test_review_button_starts_blank_practice_and_retains_history():
     assert answer.value is None
     assert app.session_state["practice_history_course-1"] == previous
     answer.set_value(0).run()
-    next(button for button in app.button if button.label == "Submit answers").click().run()
+    submit_answers(app)
     assert not app.exception
     assert len(app.session_state["practice_history_course-1"]) == len(previous) + 1
     assert app.session_state["practice_history_course-1"]["session-1"] == previous["session-1"]
@@ -123,7 +123,7 @@ def test_feedback_shows_only_retained_source_text():
     state = make_practice_state(selected_index=1)
     state["active_practice_course-1"]["questions"][0].source_pages = [2]
     state["course_document_course-1"] = {"pages": [{"page": 2, "text": "Original page two text."}, {"page": 3, "text": "Uncited page three."}]}
-    app = AppTest.from_file(str(PAGE_PATH))
+    app = AppTest.from_file(str(REVIEW_PAGE_PATH))  # the answers' page
     for key, value in state.items():
         app.session_state[key] = value
     app.run()

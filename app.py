@@ -10,8 +10,9 @@ from services.account_sync import (
 from services.auth_session import current_user
 
 from services.auth_ui import render_auth_page
-from services.account_ui import render_account_page, render_account_controls
+from services.account_ui import render_account_menu, render_account_page
 from services.accessibility import render_accessibility_controls
+from services.page_registry import existing_focus_pages
 from services.ui_style import BRAND_LOGO, BRAND_PLANE, apply_app_styles
 from services.tutor_assistant_ui import clear_tutor_browser_state, render_tutor_assistant
 
@@ -93,13 +94,20 @@ pages += [
     ),
     st.Page(
         "pages/5_Export_Anki.py",
-        title=tr("Export to Anki"),
-        icon=":material/download:",
+        title=tr("Flashcards"),
+        icon=":material/style:",
+        url_path="Flashcards",
     ),
 ]
 
+# Pages opened from a button on another page; they are not in the sidebar.
+focus_pages = [
+    st.Page(path, title=tr(title), url_path=url_path, visibility="hidden")
+    for path, title, url_path in existing_focus_pages()
+]
+
 # Default position: the page list lives in Streamlit's collapsible sidebar.
-navigation = st.navigation([*pages, account_page])
+navigation = st.navigation([*pages, account_page, *focus_pages])
 # Page widgets are cleaned up during navigation; rehydrate a course's saved
 # scope once when entering its study page, not on every form interaction.
 if st.session_state.get("_learning_page_path") != navigation.url_path:
@@ -110,20 +118,31 @@ if st.session_state.get("_learning_page_path") != navigation.url_path:
         active = st.session_state.get(f"active_practice_{selected_course.course_id}")
         if active and "result" not in active and active.get("focus_timer"):
             import time
-            from services.practice_insights import settle_focus
-            settle_focus(active, time.monotonic())
-            active["focus_timer"]["since"] = None
+            from services.practice_insights import pause_or_resume_for_page
+            # Time on other pages is not counted; the clock starts again on return.
+            pause_or_resume_for_page(
+                active, navigation.url_path == "Practice_Center", time.monotonic(),
+            )
     if selected_course is not None:
         st.session_state.pop(f"scope_initialised_{selected_course.course_id}", None)
+        # "View Learning DNA" on Home puts that section first on Progress for one
+        # visit; the answers page belongs to that visit, any other page ends it.
+        if navigation.url_path not in ("Performance", "Learning_Evidence"):
+            st.session_state.pop(f"progress_tab_{selected_course.course_id}", None)
     st.session_state["_learning_page_path"] = navigation.url_path
 
-# Account, save status and accessibility settle at the bottom of the sidebar.
-with st.sidebar, st.container(key="sidebar_footer"):
-    render_account_controls(account_page)
-    with st.container(key="flight_sync_status"):
-        render_sidebar_status()
-    with st.expander(tr("Accessibility settings")):
-        render_accessibility_controls()
+# Save status follows the page list; accessibility settings stay at the very
+# bottom of the sidebar, below the watercolour.
+with st.sidebar:
+    with st.container(key="sidebar_footer"):
+        with st.container(key="flight_sync_status"):
+            render_sidebar_status()
+    with st.container(key="sidebar_accessibility"):
+        with st.expander(tr("Accessibility settings")):
+            render_accessibility_controls()
+
+# Account: a round avatar in the top-right corner of every page.
+render_account_menu(account_page)
 
 if selected_course := st.session_state.get("current_course"):
     with st.container(key="flight_course_context"):

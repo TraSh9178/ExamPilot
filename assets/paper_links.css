@@ -1,0 +1,9 @@
+/* Page links: small buttons on the left or right edge that open a page of
+   their own (history, tools, exports, the answers behind an analysis). They
+   are never full width and never centred. See components/page_links.py. */
+[data-testid="stMain"] [class*="st-key-page_link_"] button {
+  min-height: 2.25rem;
+  padding: .2rem .95rem;
+  border-radius: 999px;
+  font-size: .92rem;
+}

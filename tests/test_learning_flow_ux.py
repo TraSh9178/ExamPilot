@@ -38,7 +38,10 @@ def test_new_entry_shows_settings_instead_of_old_graded_result():
     assert not app.exception
     assert 'Your result' not in [s.value for s in app.subheader]
     assert app.session_state['active_practice_insights']==old
-    assert any(e.label=='Practice settings' and e.proto.expanded for e in app.expander)
+    # The settings are on the page itself, not in an expander.
+    assert app.radio(key='practice_mode_insights').value=='Topic Practice'
+    assert app.button_group(key='practice_topic_insights').value=='t'
+    assert not [e for e in app.expander if e.label in ('Practice settings','Change settings')]
     app.button(key='practice_return_previous').click().run()
     assert not app.exception
     assert 'Your result' in [s.value for s in app.subheader]
@@ -74,13 +77,16 @@ def test_draft_widgets_survive_registered_page_navigation():
     assert not app.exception
     assert app.radio(key='answer_session-1_question-1').value==0
     assert app.button_group(key='confidence_session-1_question-1').value=='guessed'
-    assert app.session_state['active_practice_course-1']['focus_timer']['since'] is None
+    # Leaving stopped the clock; coming back starts it again (not a student's own pause).
+    timer=app.session_state['active_practice_course-1']['focus_timer']
+    assert timer['since'] is not None and 'away' not in timer
 
 
 def test_lab_default_matches_requested_topic():
     course=calculus()
     state={}
     open_lab(state,course.course_id,'calc_derivatives')
+    state['lab_derivatives_step']=2  # the explore step, where the sliders are
     app=AppTest.from_file(str(ROOT/'pages/6_Concept_Lab.py'))
     for key,value in state.items():app.session_state[key]=value
     app.run()
@@ -91,31 +97,44 @@ def test_lab_default_matches_requested_topic():
     assert app.get('tab_container')[0].proto.tab_container.default_tab_index==1
 
 
-def test_review_form_is_collapsed_until_requested():
+def test_review_form_is_off_the_study_plan_and_the_page_does_not_prompt_for_it():
     course=calculus()
     app=AppTest.from_file(str(ROOT/'pages/1_Study_Hub.py'))
     app.session_state['current_course']=course
     app.run()
     assert not app.exception
-    panel=next(e for e in app.expander if e.label=='Review and edit questions')
-    assert not panel.proto.expanded
+    assert not any(e.label=='Review and edit questions' for e in app.expander)
+    assert not any((s.key or '').startswith('editor_question_') for s in app.selectbox)
     assert app.button_group(key='scope_selection_calculus-i-demo') and not app.multiselect
     assert not app.checkbox
-    app.button(key='open_question_review_calculus-i-demo').click().run()
-    assert not app.exception
-    assert next(e for e in app.expander if e.label=='Review and edit questions').proto.expanded
+    # Reviewing questions is maintenance: no count, no button asking for it.
+    assert not [b for b in app.button if b.key=='open_question_review_calculus-i-demo']
+    assert not any('need your check' in c.value or 'needs your check' in c.value for c in app.caption)
+    # The tool itself is on the Course tools page, behind a small button.
+    assert app.button(key='open_course_tools').label=='Course tools'
+    tools=AppTest.from_file(str(ROOT/'pages/9_Course_Tools.py'))
+    tools.session_state['current_course']=course
+    tools.run()
+    assert not tools.exception
+    assert tools.selectbox(key='editor_question_calculus-i-demo').options
 
 
-def test_progress_groups_evidence_and_details_into_secondary_tabs():
+def test_progress_shows_every_section_on_one_page_without_tabs():
     app=AppTest.from_file(str(ROOT/'pages/3_Performance.py'))
     app.session_state['current_course']=calculus()
     app.run()
     assert not app.exception
-    assert [t.label for t in app.tabs]==['Overview','Learning DNA','Practice details']
-    assert app.get('tab_container')[0].proto.tab_container.default_tab_index==0
+    assert not app.tabs and not app.get('tab_container')
+    headings=[s.value for s in app.subheader]
+    assert headings[1:]==['Example · Mastery by topic','Example · Accuracy by session',
+                          'Example · Learning DNA','Example · Time by topic']
+    # The Dashboard records which part the student asked for; that section then comes first.
     app.session_state['progress_tab_calculus-i-demo']='Learning DNA'
     app.run()
-    assert app.get('tab_container')[0].proto.tab_container.default_tab_index==1
+    assert not app.exception
+    assert not app.tabs
+    assert [s.value for s in app.subheader][1:]==['Example · Learning DNA','Example · Mastery by topic',
+                          'Example · Accuracy by session','Example · Time by topic']
 
 
 def test_dashboard_prioritizes_course_over_secondary_features():
@@ -125,7 +144,9 @@ def test_dashboard_prioritizes_course_over_secondary_features():
     app.run()
     assert not app.exception
     assert app.button(key='dashboard_continue_learning').label=='Start practice'
-    assert any(e.label=='Study totals' and not e.proto.expanded for e in app.expander)
+    # The study totals are small tiles on the page, not a folded panel.
+    assert 'Study totals' not in [e.label for e in app.expander]
+    assert [m.label for m in app.metric]==['Courses','Knowledge points','Practice sessions']
     app.button(key='dashboard_continue_learning').click().run()
     assert not app.exception
     assert app.title[0].value=='Practice'
@@ -162,11 +183,12 @@ def test_map_to_derivatives_lab_to_practice_preserves_context_and_old_result(mon
     )}
     app=signed_in_app(ROOT/'app.py').run()
     for key,value in carried.items():app.session_state[key]=value
+    app.session_state['lab_derivatives_step']=3  # practice sits in the explain step
     app.switch_page('pages/6_Concept_Lab.py').run()
     app.button(key='concept_lab_practice_calc_derivatives').click().run()
     assert not app.exception
     assert app.radio(key='practice_mode_calculus-i-demo').value=='Topic Practice'
-    assert app.selectbox(key='practice_topic_calculus-i-demo').value=='calc_derivatives'
+    assert app.button_group(key='practice_topic_calculus-i-demo').value=='calc_derivatives'
     assert 'Your result' not in [s.value for s in app.subheader]
     assert app.session_state['practice_history_calculus-i-demo']==history
 
@@ -221,12 +243,14 @@ def test_practice_result_opens_the_same_topic_in_concept_lab():
     assert app.session_state[f"active_practice_{course.course_id}"]["session"] == session
 
 def test_sidebar_lists_every_study_page_and_opens_each_one(monkeypatch):
+    from services.page_registry import existing_focus_pages
     from tests.test_paper_shell import expected_sidebar_titles, sidebar_navigation
 
     visible, hidden, position = sidebar_navigation(monkeypatch)
     assert position == "sidebar"
     assert [page.title for page in visible] == expected_sidebar_titles()
-    assert [page.url_path for page in hidden] == ["account"]
+    from services.page_registry import existing_focus_pages
+    assert [page.url_path for page in hidden] == ["account", *[url for _, _, url in existing_focus_pages()]]
 
     # Opening a page from the list leaves no top review menu behind.
     app = signed_in_app(ROOT / "app.py").run()

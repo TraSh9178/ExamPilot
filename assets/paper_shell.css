@@ -180,19 +180,153 @@ a[data-testid="stSidebarNavLink"]:focus-visible {
   outline-offset: 1px;
 }
 
-/* ---- Sidebar footer: account, save status, accessibility ------------------ */
+/* ---- Sidebar footer: save status ------------------------------------------ */
+/* Empty unless there is something to say (a failed save or restore), so it
+   draws no line of its own: the page list above already ends with one. */
 .st-key-sidebar_footer {
-  border-top: 1px solid var(--paper-line);
+  padding-top: 0;
+  border-top: 0;
   background-color: rgb(254 247 239 / .9);
 }
 
-.st-key-account_sidebar [data-testid="stPageLink"] a {
-  border-radius: 999px;
+/* ---- Accessibility settings: last, on the bottom edge of the sidebar ------ */
+/* The block takes whatever height the page list leaves free. Its ::before
+   (the watercolour, under "Watercolour margins") fills that space, which
+   rests the control itself on the bottom edge. */
+[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_accessibility) {
+  flex: 1 0 auto;
+  padding: .5rem 0 1rem;
+  background-color: var(--paper-bg);
+}
+
+/* While open, the panel sticks to the bottom edge, so it opens upwards over
+   the page list instead of off the screen. Closed, it is simply the last
+   item and never covers the links above it. The paper-coloured shadow
+   fades whatever it covers along its top edge. */
+[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_accessibility details[open]) {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  box-shadow: 0 -.75rem .75rem -.25rem var(--paper-bg);
+}
+
+/* A very short window cannot hold the open panel; let it scroll with the list. */
+@media (max-height: 520px) {
+  [data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_accessibility details[open]) {
+    position: static;
+    box-shadow: none;
+  }
+}
+
+/* ---- Account: a round avatar in the top-right corner ---------------------- */
+/* Fixed in Streamlit's header strip, just left of its own buttons. My account
+   and Log out live in the menu and are not on screen until the avatar is
+   clicked. */
+
+/* The leftmost of Streamlit's header buttons. Their number differs between
+   visitors (Fork, GitHub, menu), the app owner and a local run, and the
+   running indicator comes and goes, so it is skipped. */
+[data-testid="stToolbar"] > div > div:last-child > :nth-child(1 of :not([data-testid="stStatusWidget"])) {
+  anchor-name: --header-tools;
+}
+
+.st-key-account_menu {
+  position: fixed;
+  top: .5rem;
+  /* Clear of the visitor's three buttons where anchors are not supported... */
+  right: 8.75rem;
+  /* ...and exactly beside the leftmost button where they are. */
+  right: calc(anchor(--header-tools left, 8rem) + .75rem);
+  z-index: 999991;
+  width: auto;
+}
+
+.st-key-account_menu [data-testid="stPopover"] button {
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 2px solid var(--paper-line);
+  border-radius: 50%;
+  background: var(--paper-select) center / cover no-repeat;
   color: var(--ink);
+}
+
+.st-key-account_menu [data-testid="stPopover"] button p {
+  font-size: 1.2rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+/* No chevron: the avatar itself is the control, with its letter centred. */
+.st-key-account_menu [data-testid="stPopover"] button > div > div:has([data-testid="stIconMaterial"]) {
+  display: none;
+}
+
+.st-key-account_menu [data-testid="stPopover"] button > div {
+  justify-content: center;
+  width: 100%;
+}
+
+.st-key-account_menu [data-testid="stPopover"] button:hover {
+  border-color: var(--accent-blue);
+}
+
+.st-key-account_menu [data-testid="stPopover"] button:focus-visible {
+  outline: 3px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+/* The menu: who is signed in, then two left-aligned rows of the same shape. */
+.account-menu-identity {
+  display: flex;
+  flex-direction: column;
+  padding: .1rem .25rem .2rem;
 }
 
 .account-sidebar-label {
   color: var(--exam-muted);
+}
+
+[data-testid="stPopoverBody"]:has(.account-menu-identity) :is([data-testid="stPageLink"] a, .st-key-logout_button button) {
+  justify-content: flex-start;
+  min-height: 2.75rem;
+  padding: .35rem .9rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--paper-badge);
+  color: var(--ink);
+  text-align: left;
+}
+
+[data-testid="stPopoverBody"]:has(.account-menu-identity) .st-key-logout_button button > div {
+  justify-content: flex-start;
+}
+
+[data-testid="stPopoverBody"]:has(.account-menu-identity) :is([data-testid="stPageLink"] a, .st-key-logout_button button):hover {
+  background: var(--paper-select);
+}
+
+/* ---- Breathing room between stacked blocks -------------------------------- */
+/* st.markdown and st.caption pull the next element up by 1rem to cancel a
+   paragraph's bottom margin. These three hold no such paragraph, so the pull
+   left the control below touching them: the signed-in line above My account,
+   and the badge and icon above Open course on a course card. */
+[data-testid="stMarkdownContainer"]:has(> .account-menu-identity),
+[class*="st-key-dashboard_course_card_"] [data-testid="stMarkdownContainer"]:has(> .academic-course-icon),
+[class*="st-key-dashboard_course_card_"] > [data-testid="stElementContainer"]:first-child [data-testid="stCaptionContainer"] {
+  margin-bottom: 0;
+}
+
+/* Home: a little more room between one row of course cards and the next. */
+[data-testid="stMain"] [data-testid="stHorizontalBlock"]:has([class*="st-key-dashboard_course_card_"]) {
+  margin-bottom: .5rem;
+}
+
+/* A framed expander needs more air above it than a line of text does. */
+[data-testid="stMain"] [data-testid="stLayoutWrapper"]:has(> [data-testid="stExpander"]) {
+  margin-top: .5rem;
 }
 
 .account-sidebar-copy strong {
@@ -480,31 +614,55 @@ label[data-baseweb="radio"]:focus-within {
 }
 
 /* ---- Watercolour margins --------------------------------------------------- */
-/* Painted as backgrounds, so they sit behind every control and never take
-   clicks; stMain is the scroll box, so its background stays in place. */
-section[data-testid="stSidebar"] {
+/* Painted as backgrounds, so they never take clicks; stMain is the scroll box,
+   so its background stays in place. */
+
+/* Sidebar: the hills fill the free space between the page list and the
+   accessibility settings, and bleed off the left edge of the sidebar. The
+   picture is drawn whole or not at all: it shrinks with the space it has and
+   disappears below 6rem, so it never sits behind a control. */
+.st-key-sidebar_accessibility::before {
+  content: "";
+  flex: 1 0 0px;
+  align-self: stretch;
+  min-height: 0;
+  /* Out to the sidebar edge, and a little into the gap above the control:
+     the foot of the hills is feathered, so it can sit close to it. */
+  margin: 0 0 -.25rem -1.25rem;
   background-image: var(--paper-landscape-left, none);
   background-repeat: no-repeat;
   background-position: left bottom;
-  background-size: 228px auto;
+  background-size: auto clamp(0px, calc((100% - 6rem) * 9999), min(100%, 196px));
+  pointer-events: none;
 }
 
+/* Main area: the mountains on the right, plus the sidebar's hills on the left
+   whenever the sidebar is not showing them (the two rules below). */
 [data-testid="stMain"] {
-  background-image: var(--paper-landscape-right, none);
+  --paper-main-left: none;
+  background-image: var(--paper-main-left), var(--paper-landscape-right, none);
   background-repeat: no-repeat;
-  background-position: right bottom;
-  background-size: 354px auto;
+  background-position: left bottom, right bottom;
+  background-size: 228px auto, 354px auto;
 }
 
-/* Leave the lower hills clear below the account block on tall screens. */
-[data-testid="stSidebarUserContent"] {
-  padding-bottom: 8.5rem;
+/* The hills stay in the lower-left corner of the window while the sidebar is
+   collapsed... */
+[data-testid="stAppViewContainer"]:has(section[data-testid="stSidebar"][aria-expanded="false"]) [data-testid="stMain"] {
+  --paper-main-left: var(--paper-landscape-left, none);
 }
 
-@media (max-height: 760px) {
-  [data-testid="stSidebarUserContent"] {
-    padding-bottom: 2rem;
+/* ...and on a window too short for the open sidebar to hold them: below
+   705px its free space is under the 6rem the picture needs. */
+@media (max-height: 704.98px) {
+  [data-testid="stMain"] {
+    --paper-main-left: var(--paper-landscape-left, none);
   }
+}
+
+/* The pinned accessibility block brings its own bottom spacing. */
+[data-testid="stSidebarUserContent"] {
+  padding-bottom: 0;
 }
 
 /* Home: foliage in the corner of the "Try one question" card. */
@@ -520,13 +678,9 @@ section[data-testid="stSidebar"] {
 }
 
 @media (max-width: 759.98px) {
-  section[data-testid="stSidebar"],
+  .st-key-sidebar_accessibility::before,
   [data-testid="stMain"] {
     background-image: none;
-  }
-
-  [data-testid="stSidebarUserContent"] {
-    padding-bottom: 1.25rem;
   }
 
   [data-testid="stMain"] .st-key-dashboard_demo_start {
@@ -582,4 +736,95 @@ section[data-testid="stSidebar"] {
 [data-testid="stMain"] .st-key-dashboard_actions div.st-key-create_course_button button:hover {
   background: var(--paper-panel) !important;
   border-color: #D9CFC2 !important;
+}
+
+/* ---- Loading: a paper plane instead of a spinner --------------------------- */
+/* The brand plane (assets/brand-plane.svg), inlined so the sheet stays one file. */
+:root {
+  --paper-plane: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 348'%3E%3Cpolygon points='28,158 436,34 140,212' fill='%23F4B45B'/%3E%3Cpolygon points='436,34 238,302 150,224' fill='%235F849F'/%3E%3Cpolygon points='126,230 170,256 130,296' fill='%235F849F'/%3E%3C/svg%3E");
+}
+
+/* Out and back along a short track, turning round at each end. */
+@keyframes paper-plane-patrol {
+  0% { transform: translate(0, 0) scaleX(1); }
+  22% { transform: translate(1.4rem, -.25rem) scaleX(1); }
+  45% { transform: translate(2.8rem, 0) scaleX(1); }
+  50% { transform: translate(2.8rem, 0) scaleX(-1); }
+  72% { transform: translate(1.4rem, -.25rem) scaleX(-1); }
+  95% { transform: translate(0, 0) scaleX(-1); }
+  100% { transform: translate(0, 0) scaleX(1); }
+}
+
+/* The same trip across the whole window. */
+@keyframes paper-plane-crossing {
+  0% { transform: translate(8vw, 0) scaleX(1); }
+  24% { transform: translate(46vw, -.25rem) scaleX(1); }
+  47% { transform: translate(calc(92vw - 1.6rem), 0) scaleX(1); }
+  50% { transform: translate(calc(92vw - 1.6rem), 0) scaleX(-1); }
+  74% { transform: translate(46vw, -.25rem) scaleX(-1); }
+  97% { transform: translate(8vw, 0) scaleX(-1); }
+  100% { transform: translate(8vw, 0) scaleX(1); }
+}
+
+/* st.spinner: the round spinner gives way to the plane on its track. The
+   icon's holder is widened to the track, so the message starts after it. */
+[data-testid="stSpinner"] span:has(> [data-testid="stSpinnerIcon"]) {
+  flex-shrink: 0;
+  justify-content: flex-start;
+  width: 4.9rem;
+  height: 1.5rem;
+}
+
+[data-testid="stSpinner"] [data-testid="stSpinnerIcon"] {
+  position: relative;
+  flex-shrink: 0;
+  width: 4.9rem;
+  height: 1.5rem;
+  border: 0;
+  border-radius: 0;
+  animation: none;
+}
+
+[data-testid="stSpinner"] [data-testid="stSpinnerIcon"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2.1rem;
+  height: 1.5rem;
+  background: var(--paper-plane) center / contain no-repeat;
+  animation: paper-plane-patrol 2s ease-in-out infinite;
+}
+
+/* While the app is working, the plane crosses the window just under the
+   header controls, and Streamlit's own running figure (which would sit
+   behind the avatar) is hidden. Streamlit shows that state only after half
+   a second, so quick updates do not flash it. A spinner on the page already
+   has its own plane, so this one stays away then. */
+[data-testid="stStatusWidgetRunningIcon"] {
+  display: none;
+}
+
+[data-testid="stApp"]:has([data-testid="stStatusWidgetRunningIcon"]):not(:has([data-testid="stSpinner"])) [data-testid="stHeader"]::after {
+  content: "";
+  position: absolute;
+  top: 3.2rem;
+  left: 0;
+  width: 1.6rem;
+  height: 1.15rem;
+  background: var(--paper-plane) center / contain no-repeat;
+  pointer-events: none;
+  animation: paper-plane-crossing 3.6s ease-in-out infinite;
+}
+
+/* Reduced motion: the plane is shown, parked. */
+@media (prefers-reduced-motion: reduce) {
+  [data-testid="stSpinner"] [data-testid="stSpinnerIcon"]::after {
+    animation: none;
+  }
+
+  [data-testid="stApp"]:has([data-testid="stStatusWidgetRunningIcon"]):not(:has([data-testid="stSpinner"])) [data-testid="stHeader"]::after {
+    left: calc(50vw - .8rem);
+    animation: none;
+  }
 }
