@@ -31,6 +31,9 @@ if user is None:
     st.stop()
 
 restore_after_login(st.session_state)
+# Built-in examples are a shared catalog, independent of account age or page.
+from services.demo_updates import sync_demo_catalog
+sync_demo_catalog(st.session_state)
 apply_app_styles()
 account_page = st.Page(
     render_account_page, title="My account", icon=":material/account_circle:",

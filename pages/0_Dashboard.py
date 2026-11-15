@@ -15,7 +15,7 @@ from services.course_state import (
 from services.document_service import extract_document
 from services.ai_service import generate_topics, generation_available
 from services.course_icons import course_icon_svg
-from services.demo_updates import demo_update
+from services.demo_updates import sync_demo_catalog
 from services.guided_limits_ui import starter_question, start_demo
 from services.learning_flow import stage_practice
 from services.ui_style import apply_app_styles
@@ -47,37 +47,8 @@ st.caption("Choose a course or continue your next study session.")
 
 initialize_courses(st.session_state)
 
-# Seed built-in examples once. The versioned marker adds Python Basics to
-# sessions that already seeded the original two demos without restoring any
-# demos the user previously removed.
-if not st.session_state.get("default_demo_courses_v3_loaded", False):
-    current_course = st.session_state["current_course"]
-    loaded_course_ids = {
-        course.course_id for course in st.session_state["courses"]
-    }
-    previous_demo_seeded = st.session_state.get(
-        "default_demo_courses_loaded",
-        False,
-    )
-    demo_courses_to_seed = (
-        DEMO_COURSES[2:] if previous_demo_seeded else DEMO_COURSES
-    )
-    seed_succeeded = True
-    for _, filename, expected_course_id in demo_courses_to_seed:
-        if expected_course_id in loaded_course_ids:
-            continue
-        try:
-            course = load_demo_package(filename, expected_course_id)
-        except (OSError, ValueError) as error:
-            seed_succeeded = False
-            st.error(f"Could not load the default demo course: {error}")
-        else:
-            save_course(st.session_state, course)
-            loaded_course_ids.add(course.course_id)
-    st.session_state["current_course"] = current_course
-    if seed_succeeded:
-        st.session_state["default_demo_courses_loaded"] = True
-        st.session_state["default_demo_courses_v3_loaded"] = True
+# Keep standalone dashboard entry consistent with registered navigation.
+sync_demo_catalog(st.session_state)
 
 
 # Keep the course setup panel open across page reruns.
@@ -416,19 +387,6 @@ else:
                             f"{len(course.topics)} topics · "
                             f"{len(course.questions)} practice questions"
                         )
-                    if is_demo:
-                        updated_demo, added_count = demo_update(course)
-                        if updated_demo != course:
-                            added_topics = len(updated_demo.topics) - len(course.topics)
-                            st.caption(f"Demo update available: {added_topics} new topics · {added_count} new questions. Existing answers and saved content are preserved. New questions need review in Study Plan; confirm new topics there before practice.")
-                            update_label = "Add calculus knowledge update" if course.course_id == "calculus-i-demo" else "Add new demo questions"
-                            if st.button(update_label, key=f"update_demo_{course.course_id}", width="stretch"):
-                                save_course(st.session_state, updated_demo)
-                                outcome = save_course_to_account(st.session_state, updated_demo)
-                                if outcome is not None and not outcome.success:
-                                    st.warning("Update kept in this session; account save failed. " + outcome.message)
-                                else:
-                                    st.rerun()
                     if stage == "topics_only":
                         st.caption("Next: review topics and choose your exam scope.")
                     action_columns = st.columns([1, 1])
@@ -447,21 +405,21 @@ else:
                                 course.course_id,
                             )
                             st.switch_page("pages/1_Study_Hub.py")
-                    with action_columns[1]:
-                        if st.button(
-                            "Delete course",
-                            icon=":material/delete:",
-                            key=f"remove_course_{course.course_id}",
-                            type="secondary",
-                            use_container_width=True,
-                            help="Review a confirmation before deleting this course.",
-                        ):
-                            st.session_state[
-                                f"pending_course_removal_{course.course_id}"
-                            ] = True
-                            st.rerun()
-
-                    if st.session_state.get(
+                    if not is_demo:
+                        with action_columns[1]:
+                            if st.button(
+                                "Delete course",
+                                icon=":material/delete:",
+                                key=f"remove_course_{course.course_id}",
+                                type="secondary",
+                                use_container_width=True,
+                                help="Review a confirmation before deleting this course.",
+                            ):
+                                st.session_state[
+                                    f"pending_course_removal_{course.course_id}"
+                                ] = True
+                                st.rerun()
+                    if not is_demo and st.session_state.get(
                         f"pending_course_removal_{course.course_id}", False
                     ):
                         st.warning(

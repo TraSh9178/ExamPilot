@@ -4,7 +4,7 @@ from copy import deepcopy
 from models.schemas import StudyPackage
 from services.question_review import normalized_text
 
-FILES={'calculus-i-demo':'calculus_i_demo.json','econ101':'sample_course.json','python-basics-demo':'demo_python_basics.json'}
+FILES={'econ101':'sample_course.json','calculus-i-demo':'calculus_i_demo.json','python-basics-demo':'demo_python_basics.json'}
 
 
 def demo_update(course):
@@ -32,3 +32,38 @@ def demo_update(course):
         for q in added:reviews[q.id]='pending'
     data['learning_state']=metadata
     return StudyPackage.model_validate(data),len(added)
+
+
+def sync_demo_catalog(state):
+    """Give every session the current built-in catalog, preserving learner work.
+
+    Run after account restoration so saved legacy packages cannot hide new
+    topics. This adds content locally; normal account saves persist it later.
+    """
+    from services.course_state import initialize_courses
+    initialize_courses(state)
+    courses = list(state['courses'])
+    current = state.get('current_course')
+    by_id = {course.course_id: index for index, course in enumerate(courses)}
+    if current is not None:
+        if current.course_id in by_id:
+            courses[by_id[current.course_id]] = current
+        else:
+            by_id[current.course_id] = len(courses)
+            courses.append(current)
+    for course_id, filename in FILES.items():
+        if course_id in by_id:
+            index = by_id[course_id]
+            courses[index], _ = demo_update(courses[index])
+        else:
+            package = StudyPackage.model_validate_json(
+                (Path(__file__).resolve().parents[1]/'data'/filename).read_text(encoding='utf-8'))
+            by_id[course_id] = len(courses)
+            courses.append(package)
+    state['courses'] = courses
+    if current is not None and current.course_id in by_id:
+        state['current_course'] = courses[by_id[current.course_id]]
+
+    # Retain compatibility with older sessions; these markers no longer gate updates.
+    state['default_demo_courses_loaded'] = True
+    state['default_demo_courses_v3_loaded'] = True

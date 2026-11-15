@@ -50,7 +50,6 @@ def test_demo_update_dashboard_button_preserves_history_and_adds_questions():
     app.session_state['current_course']=old
     app.session_state['practice_history_calculus-i-demo']={}
     app.run()
-    app.button(key='update_demo_calculus-i-demo').click().run()
     assert not app.exception
     assert len(app.session_state['current_course'].questions)==len(current.questions)
     assert app.session_state['practice_history_calculus-i-demo']=={}

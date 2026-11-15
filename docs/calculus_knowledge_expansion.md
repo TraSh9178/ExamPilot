@@ -13,7 +13,7 @@ The original three topic IDs, summaries, first 30 questions and relationships ar
 
 Each new topic has three original multiple-choice drafts with explanations, computation/conceptual labels and practice-structure tags. No textbook page sources or human approvals are claimed. The 36 new questions are pending human review; the original approval policy is unchanged. After review in Study Plan, confirm the desired new topics to include them in practice. New knowledge cards and graph edges are immediately visible for demos. New topics do not imply new Concept Lab simulations: the existing interactive experiments remain Limits and Derivatives.
 
-For an existing saved Calculus course, Dashboard → **Add calculus knowledge update** appends missing topics, relationships and questions. Saved summaries, questions, reviews, confirmed scope and history remain intact. Reapplying the update is a no-op. An empty legacy graph only backfills edges whose endpoints already exist. Account persistence uses the existing save path; no database migration is needed.
+After login, the shared demo catalog automatically appends missing topics, relationships and questions for existing saved Calculus courses before any study page renders. No manual update is required. Saved summaries, questions, reviews, confirmed scope and history remain intact. Reapplying the update is a no-op. An empty legacy graph only backfills edges whose endpoints already exist. Account persistence uses the existing save path; no database migration is needed.
 
 Learning Radar sample counts remain limited to the original topics. No new student activity is invented. The new cards have no step hints yet; they use the existing no-hints behavior after approval.
 

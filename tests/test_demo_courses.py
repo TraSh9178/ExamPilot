@@ -398,7 +398,7 @@ def test_python_basics_demo_is_seeded_once_and_preserves_progress(
     ) == 3
 
 
-def test_existing_demo_session_migrates_python_without_restoring_deleted_demos(
+def test_existing_demo_session_always_receives_shared_examples(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
@@ -428,4 +428,4 @@ def test_existing_demo_session_migrates_python_without_restoring_deleted_demos(
     assert not app.exception
     assert [
         course.course_id for course in app.session_state["courses"]
-    ] == ["econ101", "calculus-i-demo"]
+    ] == ["econ101", "calculus-i-demo", "python-basics-demo"]
