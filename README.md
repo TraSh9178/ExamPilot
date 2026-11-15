@@ -321,10 +321,25 @@ Record the exact commit and environment when reporting real integration results.
 
 ## Contributors
 
-- [Yingxuan Huang (@Zerune0)](https://github.com/Zerune0) — Streamlit frontend, multi-course workflows, practice and progress UI, Anki/OCR interface integration, and account Save/Restore UI.
-- [Charles Chen (@k086-cloud)](https://github.com/k086-cloud) — AI integration (Gemini, later Claude), document parsing and OCR, account authentication, floating AI tutor, and UI refinements.
-- [Zhengchang Quan (@mormal1016)](https://github.com/mormal1016) — Exam and mastery engines, PostgreSQL persistence, saved-course discovery, and database validation.
-- [Jiale Li (@TraSh9178)](https://github.com/TraSh9178) — Shared data schema, knowledge graph, Anki export service, integration review, and release coordination.
+### Yingxuan Huang ([@Zerune0](https://github.com/Zerune0))
+
+- **Study experience.** Connected the student workflow across Home, Study Plan, Practice, and Progress. Built and refined interactive Concept Lab exercises, and polished the worksheet, paper-plane progress, and result-review layouts. [#43](https://github.com/TraSh9178/ExamPilot/pull/43), [#51](https://github.com/TraSh9178/ExamPilot/pull/51), [#79](https://github.com/TraSh9178/ExamPilot/pull/79), [#80](https://github.com/TraSh9178/ExamPilot/pull/80), [#81](https://github.com/TraSh9178/ExamPilot/pull/81)
+- **Learning feedback and demo content.** Built Learning DNA to track computation and conceptual evidence separately. Added confidence, reflection, transfer practice, and review insights. Expanded the built-in question banks and synced demo content across accounts. [#44](https://github.com/TraSh9178/ExamPilot/pull/44), [#46](https://github.com/TraSh9178/ExamPilot/pull/46), [#50](https://github.com/TraSh9178/ExamPilot/pull/50), [#52](https://github.com/TraSh9178/ExamPilot/pull/52), [#56](https://github.com/TraSh9178/ExamPilot/pull/56)
+
+### Charles Chen ([@k086-cloud](https://github.com/k086-cloud))
+
+- **AI, document processing, and deployment.** Built PPTX parsing and local image OCR, migrated the AI service from Gemini to Claude, and prepared the public Streamlit demo. [#15](https://github.com/TraSh9178/ExamPilot/pull/15), [#36](https://github.com/TraSh9178/ExamPilot/pull/36), [#39](https://github.com/TraSh9178/ExamPilot/pull/39)
+- **Accounts, Pilot, and Learning Radar.** Built registration and sign-in, added the authenticated floating tutor, and implemented Learning Radar's topic flags and community counts. Extended the paper UI and separated practice history and answer review into focused screens. [#21](https://github.com/TraSh9178/ExamPilot/pull/21), [#24](https://github.com/TraSh9178/ExamPilot/pull/24), [#49](https://github.com/TraSh9178/ExamPilot/pull/49), [#68](https://github.com/TraSh9178/ExamPilot/pull/68), [#69](https://github.com/TraSh9178/ExamPilot/pull/69)
+
+### Zhengchang Quan ([@mormal1016](https://github.com/mormal1016))
+
+- **Exam engines and persistence.** Implemented exam generation, grading, mastery tracking, and the PostgreSQL persistence layer for saved learning records. [#4](https://github.com/TraSh9178/ExamPilot/pull/4), [#20](https://github.com/TraSh9178/ExamPilot/pull/20)
+- **Accessible explanations and review.** Added simplified practice wording, a glossary, and Chinese interface support across pages. Implemented step-by-step topic explanations with course examples and question-specific AI follow-ups in Answer Review. Refined the Concept Lab prediction controls. [#45](https://github.com/TraSh9178/ExamPilot/pull/45), [#57](https://github.com/TraSh9178/ExamPilot/pull/57), [#67](https://github.com/TraSh9178/ExamPilot/pull/67), [#72](https://github.com/TraSh9178/ExamPilot/pull/72), [#76](https://github.com/TraSh9178/ExamPilot/pull/76), [#77](https://github.com/TraSh9178/ExamPilot/pull/77)
+
+### Jiale Li ([@TraSh9178](https://github.com/TraSh9178))
+
+- **Core integration and study tools.** Defined shared module interfaces, implemented knowledge-graph data and visualisation, integrated the demo courses and account workflows, and built mastery-aware Anki TSV export. [#2](https://github.com/TraSh9178/ExamPilot/pull/2), [#3](https://github.com/TraSh9178/ExamPilot/pull/3), [#7](https://github.com/TraSh9178/ExamPilot/pull/7), [#11](https://github.com/TraSh9178/ExamPilot/pull/11), [#12](https://github.com/TraSh9178/ExamPilot/pull/12), [#26](https://github.com/TraSh9178/ExamPilot/pull/26)
+- **Guided practice and release documentation.** Implemented step hints in Topic Practice and connected the first demo question to guided Limits review. Redesigned the desktop practice worksheet and prepared the judge-facing walkthrough. [#42](https://github.com/TraSh9178/ExamPilot/pull/42), [#53](https://github.com/TraSh9178/ExamPilot/pull/53), [#65](https://github.com/TraSh9178/ExamPilot/pull/65), [#82](https://github.com/TraSh9178/ExamPilot/pull/82)
 
 ## Documentation
 
