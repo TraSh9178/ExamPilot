@@ -72,8 +72,22 @@
   min-width: 0;
 }
 /* Markdown pulls the next block up by 1rem; these hold no paragraph, so keep them centred. */
-.st-key-flight_practice_progress [data-testid="stMarkdownContainer"]:has(> :is(.flight-clock, .flight-waypoints)) {
+.st-key-flight_practice_progress [data-testid="stMarkdownContainer"]:has(> :is(.flight-clock, .flight-route)) {
   margin-bottom: 0;
+}
+
+.flight-route {
+  display: block;
+  width: min(100%, 38rem);
+  height: auto;
+  margin-inline: auto;
+}
+
+@media (max-width: 560px) {
+  .st-key-flight_practice_progress > [data-testid="stLayoutWrapper"]:has(> .st-key-flight_progress_track) {
+    order: 1;
+    flex: 1 0 100%;
+  }
 }
 
 /* Session clock: a small paper box. The text is the server value; where the

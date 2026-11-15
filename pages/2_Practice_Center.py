@@ -22,6 +22,7 @@ from services.practice_pages_ui import (
 )
 from services.auth_session import current_user
 from services import learning_radar
+from components.flight_path import practice_route
 from components.knowledge_graph import load_course_radar, render_topic_radar
 from components.page_links import open_page_button
 from services.learning_flow import install_practice, remember_widget, hydrate_widgets, open_lab
@@ -226,6 +227,7 @@ def move_question(practice_key, session_id, step):
     target = max(0, min(len(questions) - 1, current + step))
     if target == current:
         return
+    active["worksheet_previous_index"] = current
     active["worksheet_index"] = target
     # Read once by the next render: it names the page-turn (see paper_practice.css).
     active["worksheet_move"] = "next" if step > 0 else "prev"
@@ -448,15 +450,9 @@ def render_question_screen(course, active, topic_names):
                 with st.container(key="flight_progress_count", width="content"):
                     st.caption(tr("Question") + f" {index + 1:02} / {len(questions):02}")
                 with st.container(key="flight_progress_track"):
-                    stops = min(len(questions), 12)
-                    current_stop = index * (stops - 1) // max(1, len(questions) - 1)
-                    markers = "".join(
-                        '<span class="flight-waypoint is-current">✈</span>' if step == current_stop
-                        else '<span class="flight-waypoint"></span>'
-                        for step in range(stops)
-                    )
+                    previous = active.pop("worksheet_previous_index", None)
                     st.markdown(
-                        f'<div class="flight-waypoints" aria-hidden="true">{markers}</div>',
+                        practice_route(len(questions), index, previous),
                         unsafe_allow_html=True,
                     )
                 with st.container(

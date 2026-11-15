@@ -400,36 +400,3 @@ div.st-key-create_course_button button > div > span { justify-content: flex-star
     padding: .75rem 0;
   }
 }
-
-.flight-waypoints {
-  display: flex;
-  position: relative;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 2.35rem;
-  max-width: 38rem;
-  isolation: isolate;
-}
-.flight-waypoints::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: 50% .4rem auto;
-  border-top: 1px dashed #aaa284;
-}
-.flight-waypoint {
-  display: grid;
-  place-items: center;
-  width: .56rem;
-  height: .56rem;
-  border: 1px solid #a49a7e;
-  border-radius: 50%;
-  background: var(--flight-paper);
-}
-.flight-waypoint.is-current {
-  width: 2.25rem;
-  height: 2.25rem;
-  color: #985831;
-  border-color: #d7ad8e;
-  font-size: 1.25rem;
-}

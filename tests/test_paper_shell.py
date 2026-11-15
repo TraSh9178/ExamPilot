@@ -294,7 +294,7 @@ def test_stacked_blocks_keep_a_gap_between_them():
     assert "margin-bottom: .5rem;" in css_rule(shell, card_row)
 
 
-def test_loading_shows_the_brand_plane_instead_of_a_round_spinner():
+def test_loading_centers_the_brand_plane_for_app_runs_and_spinners():
     shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
 
     # The inlined plane is the brand mark: same polygons, same colours.
@@ -306,25 +306,23 @@ def test_loading_shows_the_brand_plane_instead_of_a_round_spinner():
     for points, fill in polygons:
         assert f"points='{points}' fill='%23{fill}'" in plane.group(1)
 
-    # st.spinner: no ring, the plane flies on a short track.
-    ring = css_rule(shell, '[data-testid="stSpinner"] [data-testid="stSpinnerIcon"]')
-    assert "border: 0;" in ring and "animation: none;" in ring
-    flying = css_rule(shell, '[data-testid="stSpinner"] [data-testid="stSpinnerIcon"]::after')
-    assert "var(--paper-plane)" in flying and "paper-plane-patrol" in flying
-
-    # App running: Streamlit's figure is hidden and one plane crosses the window,
-    # unless a spinner on the page already shows one.
-    assert "display: none;" in css_rule(shell, '[data-testid="stStatusWidgetRunningIcon"]')
-    crossing = css_rule(
-        shell,
-        '[data-testid="stApp"]:has([data-testid="stStatusWidgetRunningIcon"])'
-        ':not(:has([data-testid="stSpinner"])) [data-testid="stHeader"]::after',
+    triggers = (
+        '[data-testid="stApp"]:has(:is([data-testid="stSpinner"], '
+        '[data-testid="stStatusWidgetRunningIcon"]))'
     )
-    assert "var(--paper-plane)" in crossing and "paper-plane-crossing" in crossing
-    assert "pointer-events: none;" in crossing
-    for name in ("paper-plane-patrol", "paper-plane-crossing"):
-        assert f"@keyframes {name} {{" in shell
-    reduced = shell[shell.index("@media (prefers-reduced-motion: reduce)"):]
+    veil = css_rule(shell, triggers + ' [data-testid="stAppViewContainer"]::after')
+    flight = css_rule(shell, triggers + "::after")
+    assert "position: fixed;" in veil and "backdrop-filter: blur(3px);" in veil
+    assert "center / 192px 56px" in veil
+    assert "top: calc(50% - 28px);" in flight and "anchor(--paper-loading-main center, 50%)" in flight
+    assert "var(--paper-plane)" in flight and "paper-loading-flight" in flight
+    assert "pointer-events: none;" in veil and "pointer-events: none;" in flight
+    track = next(line for line in shell.splitlines() if "--paper-loading-trail:" in line)
+    trail = re.search(r"%3Cpath d='([^']+)'", track)
+    assert trail and f'offset-path: path("{trail.group(1)}");' in flight
+    assert "stroke-dasharray=" in shell
+    reduced = shell[shell.rindex("@media (prefers-reduced-motion: reduce)"):]
+    assert "offset-distance: 50%;" in reduced
     assert reduced.count("animation: none;") == 2
 
 
