@@ -96,9 +96,10 @@ def start_practice(mode, *, use_demo_question=True, bilingual=None):
         # The sidebar toggle lives in app.py; set its session-state key directly.
         app.session_state[BILINGUAL_KEY] = bilingual
     app.run()
-    app.radio(key=f"practice_mode_{course.course_id}").set_value(mode)
+    displayed_mode = {"Mock Exam": "模拟考试", "Topic Practice": "知识点练习"}.get(mode, mode) if bilingual else mode
+    app.radio(key=f"practice_mode_{course.course_id}").set_value(displayed_mode)
     app.number_input(key=f"practice_count_{course.course_id}").set_value(1)
-    next(button for button in app.button if button.label == "Start practice").click().run()
+    next(button for button in app.button if button.label == ("开始练习" if bilingual else "Start practice")).click().run()
 
     assert not app.exception
     practice = app.session_state[f"active_practice_{course.course_id}"]
@@ -155,12 +156,12 @@ def test_hint_text_shows_chinese_key_terms_only_when_toggle_is_on(bilingual):
         assert app.session_state[state_key] == number
     assert all(button.key != button_key for button in app.button)
 
-    shown = [item.value for item in app.info if item.value.startswith("Hint ")]
+    shown = [item.value for item in app.info if item.value.startswith("提示 " if bilingual else "Hint ")]
     original = [f"Hint {number} of {len(hints)}: {hint}" for number, hint in enumerate(hints, start=1)]
     if bilingual:
-        # Each hint is annotated on its own; the counter prefix is untouched.
+        # Each hint is annotated on its own, while the interface counter is localized.
         assert shown == [
-            f"Hint {number} of {len(hints)}: {display_text(hint, {BILINGUAL_KEY: True})}"
+            f"提示 {number} / {len(hints)}：{display_text(hint, {BILINGUAL_KEY: True})}"
             for number, hint in enumerate(hints, start=1)
         ]
         assert shown != original
@@ -168,11 +169,13 @@ def test_hint_text_shows_chinese_key_terms_only_when_toggle_is_on(bilingual):
     else:
         assert shown == original
 
-    next(button for button in app.button if button.label == "Submit answers").click().run()
+    next(button for button in app.button if button.label == ("提交答案" if bilingual else "Submit answers")).click().run()
 
     assert not app.exception
-    assert f"Hints used: {len(hints)} of {len(hints)}" in [item.value for item in app.caption]
-    assert next(metric.value for metric in app.metric if metric.label == "Score") == "1 / 1"
+    expected_hints = (f"已使用提示：{len(hints)} / {len(hints)}" if bilingual
+                      else f"Hints used: {len(hints)} of {len(hints)}")
+    assert expected_hints in [item.value for item in app.caption]
+    assert next(metric.value for metric in app.metric if metric.label == ("得分" if bilingual else "Score")) == "1 / 1"
 
 
 @pytest.mark.parametrize(

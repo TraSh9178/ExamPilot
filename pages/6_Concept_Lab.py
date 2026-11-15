@@ -1,5 +1,7 @@
 """Interactive Calculus I concept experiments for the public demo."""
 
+from services.i18n import tr
+
 import altair as alt
 import pandas as pd
 import streamlit as st
@@ -13,16 +15,16 @@ from services.learning_flow import stage_practice
 
 def practice_topic(topic_id: str) -> None:
     """Use the Practice page's existing course-scoped widget contract."""
-    if not st.button("Practice this topic", key=f"concept_lab_practice_{topic_id}"):
+    if not st.button(tr("Practice this topic"), key=f"concept_lab_practice_{topic_id}"):
         return
     course = st.session_state.get("current_course")
     if course is None or course.course_id != "calculus-i-demo":
-        st.info("Open the Calculus I Demo course on the Dashboard to practise this topic.")
+        st.info(tr("Open the Calculus I Demo course on the Dashboard to practise this topic."))
         return
     confirmed = st.session_state.get(f"confirmed_scope_{course.course_id}", [])
     if topic_id not in confirmed:
-        st.info("Confirm this topic in Study Plan first.")
-        st.page_link("pages/1_Study_Hub.py", label="Go to Study Plan")
+        st.info(tr("Confirm this topic in Study Plan first."))
+        st.page_link("pages/1_Study_Hub.py", label=tr("Go to Study Plan"))
         return
     stage_practice(st.session_state, course, topic_id)
     st.switch_page("pages/2_Practice_Center.py")
@@ -30,8 +32,8 @@ def practice_topic(topic_id: str) -> None:
 
 apply_app_styles()
 
-st.title("Concept Lab")
-st.caption("Move the sliders and watch the idea happen.")
+st.title(tr("Concept Lab"))
+st.caption(tr("Move the sliders and watch the idea happen."))
 
 requested_topic = st.session_state.get("concept_lab_topic_calculus-i-demo", "calc_limits")
 limits_tab, derivatives_tab = st.tabs(
@@ -40,15 +42,15 @@ limits_tab, derivatives_tab = st.tabs(
 )
 
 with limits_tab:
-    st.subheader("Limits: approaching x = 2")
+    st.subheader(tr("Limits: approaching x = 2"))
     st.write(
-        "Move closer to x = 2 from both sides and watch the function values "
-        "approach 4."
+        tr("Move closer to x = 2 from both sides and watch the function values "
+        "approach 4.")
     )
 
     distances = [1, 0.5, 0.1, 0.05, 0.01, 0.001]
     distance = st.select_slider(
-        "Distance from x = 2",
+        tr("Distance from x = 2"),
         options=distances,
         value=0.1,
         key="concept_lab_limit_distance",
@@ -107,42 +109,42 @@ with limits_tab:
         alt.layer(curve, selected_points, hole).properties(height=320),
         width="stretch",
     )
-    st.caption("The open circle at (2, 4) marks a point where f(x) is undefined.")
+    st.caption(tr("The open circle at (2, 4) marks a point where f(x) is undefined."))
 
     left_column, right_column = st.columns(2)
     left_column.metric(
-        f"f(2 − {distance:g})",
+        tr(f"f(2 − {distance:g})"),
         f"{selected['left_value']:.3f}",
     )
     right_column.metric(
-        f"f(2 + {distance:g})",
+        tr(f"f(2 + {distance:g})"),
         f"{selected['right_value']:.3f}",
     )
 
-    with st.expander("Compare values from both sides"):
+    with st.expander(tr("Compare values from both sides")):
         st.dataframe(
             pd.DataFrame(limit_table(distances)).rename(
                 columns={
-                    "distance": "Distance",
-                    "left_x": "Left x",
-                    "left_value": "f(Left x)",
-                    "right_x": "Right x",
-                    "right_value": "f(Right x)",
+                    "distance": tr("Distance"),
+                    "left_x": tr("Left x"),
+                    "left_value": tr("f(Left x)"),
+                    "right_x": tr("Right x"),
+                    "right_value": tr("f(Right x)"),
                 }
             ),
             hide_index=True,
             width="stretch",
         )
-    st.info("f(2) is undefined, but f(x) gets as close to 4 as we like.")
+    st.info(tr("f(2) is undefined, but f(x) gets as close to 4 as we like."))
 
     practice_topic("calc_limits")
 
 with derivatives_tab:
-    st.subheader("Derivatives: from secant to tangent")
-    st.write("For f(x) = x³ − 5x, shrink h and compare the secant with the tangent at x₀.")
+    st.subheader(tr("Derivatives: from secant to tangent"))
+    st.write(tr("For f(x) = x³ − 5x, shrink h and compare the secant with the tangent at x₀."))
     x0 = st.slider("x₀", -3.0, 3.0, 1.0, 0.5, key="concept_lab_x0")
     h = st.select_slider(
-        "h", options=distances, value=0.5, key="concept_lab_h",
+        tr("h"), options=distances, value=0.5, key="concept_lab_h",
     )
     slope = secant_slope(x0, h)
     exact, intercept = tangent_line(x0)
@@ -150,15 +152,15 @@ with derivatives_tab:
     for step in range(201):
         x = -3.5 + 8 * step / 200
         rows.extend([
-            {"x": x, "y": cubic(x), "Line": "Curve f(x)"},
-            {"x": x, "y": cubic(x0) + slope * (x - x0), "Line": "Secant"},
-            {"x": x, "y": exact * x + intercept, "Line": "Tangent"},
+            {"x": x, "y": cubic(x), "Line": tr("Curve f(x)")},
+            {"x": x, "y": cubic(x0) + slope * (x - x0), "Line": tr("Secant")},
+            {"x": x, "y": exact * x + intercept, "Line": tr("Tangent")},
         ])
     lines = alt.Chart(pd.DataFrame(rows)).mark_line(strokeWidth=2).encode(
         x=alt.X("x:Q", title="x"),
         y=alt.Y("y:Q", title="y", scale=alt.Scale(zero=False)),
         color=alt.Color("Line:N", scale=alt.Scale(
-            domain=["Curve f(x)", "Secant", "Tangent"],
+            domain=[tr("Curve f(x)"), tr("Secant"), tr("Tangent")],
             range=["#2166DB", "#16A085", "#CC3344"],
         )),
         strokeDash=alt.StrokeDash("Line:N"),
@@ -171,7 +173,7 @@ with derivatives_tab:
     )
     st.altair_chart(alt.layer(lines, points).properties(height=360), width="stretch")
     secant_column, derivative_column = st.columns(2)
-    secant_column.metric("Secant slope", f"{slope:.6f}")
-    derivative_column.metric("Derivative f′(x₀)", f"{cubic_derivative(x0):.6f}")
-    st.info("As h approaches 0, the secant slope approaches f′(x₀) = 3x₀² − 5.")
+    secant_column.metric(tr("Secant slope"), f"{slope:.6f}")
+    derivative_column.metric(tr("Derivative f′(x₀)"), f"{cubic_derivative(x0):.6f}")
+    st.info(tr("As h approaches 0, the secant slope approaches f′(x₀) = 3x₀² − 5."))
     practice_topic("calc_derivatives")

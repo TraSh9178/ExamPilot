@@ -1,3 +1,4 @@
+from services.i18n import tr
 import streamlit as st
 
 from services.mastery_engine import (
@@ -11,14 +12,14 @@ from services.practice_insights_ui import render_history_insights
 
 apply_app_styles()
 
-st.title("Progress")
-st.caption("Review practice results and see which topics need more evidence.")
+st.title(tr("Progress"))
+st.caption(tr("Review practice results and see which topics need more evidence."))
 
 course = st.session_state.get("current_course")
 
 if course is None:
-    st.info("Load a course from the dashboard first.")
-    st.page_link("pages/0_Dashboard.py", label="Back to Dashboard")
+    st.info(tr("Load a course from the dashboard first."))
+    st.page_link("pages/0_Dashboard.py", label=tr("Back to Dashboard"))
     st.stop()
 
 with st.container(key="progress_course_heading"):
@@ -51,19 +52,19 @@ try:
         questions=list(questions_by_id.values()),
     )
 except ValueError as error:
-    st.error(f"Could not calculate performance: {error}")
+    st.error(tr(f"Could not calculate performance: {error}"))
     st.stop()
 
 mode_label = st.radio(
-    "Performance mode",
-    options=["Mock Exam", "Topic Practice"],
+    tr("Performance mode"),
+    options=[tr("Mock Exam"), tr("Topic Practice")],
     key=f"performance_mode_{course.course_id}",
     horizontal=True,
     width="stretch",
 )
-mode = "mock" if mode_label == "Mock Exam" else "topic"
+mode = "mock" if mode_label == tr("Mock Exam") else "topic"
 mode_name = mode_label
-st.caption(f"Statistics for {mode_name}")
+st.caption(tr(f"Statistics for {mode_name}"))
 
 mode_sessions = [
     session for session in sessions if session.mode == mode
@@ -90,12 +91,12 @@ with st.container(key="progress_overview"):
         ),
     ):
         with column.container(border=True):
-            st.metric(label, value)
+            st.metric(tr(label), value)
 
 if not history:
     st.info(
-        "No graded practice sessions yet. Your topic list will update "
-        "after you complete a practice session."
+        tr("No graded practice sessions yet. Your topic list will update "
+        "after you complete a practice session.")
     )
 
 # Prefer persisted chronology when restoring histories; keep new local sessions last.
@@ -103,8 +104,8 @@ order = course.learning_state.get("session_order", [])
 ordered_ids = [sid for sid in order if sid in history]
 ordered_ids.extend(sid for sid in history if sid not in ordered_ids)
 overview_tab, dna_tab, details_tab = st.tabs(
-    ["Overview", "Learning DNA", "Practice details"],
-    default=st.session_state.get(f"progress_tab_{course.course_id}", "Overview"),
+    [tr("Overview"), tr("Learning DNA"), tr("Practice details")],
+    default=tr(st.session_state.get(f"progress_tab_{course.course_id}", "Overview")),
 )
 with dna_tab:
     render_learning_dna(
@@ -136,12 +137,12 @@ stats_by_topic = {
 }
 
 with overview_tab:
-    st.subheader("Topic overview")
+    st.subheader(tr("Topic overview"))
     st.dataframe([
-        {"Topic": topic.name,
-         "Status": status_labels[get_mastery_status(stats_by_topic[topic.id])] if topic.id in stats_by_topic else "Unattempted",
-         "Different questions": stats_by_topic[topic.id].unique_attempted if topic.id in stats_by_topic else 0,
-         "Latest-answer accuracy": "—" if topic.id not in stats_by_topic or stats_by_topic[topic.id].evidence_accuracy is None else f"{stats_by_topic[topic.id].evidence_accuracy:.0f}%"}
+        {tr("Topic"): topic.name,
+         tr("Status"): tr(status_labels[get_mastery_status(stats_by_topic[topic.id])]) if topic.id in stats_by_topic else tr("Unattempted"),
+         tr("Different questions"): stats_by_topic[topic.id].unique_attempted if topic.id in stats_by_topic else 0,
+         tr("Latest-answer accuracy"): "—" if topic.id not in stats_by_topic or stats_by_topic[topic.id].evidence_accuracy is None else f"{stats_by_topic[topic.id].evidence_accuracy:.0f}%"}
         for topic in course.topics
     ], hide_index=True, width="stretch")
 
@@ -163,36 +164,36 @@ with details_tab:
         with st.container(border=True, key=f"progress_topic_{topic.id}"):
             st.subheader(topic.name)
             topic_columns = st.columns([1, 1, 1.5])
-            topic_columns[0].metric("Answers", attempted)
+            topic_columns[0].metric(tr("Answers"), attempted)
             topic_columns[1].metric(
-                "Accuracy",
+                tr("Accuracy"),
                 "—" if accuracy is None else f"{accuracy:.2f}%",
             )
             with topic_columns[2]:
-                st.caption("Mastery")
-                st.badge(status_labels[status], color=status_colors[status])
+                st.caption(tr("Mastery"))
+                st.badge(tr(status_labels[status]), color=status_colors[status])
             if topic_stats is not None:
                 evidence = topic_stats.unique_attempted if topic_stats.unique_attempted is not None else attempted
                 recent = topic_stats.evidence_accuracy
-                st.caption(f"Different questions: {evidence} · Latest-answer accuracy: " + ("—" if recent is None else f"{recent:.2f}%"))
-            st.caption(
+                st.caption(tr("Different questions") + f": {evidence} · " + tr("Latest-answer accuracy") + ": " + ("—" if recent is None else f"{recent:.2f}%"))
+            st.caption(tr(
                 (
                     f"{correct} correct out of {attempted} answers."
                     if attempted
                     else "No answers recorded in this mode."
                 )
-            )
+            ))
 
     st.caption(
-        "Insufficient evidence means fewer than 3 different questions for that topic "
+        tr("Insufficient evidence means fewer than 3 different questions for that topic "
         "in the selected mode. "
         "Below 60%: Weak · 60–79.99%: Developing · 80% or above: Mastered."
-    )
+   ) )
     st.caption(
-        "Signed-in users' saved practice records can be restored across sessions. "
-        "Unsaved records remain in the current session only."
+        tr("Signed-in users' saved practice records can be restored across sessions. "
+        "Unsaved records remain in the current session only.")
     )
-if st.button("Start practice", type="primary"):
+if st.button(tr("Start practice"), type="primary"):
     from services.learning_flow import stage_practice
     stage_practice(st.session_state, course)
     st.switch_page("pages/2_Practice_Center.py")

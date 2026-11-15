@@ -1,3 +1,4 @@
+from services.i18n import tr
 import streamlit as st
 
 from services.account_sync import (
@@ -25,7 +26,7 @@ user = current_user(st.session_state)
 if user is None:
     clear_tutor_browser_state()
     st.navigation(
-        [st.Page(render_auth_page, title="Log in", icon=":material/login:", default=True)],
+        [st.Page(render_auth_page, title=tr("Log in"), icon=":material/login:", default=True)],
         position="hidden",
     ).run()
     st.stop()
@@ -36,45 +37,45 @@ from services.demo_updates import sync_demo_catalog
 sync_demo_catalog(st.session_state)
 apply_app_styles()
 account_page = st.Page(
-    render_account_page, title="My account", icon=":material/account_circle:",
+    render_account_page, title=tr("My account"), icon=":material/account_circle:",
     url_path="account", visibility="hidden",
 )
 
 pages = [
     st.Page(
         "pages/0_Dashboard.py",
-        title="Dashboard",
+        title=tr("Dashboard"),
         icon=":material/dashboard:",
         default=True,
     ),
     st.Page(
         "pages/1_Study_Hub.py",
-        title="Study Plan",
+        title=tr("Study Plan"),
         icon=":material/menu_book:",
     ),
     st.Page(
         "pages/2_Practice_Center.py",
-        title="Practice",
+        title=tr("Practice"),
         icon=":material/edit_note:",
     ),
     st.Page(
         "pages/3_Performance.py",
-        title="Progress",
+        title=tr("Progress"),
         icon=":material/monitoring:",
     ),
     st.Page(
         "pages/4_Knowledge_Graph.py",
-        title="Knowledge Map",
+        title=tr("Knowledge Map"),
         icon=":material/hub:",
     ),
     st.Page(
         "pages/6_Concept_Lab.py",
-        title="Concept Lab",
+        title=tr("Concept Lab"),
         icon=":material/science:",
     ),
     st.Page(
         "pages/5_Export_Anki.py",
-        title="Export to Anki",
+        title=tr("Export to Anki"),
         icon=":material/download:",
     ),
 ]
@@ -99,7 +100,7 @@ if st.session_state.get("_learning_page_path") != navigation.url_path:
 render_account_sidebar(account_page)
 with st.sidebar:
     render_sidebar_status()
-    with st.expander("Accessibility settings"):
+    with st.expander(tr("Accessibility settings")):
         render_accessibility_controls()
 
 # Reserve room for the floating entry at the bottom of narrow study pages.

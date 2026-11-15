@@ -1,3 +1,4 @@
+from services.i18n import tr
 """Account identity and session avatar controls behind the existing Auth gate."""
 
 import base64
@@ -62,23 +63,23 @@ def render_account_sidebar(account_page) -> None:
             '<div class="account-sidebar-identity">'
             f'{_avatar_html(user.username)}'
             '<div class="account-sidebar-copy">'
-            '<span class="account-sidebar-label">SIGNED IN AS</span>'
+            f'<span class="account-sidebar-label">{tr("SIGNED IN AS")}</span>'
             f'<strong>{escape(user.username)}</strong>'
             '</div></div>',
             unsafe_allow_html=True,
         )
         st.page_link(
-            account_page, label="My account", icon=":material/account_circle:",
+            account_page, label=tr("My account"), icon=":material/account_circle:",
             use_container_width=True,
         )
         discard_confirmed = True
         if has_unresolved_conflicts(st.session_state):
             discard_confirmed = st.checkbox(
-                "Discard conflicting local records on log out",
+                tr("Discard conflicting local records on log out"),
                 key="confirm_discard_logout_button",
             )
         st.button(
-            "Log out", key="logout_button", icon=":material/logout:",
+            tr("Log out"), key="logout_button", icon=":material/logout:",
             disabled=not discard_confirmed, on_click=logout_session, args=(st.session_state,),
             use_container_width=True,
         )
@@ -87,45 +88,45 @@ def render_account_sidebar(account_page) -> None:
 def render_account_page() -> None:
     user = current_user(st.session_state)
     if user is None:
-        st.info("Log in to view your account.")
+        st.info(tr("Log in to view your account."))
         st.stop()
 
     apply_app_styles()
-    st.title("My account")
-    st.caption("Your identity across your study and practice pages.")
+    st.title(tr("My account"))
+    st.caption(tr("Your identity across your study and practice pages."))
     identity, avatar_controls = st.columns([1, 1], gap="large")
     with identity, st.container(border=True, key="account_identity"):
         st.markdown(_avatar_html(user.username, large=True), unsafe_allow_html=True)
         st.subheader(user.username)
-        st.caption("Currently signed in")
+        st.caption(tr("Currently signed in"))
         discard_confirmed = True
         if has_unresolved_conflicts(st.session_state):
             discard_confirmed = st.checkbox(
-                "Discard conflicting local records on log out",
+                tr("Discard conflicting local records on log out"),
                 key="confirm_discard_account_logout_button",
             )
         st.button(
-            "Log out", key="account_logout_button", icon=":material/logout:",
+            tr("Log out"), key="account_logout_button", icon=":material/logout:",
             disabled=not discard_confirmed, on_click=logout_session, args=(st.session_state,),
             use_container_width=True,
         )
 
     with avatar_controls, st.container(border=True, key="account_avatar_controls"):
-        st.subheader("Profile photo")
-        st.caption("Upload a PNG or JPG, up to 2 MB.")
+        st.subheader(tr("Profile photo"))
+        st.caption(tr("Upload a PNG or JPG, up to 2 MB."))
         version = st.session_state.get("account_avatar_upload_version", 0)
         upload_key = f"account_avatar_upload_{user.user_id}_{version}"
         st.file_uploader(
-            "Choose a profile photo", type=["png", "jpg", "jpeg"],
+            tr("Choose a profile photo"), type=["png", "jpg", "jpeg"],
             max_upload_size=2, key=upload_key,
             on_change=_upload_avatar, args=(upload_key, user.user_id),
         )
         notice = st.session_state.get("account_avatar_notice")
         if notice:
-            (st.success if notice.success else st.error)(notice.message)
+            (st.success if notice.success else st.error)(tr(notice.message))
         st.button(
-            "Remove photo", key="account_remove_avatar",
+            tr("Remove photo"), key="account_remove_avatar",
             icon=":material/delete:", disabled=get_account_avatar(st.session_state) is None,
             on_click=_remove_avatar, args=(user.user_id,),
         )
-        st.caption("Your photo stays in this browser session and clears when you log out.")
+        st.caption(tr("Your photo stays in this browser session and clears when you log out."))

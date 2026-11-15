@@ -11,6 +11,7 @@ from services.auth_session import current_user
 from services.course_state import select_course
 from services.learning_flow import install_practice
 from services.question_editor import available_questions
+from services.i18n import tr
 
 
 DEMO_COURSE_ID = "calculus-i-demo"
@@ -41,7 +42,7 @@ def start_demo(state, course, question):
 
     select_course(state, course.course_id)
     state[scope_key] = confirmed
-    state[f"practice_mode_{course.course_id}"] = "Topic Practice"
+    state[f"practice_mode_{course.course_id}"] = tr("Topic Practice")
     state[f"practice_topic_{course.course_id}"] = question.topic_id
     state[f"practice_count_{course.course_id}"] = 1
     session = ExamSession(session_id=str(uuid4()), mode="topic", question_ids=[question.id])
@@ -77,87 +78,88 @@ def render_guided_review(course, session, questions, result) -> bool:
     first_answer = question.options[attempt.selected_index] if attempt.selected_index is not None else "Unanswered"
 
     with st.container(border=True, key="guided_limits_review"):
-        st.subheader("Redo the step that stopped you")
-        st.caption("Calculus I · Limits")
+        st.subheader(tr("Redo the step that stopped you"))
+        st.caption(tr("Calculus I · Limits"))
         if progress.get("complete"):
             original, follow_up = st.columns(2)
             with original:
-                st.markdown("**First question**")
-                st.write(f"Your answer: {first_answer}")
-                st.caption(REASONS[progress["reason"]][0])
+                st.markdown(tr("**First question**"))
+                st.write(tr("Your answer: ") + first_answer)
+                st.caption(tr(REASONS[progress["reason"]][0]))
             with follow_up:
-                st.markdown("**New question**")
-                st.success("8 · Correct")
-                st.caption("Solved after a retry." if progress["retried"] else "Solved on your first try.")
-            st.caption("You practised factoring a difference of squares before taking the limit.")
+                st.markdown(tr("**New question**"))
+                st.success(tr("8 · Correct"))
+                st.caption(tr("Solved after a retry." if progress["retried"] else "Solved on your first try."))
+            st.caption(tr("You practised factoring a difference of squares before taking the limit."))
             return True
 
-        st.markdown(f"**First answer:** {first_answer}")
+        st.markdown(tr("**First answer:** ") + first_answer)
         if "reason" not in progress:
             reason = st.radio(
-                "Where did you get stuck?",
+                tr("Where did you get stuck?"),
                 list(REASONS),
                 index=None,
-                format_func=lambda value: REASONS[value][0],
+                format_func=lambda value: tr(REASONS[value][0]),
                 key=f"{key}_reason",
             )
-            if st.button("Work on this step", type="primary", key=f"{key}_start"):
+            if st.button(tr("Work on this step"), type="primary", key=f"{key}_start"):
                 if reason is None:
-                    st.warning("Choose what stopped you, or select I’m not sure.")
+                    st.warning(tr("Choose what stopped you, or select I’m not sure."))
                 else:
                     progress["reason"] = reason
                     st.rerun()
             return True
 
-        st.info(REASONS[progress["reason"]][1])
+        st.info(tr(REASONS[progress["reason"]][1]))
         user = current_user(st.session_state)
         if user is not None and progress["reason"] in learning_radar.REASON_LABELS:
-            with st.expander("Learning Radar · share this blocker"):
-                st.caption("Add this topic and reason to the anonymous course totals.")
+            with st.expander(tr("Learning Radar · share this blocker")):
+                st.caption(tr("Add this topic and reason to the anonymous course totals."))
                 if progress.get("flag_saved"):
-                    st.caption("Shared with Learning Radar.")
-                elif st.button("Share anonymously", key=f"{key}_flag"):
+                    st.caption(tr("Shared with Learning Radar."))
+                elif st.button(tr("Share anonymously"), key=f"{key}_flag"):
                     outcome = learning_radar.set_flag(user.user_id, course.course_id, TOPIC_ID, progress["reason"])
                     if outcome.success:
                         progress["flag_saved"] = True
                         forget_course_radar(st.session_state, course.course_id)
                         st.rerun()
                     else:
-                        st.warning("Learning Radar is unavailable. You can still finish this review.")
+                        st.warning(tr("Learning Radar is unavailable. You can still finish this review."))
 
         if not progress.get("step_done"):
             factor = st.radio(
-                "Which expression equals x² − 4?",
+                tr("Which expression equals x² − 4?"),
                 FACTORS,
                 index=None,
                 key=f"{key}_factor",
             )
-            if st.button("Check this step", type="primary", key=f"{key}_check"):
+            if st.button(tr("Check this step"), type="primary", key=f"{key}_check"):
                 if factor == FACTORS[1]:
                     progress["step_done"] = True
                     st.rerun()
                 elif factor is None:
-                    st.warning("Choose an expression first.")
+                    st.warning(tr("Choose an expression first."))
                 else:
-                    st.warning("Expand your choice. Does the middle term cancel?")
+                    st.warning(tr("Expand your choice. Does the middle term cancel?"))
             return True
 
-        st.markdown("**The step you repaired:** x² − 4 = (x − 2)(x + 2)")
-        st.caption("For x ≠ 2, cancel x − 2 and take the limit of x + 2.")
+        st.markdown(tr("**The step you repaired:** x² − 4 = (x − 2)(x + 2)"))
+        st.caption(tr("For x ≠ 2, cancel x − 2 and take the limit of x + 2."))
         answer = st.radio(
-            "New question: what is limₓ→₄ (x² − 16)/(x − 4)?",
+            tr("New question: what is limₓ→₄ (x² − 16)/(x − 4)?"),
             ("0", "4", "8", "The limit does not exist"),
+            format_func=tr,
             index=None,
             key=f"{key}_transfer",
         )
-        if st.button("Check the new question", type="primary", key=f"{key}_finish"):
+        if st.button(tr("Check the new question"), type="primary", key=f"{key}_finish"):
             if answer is None:
-                st.warning("Choose an answer first.")
+                st.warning(tr("Choose an answer first."))
             elif answer == "8":
                 progress["retried"] = progress.get("retried", False)
                 progress["complete"] = True
                 st.rerun()
             else:
                 progress["retried"] = True
-                st.warning("Try rewriting x² − 16 as a difference of squares.")
+                st.warning(tr("Try rewriting x² − 16 as a difference of squares."))
     return True

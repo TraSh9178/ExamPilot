@@ -11,6 +11,7 @@ from streamlit_agraph import Config, Edge, Node
 from models.schemas import StudyPackage, TopicStats
 from services import learning_radar
 from services.graph_service import build_mastery_graph
+from services.i18n import LANGUAGE_KEY, tr
 
 
 _RELATIONSHIP_STYLES = {
@@ -63,6 +64,7 @@ def agraph(nodes, edges, config, node_scale: float = 1.0):
             },
             "config": config.to_dict(),
             "nodeScale": node_scale,
+            **({"languageZh": True} if st.session_state.get(LANGUAGE_KEY, False) else {}),
         },
         default=None,
         key=f"bounded_graph_{config.layout['randomSeed']}",
@@ -77,6 +79,7 @@ def _badged_label(label: str, badge: str | None) -> str:
 def convert_graph_data(
     graph: dict,
     node_badges: dict[str, str] | None = None,
+    translate_labels: bool = False,
 ) -> tuple[list[Node], list[Edge]]:
     """Convert build_mastery_graph output for streamlit-agraph.
 
@@ -87,7 +90,7 @@ def convert_graph_data(
     nodes = [
         Node(
             id=node["id"],
-            label=_badged_label(node["label"], badges.get(node["id"])),
+            label=_badged_label(node["label"], tr(badges[node["id"]]) if translate_labels and node["id"] in badges else badges.get(node["id"])),
             color=node["color"],
             size=MIN_NODE_SIZE,
             font={
@@ -109,12 +112,15 @@ def convert_graph_data(
                 f"Unknown relationship type: {relationship_type}"
             )
 
+        edge_style = _RELATIONSHIP_STYLES[relationship_type].copy()
+        if translate_labels:
+            edge_style["label"] = tr(edge_style["label"])
         edges.append(
             Edge(
                 source=edge["source"],
                 target=edge["target"],
                 font={"size": 14},
-                **_RELATIONSHIP_STYLES[relationship_type],
+                **edge_style,
             )
         )
 
@@ -132,7 +138,12 @@ def render_knowledge_graph(
 ) -> str | None:
     graph = build_mastery_graph(package, stats, mode)
     if node_badges:
-        nodes, edges = convert_graph_data(graph, node_badges=node_badges)
+        if st.session_state.get(LANGUAGE_KEY, False):
+            nodes, edges = convert_graph_data(graph, node_badges=node_badges, translate_labels=True)
+        else:
+            nodes, edges = convert_graph_data(graph, node_badges=node_badges)
+    elif st.session_state.get(LANGUAGE_KEY, False):
+        nodes, edges = convert_graph_data(graph, translate_labels=True)
     else:
         nodes, edges = convert_graph_data(graph)
     config = Config(
@@ -206,35 +217,35 @@ def render_topic_details(
     topic_stats: TopicStats | None = None,
 ) -> None:
     if details is None:
-        st.info("Click a knowledge point to see its details.")
+        st.info(tr("Click a knowledge point to see its details."))
         return
 
     with st.container(key="knowledge_topic_heading"):
         st.subheader(details["name"])
 
     with st.container(key="knowledge_topic_summary"):
-        st.subheader("Summary")
+        st.subheader(tr("Summary"))
         st.write(details["summary"])
 
     source_pages = details["source_pages"]
     if source_pages:
-        st.caption(f"Source pages: {', '.join(map(str, source_pages))}")
+        st.caption(tr(f"Source pages: {', '.join(map(str, source_pages))}"))
     else:
-        st.caption("Source pages not provided")
+        st.caption(tr("Source pages not provided"))
 
     st.divider()
-    st.markdown("**Your Progress**")
+    st.markdown(tr("**Your Progress**"))
     if topic_stats is not None:
         with st.container(key="knowledge_topic_stats"):
             stats_columns = st.columns(2)
-            stats_columns[0].metric("Answers", topic_stats.attempted)
-            st.caption(f"Different questions: {topic_stats.unique_attempted if topic_stats.unique_attempted is not None else topic_stats.attempted}")
+            stats_columns[0].metric(tr("Answers"), topic_stats.attempted)
+            st.caption(tr(f"Different questions: {topic_stats.unique_attempted if topic_stats.unique_attempted is not None else topic_stats.attempted}"))
             stats_columns[1].metric(
-                "Accuracy",
+                tr("Accuracy"),
                 "—" if topic_stats.accuracy is None else f"{topic_stats.accuracy:.2f}%",
             )
     status = details["status"]
-    st.badge(_MASTERY_LABELS[status], color=_MASTERY_BADGE_COLORS[status])
+    st.badge(tr(_MASTERY_LABELS[status]), color=_MASTERY_BADGE_COLORS[status])
 
 
 RADAR_CACHE_SECONDS = 15
@@ -398,12 +409,12 @@ def concept_lab_available(course_id: str, topic_id: str) -> bool:
 def render_reason_hint(reason: str | None) -> None:
     """Point users who cannot understand the wording to Accessibility mode."""
     if reason == "wording":
-        st.info(WORDING_HINT)
+        st.info(tr(WORDING_HINT))
 
 
 def render_saved_reason(reason: str | None) -> None:
     """Show the reason the user gave when flagging the selected topic."""
-    st.caption(f"Your reason: {radar_reason_label(reason)}")
+    st.caption(tr("Your reason: ") + tr(radar_reason_label(reason)))
     render_reason_hint(reason)
 
 
@@ -412,12 +423,12 @@ def render_topic_radar(
     prerequisite_names: Sequence[str] = (),
 ) -> None:
     """Show how many students are stuck on the selected topic."""
-    st.markdown(radar_count_text(topic_radar))
+    st.markdown(tr(radar_count_text(topic_radar)))
     if topic_radar is not None and topic_radar.sample_count > 0:
-        st.caption("Includes sample data")
+        st.caption(tr("Includes sample data"))
     hint = radar_prerequisite_hint(topic_radar, prerequisite_names)
     if hint is not None:
-        st.info(hint)
+        st.info(tr(hint))
 
 
 def render_radar_panel(
@@ -426,8 +437,8 @@ def render_radar_panel(
     topic_names: dict[str, str],
 ) -> None:
     """List the course's flagged topics in the order given (most flagged first)."""
-    st.markdown("**Learning Radar**")
-    st.caption("Topics where students marked \"I'm stuck here\", most flagged first.")
+    st.markdown(tr("**Learning Radar**"))
+    st.caption(tr("Topics where students marked \"I'm stuck here\", most flagged first."))
     flagged = [
         topic_radar
         for topic_radar in ranked_topics
@@ -439,16 +450,21 @@ def render_radar_panel(
             marker = f"{index}. "
             lines.append(
                 f"{marker}**{topic_names[topic_radar.topic_id]}** — "
-                f"{radar_count_text(topic_radar)}"
+                f"{tr(radar_count_text(topic_radar))}"
             )
             breakdown = radar_reason_breakdown(topic_radar)
             if breakdown is not None:
                 # Indent to the item's content so it renders as a nested bullet.
-                lines.append(f"{' ' * len(marker)}- {breakdown}")
+                parts = [
+                    f"{tr(learning_radar.REASON_LABELS[code])} {topic_radar.reasons[code]}"
+                    for code in learning_radar.REASON_LABELS
+                    if topic_radar.reasons.get(code, 0) > 0
+                ]
+                lines.append(f"{' ' * len(marker)}- {' · '.join(parts)}")
         st.markdown("\n".join(lines))
     else:
-        st.caption("No topics have been flagged yet.")
+        st.caption(tr("No topics have been flagged yet."))
     if radar.has_sample:
-        st.caption("Includes sample data")
+        st.caption(tr("Includes sample data"))
     if not radar.live:
-        st.caption("Live flags are unavailable right now.")
+        st.caption(tr("Live flags are unavailable right now."))
