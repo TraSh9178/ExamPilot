@@ -51,9 +51,12 @@ st.title(tr("Concept Lab"))
 st.caption(tr("Predict, move the controls, then explain what changed."))
 # Values of steps that are not on screen (or were set before leaving the page).
 restore_values()
+# Written again on every run, not only the first: the browser shows a control's
+# own default unless the run that first draws it also sets its value, and the
+# controls first appear in step 2, after the chart has used these values.
 for key, value in {"concept_lab_limit_distance": 0.1, "concept_lab_x0": 1.0,
                    "concept_lab_h": 0.5, "concept_lab_zoom": True, "concept_lab_corner_h": 0.5}.items():
-    st.session_state.setdefault(key, value)
+    st.session_state[key] = st.session_state.get(key, value)
 
 requested_topic = st.session_state.get("concept_lab_topic_calculus-i-demo", "calc_limits")
 limits_label, derivatives_label = tr("Limits"), tr("Derivatives")

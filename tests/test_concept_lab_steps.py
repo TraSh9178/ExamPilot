@@ -488,3 +488,42 @@ def test_step_indicator_marks_the_current_step_with_paper_tokens():
     assert "margin-bottom: 0;" in rule(
         '[data-testid="stMain"] [data-testid="stMarkdownContainer"]:has(> ol.lab-steps)'
     )
+
+
+# ---- A control that first appears in step 2 ---------------------------------------
+
+STARTING_VALUES = {
+    "limits": {"concept_lab_limit_distance": 0.1},
+    "derivatives": {"concept_lab_x0": 1.0, "concept_lab_h": 0.5, "concept_lab_zoom": True},
+    "corner": {"concept_lab_corner_h": 0.5},
+}
+
+
+def _control(app: AppTest, key: str):
+    for kind in ("select_slider", "slider", "toggle"):
+        for element in getattr(app, kind):
+            if element.key == key:
+                return element
+    raise AssertionError(f"No control with key {key}")
+
+
+@pytest.mark.parametrize("topic", TOPICS)
+def test_controls_are_told_their_starting_value_when_step_two_first_appears(topic):
+    # The browser shows a control's own default unless the run that first draws
+    # it also sets its value. The starting values differ from those defaults
+    # (0.1, not the first distance), and the chart already uses them in step 1.
+    app = _lab()
+    choice = PREDICTIONS[topic][1][0]
+    app.radio(key=f"lab_{topic}_prediction").set_value(choice).run()
+    app.button(key=f"lab_{topic}_check").click().run()
+    app.button(key=f"lab_{topic}_next_explore").click().run()
+    assert not app.exception
+    for key, value in STARTING_VALUES[topic].items():
+        control = _control(app, key)
+        assert control.value == value
+        assert control.proto.set_value, f"{key} would show its own default in the browser"
+
+    # Still told on a later run, after another control changed.
+    app.button(key=f"lab_{topic}_approach").click().run()
+    for key in STARTING_VALUES[topic]:
+        assert _control(app, key).proto.set_value
