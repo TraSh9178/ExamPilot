@@ -282,12 +282,14 @@ def test_progress_review_and_time_use_selected_mode_and_latest_family():
     app.session_state['practice_history_insights']={'s':{'session':s,'questions':course.questions[:2],'attempts':result['attempts'],'result':result}}
     app.run()
     assert not app.exception
+    from tests.test_progress_charts import bar_rows, charts
     tables=[f.value for f in app.dataframe]
-    assert any('Tracked seconds' in t.columns and t['Tracked seconds'].sum()==40 for t in tables)
+    # Time by topic is a chart now: one bar for Topic, 30 s + 10 s.
+    assert [(row['label'],row['value']) for markup in charts(app,'time') for row in bar_rows(markup)]==[('Topic','40 s')]
     assert any('Why review' in t.columns and 'Confident but incorrect' in t.iloc[0]['Why review'] for t in tables)
     app.radio(key='performance_mode_insights').set_value('Mock Exam').run()
     assert not app.exception
-    assert all('Tracked seconds' not in t.value.columns for t in app.dataframe)
+    assert not charts(app,'time')
 
 
 def test_answer_evidence_is_one_short_line_without_completion_claims():

@@ -531,6 +531,20 @@ _TRANSLATIONS.update({
     "#### Learning Radar": "#### 学习雷达",
 })
 
+# progress charts
+_TRANSLATIONS.update({
+    "Mastery by topic": "各知识点掌握情况",
+    "Accuracy by session": "各次练习正确率",
+    # Replaces the earlier wording so the three chart headings read alike.
+    "Time by topic": "各知识点用时",
+    "Example": "示例",
+    "Example report": "示例报告",
+    "These numbers are sample data. Finish a practice session to see your own.": "这些数字是示例数据。完成一次练习后就会显示你自己的结果。",
+    "Not enough answers yet": "作答还不够",
+    "No graded sessions in this mode yet.": "此模式下还没有已评分的练习。",
+    "Each dot is one graded session, oldest on the left.": "每个点代表一次已评分的练习，最早的在最左边。",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
@@ -609,6 +623,12 @@ _DYNAMIC = [
     (r"^Last time you chose ([A-D])\.$", r"上次你选了 \1。"),
     # practice clock
     (r"^Session time (.+)$", r"本次用时 \1"),
+    # progress charts
+    (r"^(\d+) different questions?$", r"\1 道不同题目"),
+    (r"^(\d+) answers?$", r"\1 次作答"),
+    (r"^Session (\d+): (\d+)%$", r"第 \1 次练习：\2%"),
+    (r"^Latest session: (\d+)%$", r"最近一次练习：\1%"),
+    (r"^(\d+) min (\d+) s$", r"\1 分 \2 秒"),
 ]
 
 

@@ -129,7 +129,8 @@ def test_progress_exposes_learning_dna_evidence(with_history):
         assert 'Computation answers are more consistent' in ' '.join(m.value for m in app.markdown)
         assert len(next(frame.value for frame in app.dataframe if 'Dimension' in frame.value.columns))==6
     else:
-        assert 'Insufficient evidence' in captions
+        from tests.test_progress_charts import bar_rows, chart
+        assert [row['value'] for row in bar_rows(chart(app,'dna'))]==['Not enough answers yet']*2
     app.radio(key='performance_mode_test-dna').set_value('Mock Exam').run()
     assert not app.exception
     assert not any("Dimension" in frame.value.columns for frame in app.dataframe)
@@ -178,8 +179,9 @@ def test_profile_uses_saved_chronology_on_progress_page():
     app.session_state['practice_history_test-dna']=records
     app.run()
     assert not app.exception
-    computation=next(m for m in app.metric if m.label=='Computation')
-    assert computation.value=='67%'
+    from tests.test_progress_charts import bar_rows, chart
+    computation=bar_rows(chart(app,'dna'))[0]
+    assert computation['label']=='Computation' and computation['value']=='67%'
 
 
 def test_progress_for_old_untagged_history_does_not_infer_abilities():
@@ -193,7 +195,10 @@ def test_progress_for_old_untagged_history_does_not_infer_abilities():
     assert not app.exception
     assert 'excluded' not in ' '.join(c.value for c in app.caption)
     assert not any("Dimension" in frame.value.columns for frame in app.dataframe)
-    assert next(m for m in app.metric if m.label=='Computation').value=='—'
+    from tests.test_progress_charts import bar_rows, chart
+    computation=bar_rows(chart(app,'dna'))[0]
+    assert computation['label']=='Computation' and computation['value']=='Not enough answers yet'
+    assert computation['fill'] is None and computation['detail']=='0 different questions'
 
 
 def test_dashboard_entry_navigates_to_learning_dna_in_registered_app():
