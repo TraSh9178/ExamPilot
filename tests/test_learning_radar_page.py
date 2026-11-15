@@ -254,17 +254,28 @@ def test_radar_uses_the_picked_topic_for_practice_without_changing_scope(monkeyp
     assert app.title[0].value == "Practice"
     assert "Price Elasticity of Demand" in [heading.value for heading in app.subheader]
     assert not any(radio.label == "Practice mode" for radio in app.radio)
-    app.button(key=f"practice_start_{ECON_ID}").click().run()
+    focus_key = f"learning_radar_focus_{ECON_ID}"
+    assert app.session_state[focus_key] == "elasticity"
 
-    assert not app.exception
-    session = app.session_state[f"active_practice_{ECON_ID}"]
+    # AppTest retains the previous page's pill node after a switch, even after
+    # Streamlit removes its widget value. Continue with the real navigation and
+    # the carried state in a fresh runner, without the obsolete widget nodes.
+    practice = signed_in_app(ROOT / "app.py").run()
+    for key in (scope_key, "current_course", focus_key, f"practice_entry_{ECON_ID}"):
+        if key in app.session_state:
+            practice.session_state[key] = app.session_state[key]
+    practice.switch_page("pages/2_Practice_Center.py").run()
+    practice.button(key=f"practice_start_{ECON_ID}").click().run()
+
+    assert not practice.exception
+    session = practice.session_state[f"active_practice_{ECON_ID}"]
     assert session["session"].mode == "topic"
     assert {q.topic_id for q in session["questions"]} == {"elasticity"}
-    assert (app.session_state[scope_key] if scope_key in app.session_state else None) == exam_scope
+    assert (practice.session_state[scope_key] if scope_key in practice.session_state else None) == exam_scope
 
-    app.switch_page("pages/7_Learning_Radar.py").run()
-    assert not app.exception
-    assert app.button_group(key=f"learning_radar_topic_{ECON_ID}").value == "elasticity"
+    practice.switch_page("pages/7_Learning_Radar.py").run()
+    assert not practice.exception
+    assert practice.button_group(key=f"learning_radar_topic_{ECON_ID}").value == "elasticity"
 
 
 def test_topic_without_questions_stays_on_radar_with_explanation(monkeypatch):
