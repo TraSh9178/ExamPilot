@@ -12,6 +12,7 @@ from pathlib import Path
 from collections.abc import Mapping
 
 from models.schemas import Question
+from services.i18n import tr
 
 
 SIMPLIFY_KEY = "a11y_simplify"
@@ -32,9 +33,10 @@ def render_accessibility_controls() -> None:
     """Render controls only when the host page invokes this function."""
     import streamlit as st
 
-    st.subheader("Accessibility")
-    st.toggle("Simplified English", key=SIMPLIFY_KEY)
-    st.toggle("Key terms in Chinese (中文)", key=BILINGUAL_KEY)
+    st.subheader(tr("Accessibility"))
+    st.toggle(tr("Simplified English"), key=SIMPLIFY_KEY)
+    st.toggle("中文界面 / Chinese interface", key=BILINGUAL_KEY)
+    st.caption(tr("Interface language only; uploaded material and AI-generated answers retain their original language."))
 
 
 def _read_mapping(filename: str) -> dict:

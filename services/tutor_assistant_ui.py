@@ -6,6 +6,7 @@ from pathlib import Path
 
 import streamlit as st
 import streamlit.components.v2 as components
+from services.i18n import LANGUAGE_KEY
 
 from services.auth_session import current_user
 from services.tutor_assistant_state import (
@@ -102,11 +103,11 @@ def render_tutor_assistant() -> None:
 
     _component()(
         key=COMPONENT_KEY,
-        data=assistant_view(
+        data={**assistant_view(
             st.session_state,
             st.session_state.get("current_course"),
             owner_id=user.user_id,
-        ),
+        ), "ui_language_zh": bool(st.session_state.get(LANGUAGE_KEY, False))},
         on_submit_change=on_submit,
         on_clear_change=on_clear,
         width="stretch",

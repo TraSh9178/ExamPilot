@@ -7,13 +7,16 @@ import streamlit as st
 
 from services.auth_service import login_user, register_user
 from services.auth_session import start_authenticated_session
+from services.i18n import LANGUAGE_KEY, tr
 from services.ui_style import apply_app_styles
 
 
 def render_auth_page() -> None:
     apply_app_styles()
+    st.toggle("中文界面 / Chinese interface", key=LANGUAGE_KEY)
     st.markdown(
         """
+
         <style>
         [data-testid="stMainBlockContainer"] { max-width: 1120px; }
         [class*="st-key-auth_forms"] { margin-top: 1.5rem; }
@@ -30,8 +33,8 @@ def render_auth_page() -> None:
     intro, forms = st.columns([1.1, 1], gap="large")
     with intro:
         st.markdown("### 🎓 ExamPilot")
-        st.title("Make your next study session count.")
-        st.write("Turn your course materials into a focused study plan and exam practice.")
+        st.title(tr("Make your next study session count."))
+        st.write(tr("Turn your course materials into a focused study plan and exam practice."))
         art_path = Path(__file__).resolve().parents[1] / "assets" / "campus-illustration.svg"
         campus_art = base64.b64encode(art_path.read_bytes()).decode("ascii")
         st.markdown(
@@ -42,69 +45,69 @@ def render_auth_page() -> None:
         )
 
     with forms, st.container(border=True, key="auth_forms"):
-        st.header("Welcome to ExamPilot")
-        st.caption("Log in or create an account to start studying.")
-        login_tab, register_tab = st.tabs(["Log in", "Create account"])
+        st.header(tr("Welcome to ExamPilot"))
+        st.caption(tr("Log in or create an account to start studying."))
+        login_tab, register_tab = st.tabs([tr("Log in"), tr("Create account")])
 
         with login_tab:
             with st.form("login_form", clear_on_submit=True):
                 username = st.text_input(
-                    "Username", key="login_username", max_chars=32,
+                    tr("Username"), key="login_username", max_chars=32,
                     autocomplete="username",
                 )
                 password = st.text_input(
-                    "Password", type="password", key="login_password",
+                    tr("Password"), type="password", key="login_password",
                     max_chars=128, autocomplete="current-password",
                 )
                 login_submitted = st.form_submit_button(
-                    "Log in", type="primary", use_container_width=True,
+                    tr("Log in"), type="primary", use_container_width=True,
                 )
 
             if login_submitted:
                 if not username.strip() or not password:
-                    st.error("Enter your username and password.")
+                    st.error(tr("Enter your username and password."))
                 else:
-                    with st.spinner("Logging in…"):
+                    with st.spinner(tr("Logging in…")):
                         result = login_user(username, password)
                     if result.success and result.user is not None:
                         start_authenticated_session(st.session_state, result.user)
                         st.rerun()
                     else:
-                        st.error(result.message)
+                        st.error(tr(result.message))
 
         with register_tab:
             with st.form("register_form", clear_on_submit=True):
                 username = st.text_input(
-                    "Username", key="register_username", max_chars=32,
-                    help="3–32 characters: letters, numbers, periods, underscores, or hyphens. Usernames are case-insensitive.",
+                    tr("Username"), key="register_username", max_chars=32,
+                    help=tr("3–32 characters: letters, numbers, periods, underscores, or hyphens. Usernames are case-insensitive."),
                     autocomplete="username",
                 )
                 password = st.text_input(
-                    "Password", type="password", key="register_password",
+                    tr("Password"), type="password", key="register_password",
                     max_chars=128, autocomplete="new-password",
                 )
                 confirmation = st.text_input(
-                    "Confirm password", type="password",
+                    tr("Confirm password"), type="password",
                     key="register_password_confirm", max_chars=128,
                     autocomplete="new-password",
                 )
-                st.caption("Use 15–128 characters. Try a memorable passphrase.")
+                st.caption(tr("Use 15–128 characters. Try a memorable passphrase."))
                 register_submitted = st.form_submit_button(
-                    "Create account", type="primary", use_container_width=True,
+                    tr("Create account"), type="primary", use_container_width=True,
                 )
 
             if register_submitted:
                 if not username.strip() or not password:
-                    st.error("Enter a username and password.")
+                    st.error(tr("Enter a username and password."))
                 elif password != confirmation:
-                    st.error("Passwords do not match.")
+                    st.error(tr("Passwords do not match."))
                 else:
-                    with st.spinner("Creating your account…"):
+                    with st.spinner(tr("Creating your account…")):
                         result = register_user(username, password)
                     if result.success and result.user is not None:
                         start_authenticated_session(st.session_state, result.user)
                         st.rerun()
                     else:
-                        st.error(result.message)
+                        st.error(tr(result.message))
 
-        st.caption("For your privacy, a browser refresh or an eight-hour session will require you to log in again.")
+        st.caption(tr("For your privacy, a browser refresh or an eight-hour session will require you to log in again."))

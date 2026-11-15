@@ -72,6 +72,11 @@
     if (network && sourceNodes.length) network.fit({ animation: false, padding: 45 });
   }
   function mount(payload) {
+    const zh = payload.languageZh === true;
+    document.documentElement.lang = zh ? "zh-CN" : "en";
+    frame.setAttribute("aria-label", zh ? "知识图谱区域" : "Knowledge graph boundary");
+    host.setAttribute("aria-label", zh ? "知识图谱" : "Knowledge graph");
+    loadError.textContent = zh ? "无法加载知识图谱，请检查浏览器网络连接后刷新。" : "The graph renderer could not be loaded. Check the browser connection and reload.";
     if (!window.vis?.Network) {
       loadError.hidden = false;
       return;

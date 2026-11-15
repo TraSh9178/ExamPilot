@@ -5,6 +5,7 @@ import time
 from typing import Any
 
 from services.auth_service import AuthUser
+from services.i18n import LANGUAGE_KEY
 
 
 SESSION_DURATION_SECONDS = 8 * 60 * 60
@@ -14,14 +15,20 @@ def start_authenticated_session(
     session_state: MutableMapping[str, Any], user: AuthUser,
 ) -> None:
     """Start with clean study state whenever an account signs in."""
+    language = session_state.get(LANGUAGE_KEY, False) is True
     session_state.clear()
+    if language:
+        session_state[LANGUAGE_KEY] = True
     session_state["auth_user"] = user
     session_state["auth_started_at"] = time.time()
 
 
 def logout_session(session_state: MutableMapping[str, Any]) -> None:
     """Forget identity, form credentials, uploads, and all study state."""
+    language = session_state.get(LANGUAGE_KEY, False) is True
     session_state.clear()
+    if language:
+        session_state[LANGUAGE_KEY] = True
 
 
 def current_user(session_state: MutableMapping[str, Any]) -> AuthUser | None:

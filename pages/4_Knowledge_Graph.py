@@ -1,3 +1,4 @@
+from services.i18n import tr
 from pathlib import Path
 
 import streamlit as st
@@ -35,14 +36,14 @@ from services.learning_flow import open_lab, stage_practice
 
 apply_app_styles()
 
-st.title("Knowledge Map")
-st.caption("Explore connected ideas. Click a topic to read its summary and learning progress.")
+st.title(tr("Knowledge Map"))
+st.caption(tr("Explore connected ideas. Click a topic to read its summary and learning progress."))
 
 course = st.session_state.get("current_course")
 
 if course is None:
-    st.info("Load a course from the dashboard first.")
-    st.page_link("pages/0_Dashboard.py", label="Back to Dashboard")
+    st.info(tr("Load a course from the dashboard first."))
+    st.page_link("pages/0_Dashboard.py", label=tr("Back to Dashboard"))
     st.stop()
 
 if course.course_id == "calculus-i-demo" and not course.relationships:
@@ -56,7 +57,7 @@ if course.course_id == "calculus-i-demo" and not course.relationships:
             demo_path.read_text(encoding="utf-8")
         )
     except (OSError, ValueError) as error:
-        st.error(f"Could not update the Calculus demo course: {error}")
+        st.error(tr(f"Could not update the Calculus demo course: {error}"))
         st.stop()
 
     topic_ids = {topic.id for topic in course.topics}
@@ -70,35 +71,35 @@ if course.course_id == "calculus-i-demo" and not course.relationships:
 
 with st.container(key="graph_course_heading"):
     st.subheader(course.course_name)
-    st.caption(f"{len(course.topics)} knowledge points")
+    st.caption(tr(f"{len(course.topics)} knowledge points"))
 
 if not course.topics:
-    st.info("This course has no topics yet.")
+    st.info(tr("This course has no topics yet."))
     st.stop()
 
 mode_column, search_column, local_column = st.columns([1.4, 1.8, .8], vertical_alignment="bottom")
 mode_label = mode_column.radio(
-    "Progress mode", options=["Mock Exam", "Topic Practice"],
+    tr("Progress mode"), options=[tr("Mock Exam"), tr("Topic Practice")],
     key=f"graph_mode_{course.course_id}", horizontal=True,
 )
-mode = "mock" if mode_label == "Mock Exam" else "topic"
+mode = "mock" if mode_label == tr("Mock Exam") else "topic"
 
 topic_names = {topic.id: topic.name for topic in course.topics}
 pending_key = f"graph_pending_focus_{course.course_id}"
 if pending_key in st.session_state:
     st.session_state[f"graph_focus_{course.course_id}"] = st.session_state.pop(pending_key)
 focus_id = search_column.selectbox(
-    "Find a topic", options=[None, *topic_names],
-    format_func=lambda value: "All topics" if value is None else topic_names[value],
+    tr("Find a topic"), options=[None, *topic_names],
+    format_func=lambda value: tr("All topics") if value is None else topic_names[value],
     key=f"graph_focus_{course.course_id}",
 )
 local_view = local_column.toggle(
-    "Local graph", disabled=focus_id is None,
+    tr("Local graph"), disabled=focus_id is None,
     key=f"graph_local_{course.course_id}",
-    help="Show only this topic and its directly connected neighbors.",
+    help=tr("Show only this topic and its directly connected neighbors."),
 )
 view_course = local_graph(course, focus_id) if focus_id and local_view else course
-st.caption(f"Showing {len(view_course.topics)} of {len(course.topics)} topics · Connections: {len(view_course.relationships)}")
+st.caption(tr(f"Showing {len(view_course.topics)} of {len(course.topics)} topics · Connections: {len(view_course.relationships)}"))
 
 reset_key = f"graph_view_reset_{course.course_id}_{mode}"
 zoom_key = f"graph_zoom_{course.course_id}_{mode}"
@@ -106,7 +107,7 @@ zoom_level = st.session_state.get(zoom_key, 0)
 graph_controls = st.columns([1.4, 3])
 with graph_controls[0]:
     if st.button(
-        "Fit to view / Reset view",
+        tr("Fit to view / Reset view"),
         key=f"reset_graph_view_{course.course_id}_{mode}",
         icon=":material/fit_screen:",
     ):
@@ -116,7 +117,7 @@ with graph_controls[0]:
         st.session_state[zoom_key] = 0
         st.rerun()
 with graph_controls[1]:
-    st.caption("Click for details · Drag to rearrange · Scroll to zoom")
+    st.caption(tr("Click for details · Drag to rearrange · Scroll to zoom"))
 
 history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})
@@ -144,7 +145,7 @@ try:
         questions=list(questions_by_id.values()),
     )
 except ValueError as error:
-    st.error(f"Could not calculate mastery: {error}")
+    st.error(tr(f"Could not calculate mastery: {error}"))
     st.stop()
 
 # Learning Radar (demo courses only). Zooming and selecting topics rerun the
@@ -169,7 +170,7 @@ with graph_column:
             if st.button(
                 "−",
                 key=f"graph_zoom_out_{course.course_id}_{mode}",
-                help="Make nodes smaller",
+                help=tr("Make nodes smaller"),
                 disabled=zoom_level <= -3,
             ):
                 st.session_state[zoom_key] = zoom_level - 1
@@ -177,7 +178,7 @@ with graph_column:
             if st.button(
                 "+",
                 key=f"graph_zoom_in_{course.course_id}_{mode}",
-                help="Make nodes larger",
+                help=tr("Make nodes larger"),
                 disabled=zoom_level >= 3,
             ):
                 st.session_state[zoom_key] = zoom_level + 1
@@ -196,7 +197,7 @@ with graph_column:
 
     if radar is not None:
         with st.container(border=True, key="learning_radar_panel"):
-            with st.expander("Learning Radar · community signals"):
+            with st.expander(tr("Learning Radar · community signals")):
                 render_radar_panel(
                     radar,
                     learning_radar.top_hard_topics(radar, limit=len(course.topics)),
@@ -204,7 +205,7 @@ with graph_column:
                 )
 
     if not course.relationships:
-        st.info("This course has no topic relationships yet.")
+        st.info(tr("This course has no topic relationships yet."))
 
     # Suggestions need the saved course material; demo courses have none.
     material = st.session_state.get(f"course_document_{course.course_id}")
@@ -212,33 +213,33 @@ with graph_column:
         suggestions_state_key = suggestions_key(course.course_id)
         notice_state_key = notice_key(course.course_id)
         with st.container(border=True, key="graph_suggestions_panel"):
-            st.markdown("**Suggest connections from your material**")
-            st.caption(
+            st.markdown(tr("**Suggest connections from your material**"))
+            st.caption(tr(
                 "Claude reads the saved course material and proposes "
                 "related-topic connections. Nothing changes until you apply "
                 "them, and applying replaces the current connections. "
                 "AI suggestions may be wrong."
-            )
+            ))
 
             notice = st.session_state.pop(notice_state_key, None)
             if notice is not None:
                 level, text = notice
                 if level == "success":
-                    st.success(text)
+                    st.success(tr(text))
                 else:
-                    st.warning(text)
+                    st.warning(tr(text))
 
             suggestions = st.session_state.get(suggestions_state_key)
             if suggestions is None:
                 if st.button(
-                    "Suggest connections",
+                    tr("Suggest connections"),
                     key=f"suggest_relationships_{course.course_id}",
                     icon=":material/auto_awesome:",
                 ):
-                    with st.spinner("Asking Claude for connections..."):
+                    with st.spinner(tr("Asking Claude for connections...")):
                         generated = generate_relationships(material, course)
                     if not generated["ok"]:
-                        st.error(generated["message"])
+                        st.error(tr(generated["message"]))
                     else:
                         st.session_state[suggestions_state_key] = list(
                             generated["package"]["relationships"]
@@ -254,12 +255,12 @@ with graph_column:
                     )
                 else:
                     st.info(
-                        "Claude found no evidence-supported connections "
-                        "in the material."
+                        tr("Claude found no evidence-supported connections "
+                        "in the material.")
                     )
                 apply_column, discard_column = st.columns(2)
                 if apply_column.button(
-                    "Apply suggestions",
+                    tr("Apply suggestions"),
                     type="primary",
                     key=f"apply_relationships_{course.course_id}",
                     disabled=not suggestions,
@@ -270,8 +271,8 @@ with graph_column:
                         )
                     except ValueError:
                         st.error(
-                            "These suggestions no longer match the course "
-                            "topics. Discard them and ask for new suggestions."
+                            tr("These suggestions no longer match the course "
+                            "topics. Discard them and ask for new suggestions.")
                         )
                     else:
                         save_course(st.session_state, updated_course)
@@ -295,7 +296,7 @@ with graph_column:
                             )
                         st.rerun()
                 if discard_column.button(
-                    "Discard",
+                    tr("Discard"),
                     key=f"discard_relationships_{course.course_id}",
                 ):
                     st.session_state.pop(suggestions_state_key, None)
@@ -332,29 +333,29 @@ with details_column:
         if details is not None:
             links = related_topics(course, selected_node_id)
             st.divider()
-            st.markdown("**Connected topics**")
+            st.markdown(tr("**Connected topics**"))
             for label, group in (("Prerequisites", "prerequisites"), ("Leads to", "next_topics"), ("Related", "related")):
                 if links[group]:
-                    st.caption(label + ": " + ", ".join(topic_names[item] for item in links[group]))
+                    st.caption(tr(label) + "：" + ", ".join(topic_names[item] for item in links[group]))
             if not any(links.values()):
-                st.caption("No connections recorded for this topic.")
-            st.caption("These are course-provided relationships, not a diagnosis of your understanding.")
+                st.caption(tr("No connections recorded for this topic."))
+            st.caption(tr("These are course-provided relationships, not a diagnosis of your understanding."))
             for linked_id in links["prerequisites"]:
-                if st.button("Review " + topic_names[linked_id], key=f"graph_prerequisite_{course.course_id}_{linked_id}"):
+                if st.button(tr("Review ") + topic_names[linked_id], key=f"graph_prerequisite_{course.course_id}_{linked_id}"):
                     st.session_state[pending_key] = linked_id
                     st.rerun()
-            if st.button("Practise this topic", key=f"graph_practice_{course.course_id}_{selected_node_id}", type="primary"):
+            if st.button(tr("Practise this topic"), key=f"graph_practice_{course.course_id}_{selected_node_id}", type="primary"):
                 try:
                     stage_practice(st.session_state, course, selected_node_id)
                 except ValueError as error:
-                    st.info(str(error))
-                    st.page_link("pages/1_Study_Hub.py", label="Confirm scope in Study Plan")
+                    st.info(tr(str(error)))
+                    st.page_link("pages/1_Study_Hub.py", label=tr("Confirm scope in Study Plan"))
                 else:
                     st.switch_page("pages/2_Practice_Center.py")
 
             if radar is not None:
                 st.divider()
-                st.markdown("**Learning Radar**")
+                st.markdown(tr("**Learning Radar**"))
                 render_topic_radar(
                     radar.topics.get(selected_node_id),
                     prerequisite_names=[
@@ -371,14 +372,14 @@ with details_column:
                         render_saved_reason(reason)
                     else:
                         reason = st.selectbox(
-                            "Why are you stuck?",
+                            tr("Why are you stuck?"),
                             options=RADAR_REASON_OPTIONS,
-                            format_func=radar_reason_label,
+                            format_func=lambda value: tr(radar_reason_label(value)),
                             key=f"radar_reason_{course.course_id}_{selected_node_id}",
                         )
                         render_reason_hint(reason)
                     if st.button(
-                        "Not stuck anymore" if already_flagged else "I'm stuck here",
+                        tr("Not stuck anymore") if already_flagged else tr("I'm stuck here"),
                         key=f"radar_flag_{course.course_id}_{selected_node_id}",
                     ):
                         if already_flagged:
@@ -397,10 +398,10 @@ with details_column:
                             # for the cache to expire.
                             forget_course_radar(st.session_state, course.course_id)
                             st.rerun()
-                        st.warning(result.message)
+                        st.warning(tr(result.message))
                 if concept_lab_available(course.course_id, selected_node_id):
                     if st.button(
-                        "Open Concept Lab",
+                        tr("Open Concept Lab"),
                         key=f"radar_concept_lab_{course.course_id}_{selected_node_id}",
                         icon=":material/science:",
                     ):
@@ -408,15 +409,15 @@ with details_column:
                         st.switch_page("pages/6_Concept_Lab.py")
 
     with st.container(border=True, key="knowledge_graph_legend"):
-        st.markdown("**Status Legend**")
+        st.markdown(tr("**Status Legend**"))
         st.markdown(
-            """
+            f"""
             <div class="graph-legend">
-                <span><i style="background:#94A3B8"></i>Unattempted</span>
-                <span><i style="background:#A78BFA"></i>Insufficient evidence</span>
-                <span><i style="background:#EF4444"></i>Weak</span>
-                <span><i style="background:#F59E0B"></i>Developing</span>
-                <span><i style="background:#22C55E"></i>Mastered</span>
+                <span><i style="background:#94A3B8"></i>{tr('Unattempted')}</span>
+                <span><i style="background:#A78BFA"></i>{tr('Insufficient evidence')}</span>
+                <span><i style="background:#EF4444"></i>{tr('Weak')}</span>
+                <span><i style="background:#F59E0B"></i>{tr('Developing')}</span>
+                <span><i style="background:#22C55E"></i>{tr('Mastered')}</span>
             </div>
             """,
             unsafe_allow_html=True,

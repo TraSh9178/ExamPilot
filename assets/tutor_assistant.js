@@ -3,6 +3,8 @@ export default function(component) {
   const root = parentElement.querySelector('[data-testid="tutor-root"]');
   const namespace = '__examPilotFloatingTutor';
   if (!root || !data || typeof data.session_id !== 'string') return;
+  const zh = data.ui_language_zh === true;
+  const text = (english, chinese) => zh ? chinese : english;
   root.hidden = false;
 
   // In-memory UI state survives Streamlit page reruns. It never goes to browser
@@ -32,6 +34,7 @@ export default function(component) {
 
   const bubble = root.querySelector('[data-testid="tutor-launcher"]');
   root.querySelector('.tutor-small-pilot').src = bubble.querySelector('.tutor-pilot').src;
+  bubble.title = text('Pilot · Your AI study assistant · Drag to move, or use arrow keys when focused', 'Pilot · 你的 AI 学习助手 · 拖动可移动，也可在聚焦时使用方向键');
   const panel = root.querySelector('[data-testid="tutor-panel"]');
   const header = root.querySelector('[data-testid="tutor-drag-handle"]');
   const close = root.querySelector('[data-testid="tutor-close"]');
@@ -44,6 +47,15 @@ export default function(component) {
   const send = root.querySelector('[data-testid="tutor-send"]');
   const counter = root.querySelector('[data-testid="tutor-counter"]');
   const maxChars = Math.max(1, Number(data.max_question_chars) || 4000);
+  root.querySelector('.tutor-title-group p').textContent = text('Your AI study copilot', '你的 AI 学习助手');
+  clear.setAttribute('aria-label', text('Clear conversation', '清空对话'));
+  clear.title = text('Clear conversation', '清空对话');
+  close.setAttribute('aria-label', text('Close Pilot', '关闭 Pilot'));
+  close.title = text('Close Pilot', '关闭 Pilot');
+  root.querySelector('label[for="tutor-question"]').textContent = text('Your question', '你的问题');
+  root.querySelector('.tutor-input-help').textContent = text('Enter to send · Shift + Enter for a new line', '回车发送 · Shift + 回车换行');
+  root.querySelector('.tutor-form-note > span').textContent = text('Each question uses this course’s summaries', '每次提问都会使用本课程的知识点摘要');
+  send.firstChild.textContent = text('Send ', '发送 ');
   const listeners = [];
   let destroyed = false;
   let drag = null;
@@ -117,7 +129,7 @@ export default function(component) {
     clear.disabled = busy || state.clearPending || !(data.messages || []).length;
     counter.textContent = `${question.value.length} / ${maxChars}`;
     form.setAttribute('aria-busy', busy ? 'true' : 'false');
-    question.placeholder = courseId ? 'What would you like to understand?' : 'Open a course to ask a question';
+    question.placeholder = courseId ? text('What would you like to understand?', '你想了解什么？') : text('Open a course to ask a question', '先打开一门课程再提问');
   };
   const updateStatus = () => {
     const serverError = typeof data.error === 'string' ? data.error : '';
@@ -126,7 +138,7 @@ export default function(component) {
     status.hidden = !state.pending && !error;
     status.classList.toggle('is-error', Boolean(error) && !state.pending);
     status.classList.toggle('is-pending', Boolean(state.pending));
-    status.textContent = state.pending ? 'Thinking about your question…' : error;
+    status.textContent = state.pending ? text('Thinking about your question…', '正在思考你的问题…') : error;
   };
   const appendMessage = (role, content, pending = false) => {
     const safeRole = ['user', 'assistant', 'error'].includes(role) ? role : 'assistant';
@@ -135,7 +147,7 @@ export default function(component) {
     item.dataset.role = safeRole;
     const label = document.createElement('span');
     label.className = 'tutor-message-label';
-    label.textContent = safeRole === 'user' ? 'You' : safeRole === 'error' ? 'Couldn’t answer' : 'Pilot';
+    label.textContent = safeRole === 'user' ? text('You', '你') : safeRole === 'error' ? text('Couldn’t answer', '无法回答') : 'Pilot';
     const body = document.createElement('div');
     body.className = 'tutor-message-body';
     body.textContent = typeof content === 'string' ? content : '';
@@ -149,9 +161,9 @@ export default function(component) {
       const empty = document.createElement('div');
       empty.className = 'tutor-empty';
       const title = document.createElement('strong');
-      title.textContent = courseId ? 'Let’s work through it together' : 'Choose a course to get started';
+      title.textContent = courseId ? text('Let’s work through it together', '我们一起弄懂它') : text('Choose a course to get started', '先选择一门课程');
       const text = document.createElement('p');
-      text.textContent = courseId ? 'Ask for an explanation, a worked example, or help understanding a topic.' : 'Open a course from the Dashboard, then ask about its study notes here.';
+      text.textContent = courseId ? (zh ? '可以提问概念解释、例题或知识点。' : 'Ask for an explanation, a worked example, or help understanding a topic.') : (zh ? '从主页打开课程后，可以在这里询问课程笔记。' : 'Open a course from the Dashboard, then ask about its study notes here.');
       empty.append(title, text);
       messages.append(empty);
     }
@@ -166,7 +178,7 @@ export default function(component) {
     state.open = true;
     panel.hidden = false;
     bubble.setAttribute('aria-expanded', 'true');
-    bubble.setAttribute('aria-label', 'Close Pilot, your AI study assistant');
+    bubble.setAttribute('aria-label', text('Close Pilot, your AI study assistant', '关闭 Pilot AI 学习助手'));
     position();
     focusFrame = requestAnimationFrame(() => {
       if (!destroyed && !question.disabled) question.focus({ preventScroll: true });
@@ -176,7 +188,7 @@ export default function(component) {
     state.open = false;
     panel.hidden = true;
     bubble.setAttribute('aria-expanded', 'false');
-    bubble.setAttribute('aria-label', 'Open Pilot, your AI study assistant');
+    bubble.setAttribute('aria-label', text('Open Pilot, your AI study assistant', '打开 Pilot AI 学习助手'));
     position();
     bubble.focus({ preventScroll: true });
   };
@@ -185,13 +197,13 @@ export default function(component) {
     if (!courseId || state.pending) return;
     const value = question.value.trim();
     if (!value) {
-      state.validation = 'Write a question first.';
+      state.validation = text('Write a question first.', '请先输入问题。');
       updateStatus();
       question.focus();
       return;
     }
     if (value.length > maxChars) {
-      state.validation = `Keep your question within ${maxChars} characters.`;
+      state.validation = zh ? `问题请勿超过 ${maxChars} 个字符。` : `Keep your question within ${maxChars} characters.`;
       updateStatus();
       return;
     }
@@ -208,11 +220,11 @@ export default function(component) {
 
   question.value = state.draft;
   panel.dataset.currentCourseId = courseId || '';
-  course.textContent = courseId ? `Course · ${data.course_name || 'Current course'}` : 'No course selected';
+  course.textContent = courseId ? `${text('Course', '课程')} · ${data.course_name || text('Current course', '当前课程')}` : text('No course selected', '尚未选择课程');
   course.title = course.textContent;
   panel.hidden = !state.open;
   bubble.setAttribute('aria-expanded', String(state.open));
-  bubble.setAttribute('aria-label', `${state.open ? 'Close' : 'Open'} Pilot, your AI study assistant`);
+  bubble.setAttribute('aria-label', state.open ? text('Close Pilot, your AI study assistant', '关闭 Pilot AI 学习助手') : text('Open Pilot, your AI study assistant', '打开 Pilot AI 学习助手'));
   renderMessages();
   updateInput();
   updateStatus();

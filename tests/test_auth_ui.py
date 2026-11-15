@@ -8,6 +8,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from services import auth_ui
+from services.i18n import LANGUAGE_KEY
 from services.auth_service import AuthResult, AuthUser
 from tests.auth_helpers import TEST_USER, signed_in_app
 
@@ -59,6 +60,40 @@ def test_logged_out_app_shows_account_forms_before_dashboard(monkeypatch) -> Non
     assert app.text_input(key="register_password").value == ""
     login.assert_not_called()
     register.assert_not_called()
+
+
+def test_login_language_switch_translates_interface_without_database_calls(monkeypatch) -> None:
+    login = Mock()
+    register = Mock()
+    monkeypatch.setattr(auth_ui, "login_user", login)
+    monkeypatch.setattr(auth_ui, "register_user", register)
+    app = AppTest.from_file(str(APP_PATH)).run()
+    next(item for item in app.get("toggle") if item.key == LANGUAGE_KEY).set_value(True).run()
+
+    assert not app.exception
+    assert [tab.label for tab in app.tabs] == ["登录", "创建账户"]
+    assert app.text_input(key="login_username").label == "用户名"
+    assert app.text_input(key="login_password").label == "密码"
+    assert any(button.label == "登录" for button in app.button)
+    login.assert_not_called()
+    register.assert_not_called()
+
+
+def test_chinese_choice_continues_to_dashboard_after_login(monkeypatch) -> None:
+    monkeypatch.setattr(
+        auth_ui, "login_user",
+        Mock(return_value=AuthResult(success=True, user=TEST_USER, message="Signed in.")),
+    )
+    app = AppTest.from_file(str(APP_PATH)).run()
+    next(item for item in app.get("toggle") if item.key == LANGUAGE_KEY).set_value(True).run()
+    app.text_input(key="login_username").set_value(TEST_USER.username)
+    app.text_input(key="login_password").set_value(PASSWORD)
+    next(button for button in app.button if button.label == "登录").click().run()
+
+    assert not app.exception
+    assert app.session_state[LANGUAGE_KEY] is True
+    assert any(button.label == "打开课程" for button in app.button)
+    assert app.button(key="logout_button").label == "退出登录"
 
 
 @pytest.mark.parametrize("method", ["login", "register"])

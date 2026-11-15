@@ -1,3 +1,4 @@
+from services.i18n import tr
 import streamlit as st
 
 from components.knowledge_graph import load_course_radar, radar_count_text
@@ -16,19 +17,19 @@ from services.learning_flow import stage_practice
 
 apply_app_styles()
 
-st.title("Study Plan")
-st.caption("Review course topics and choose the scope for your exam.")
+st.title(tr("Study Plan"))
+st.caption(tr("Review course topics and choose the scope for your exam."))
 
 course = st.session_state.get("current_course")
 
 if course is None:
-    st.info("Load a course from the dashboard to start studying.")
-    st.page_link("pages/0_Dashboard.py", label="Back to Dashboard")
+    st.info(tr("Load a course from the dashboard to start studying."))
+    st.page_link("pages/0_Dashboard.py", label=tr("Back to Dashboard"))
     st.stop()
 
 with st.container(key="study_plan_overview"):
     st.subheader(course.course_name)
-    st.caption(f"{len(course.topics)} knowledge points")
+    st.caption(tr(f"{len(course.topics)} knowledge points"))
 
 # Keep scope confirmation separate for each course.
 scope_key = f"scope_selection_{course.course_id}"
@@ -69,19 +70,19 @@ def render_most_flagged_topics(course, confirmed_key: str) -> None:
     ]
 
     with st.container(border=True, key="study_radar_panel"):
-        st.subheader("Most flagged topics · Top 3")
-        st.caption("Topics students marked \"I'm stuck here\" on the Knowledge Map.")
+        st.subheader(tr("Most flagged topics · Top 3"))
+        st.caption(tr("Topics students marked \"I'm stuck here\" on the Knowledge Map."))
         if not most_flagged:
-            st.caption("No topics have been flagged yet.")
+            st.caption(tr("No topics have been flagged yet."))
         for rank, topic_radar in enumerate(most_flagged, start=1):
             topic_id = topic_radar.topic_id
             topic_name = topic_names[topic_id]
             row = st.columns([3, 1], vertical_alignment="center")
             row[0].markdown(
-                f"**{rank}. {topic_name}** — {radar_count_text(topic_radar)}"
+                f"**{rank}. {topic_name}** — {tr(radar_count_text(topic_radar))}"
             )
             if row[1].button(
-                "Practice now",
+                tr("Practice now"),
                 key=f"study_radar_practice_{course.course_id}_{topic_id}",
             ):
                 # Topic Practice only offers topics from the confirmed scope.
@@ -90,29 +91,29 @@ def render_most_flagged_topics(course, confirmed_key: str) -> None:
                     st.switch_page("pages/2_Practice_Center.py")
                 else:
                     st.info(
-                        f"Confirm {topic_name} in your exam scope above, "
-                        "then select Practice now again."
+                        tr(f"Confirm {topic_name} in your exam scope above, "
+                        "then select Practice now again.")
                     )
         if radar.has_sample:
-            st.caption("Includes sample data")
+            st.caption(tr("Includes sample data"))
         if not radar.live:
-            st.caption("Live flags are unavailable right now.")
+            st.caption(tr("Live flags are unavailable right now."))
 
 
 if not course.topics:
-    st.info("This course has no topics yet.")
+    st.info(tr("This course has no topics yet."))
 else:
-    with st.expander("Topic summaries"):
+    with st.expander(tr("Topic summaries")):
         for topic in course.topics:
             st.markdown(f"**{topic.name}**")
             st.write(topic.summary)
             if topic.source_pages:
-                st.caption("Source pages: " + ", ".join(map(str, topic.source_pages)))
+                st.caption(tr("Source pages: ") + ", ".join(map(str, topic.source_pages)))
 
 with st.container(border=True, key="study_scope_panel"):
-    st.subheader("Choose your exam scope")
+    st.subheader(tr("Choose your exam scope"))
     selected_topic_ids = st.multiselect(
-        "Knowledge points",
+        tr("Knowledge points"),
         options=[topic.id for topic in course.topics],
         format_func=lambda topic_id: next(
             topic.name
@@ -122,19 +123,19 @@ with st.container(border=True, key="study_scope_panel"):
         key=scope_key,
     )
     st.caption(
-        f"Selected {len(selected_topic_ids)} / {len(course.topics)} "
-        "knowledge points"
+        tr(f"Selected {len(selected_topic_ids)} / {len(course.topics)} "
+        "knowledge points")
     )
 
-    if st.button("Confirm exam scope", type="primary"):
+    if st.button(tr("Confirm exam scope"), type="primary"):
         valid_topic_ids = {topic.id for topic in course.topics}
 
         if not selected_topic_ids:
-            st.error("Select at least one topic.")
+            st.error(tr("Select at least one topic."))
         elif len(selected_topic_ids) != len(set(selected_topic_ids)):
-            st.error("Duplicate topic IDs are not allowed.")
+            st.error(tr("Duplicate topic IDs are not allowed."))
         elif not set(selected_topic_ids).issubset(valid_topic_ids):
-            st.error("The selection contains an invalid topic.")
+            st.error(tr("The selection contains an invalid topic."))
         else:
             st.session_state[confirmed_key] = selected_topic_ids.copy()
             save_course_to_account(st.session_state, course)
@@ -154,7 +155,7 @@ if confirmed_topic_ids:
     topic_count = len(confirmed_topic_ids)
     topic_label = "topic" if topic_count == 1 else "topics"
 
-    st.success(f"Exam scope confirmed: {topic_count} {topic_label}.")
+    st.success(tr(f"Exam scope confirmed: {topic_count} {topic_label}."))
 
     document = st.session_state.get(
         f"course_document_{course.course_id}"
@@ -162,41 +163,41 @@ if confirmed_topic_ids:
 
     if document is not None:
         with st.container(border=True):
-            st.subheader("Questions from your material")
+            st.subheader(tr("Questions from your material"))
             st.caption(
-                "Generate candidate questions from this course material "
+                tr("Generate candidate questions from this course material "
                 "using only the confirmed topics. AI-generated questions "
-                "may contain errors."
+                "may contain errors.")
             )
 
             if has_practice_history:
                 st.warning(
-                    "Question generation is disabled because this course "
+                    tr("Question generation is disabled because this course "
                     "has exam history. Regenerating questions could make "
-                    "those results impossible to restore."
+                    "those results impossible to restore.")
                 )
 
             ai_available = generation_available()
             if not ai_available:
                 st.info(
-                    "AI question generation is not available on this server "
-                    "because ANTHROPIC_API_KEY is not configured."
+                    tr("AI question generation is not available on this server "
+                    "because ANTHROPIC_API_KEY is not configured.")
                 )
 
             if st.button(
-                "Generate questions",
+                tr("Generate questions"),
                 type="primary",
                 disabled=has_practice_history or not ai_available,
                 key=f"generate_questions_{course.course_id}",
             ):
                 if has_practice_history:
                     st.error(
-                        "Questions were not generated because this course "
-                        "has exam history."
+                        tr("Questions were not generated because this course "
+                        "has exam history.")
                     )
                     st.stop()
 
-                with st.spinner("Generating questions..."):
+                with st.spinner(tr("Generating questions...")):
                     generated = generate_questions(
                         document,
                         course,
@@ -204,7 +205,7 @@ if confirmed_topic_ids:
                     )
 
                 if not generated["ok"]:
-                    st.error(generated["message"])
+                    st.error(tr(generated["message"]))
                 else:
                     try:
                         updated_course = StudyPackage.model_validate(
@@ -212,7 +213,7 @@ if confirmed_topic_ids:
                         )
                     except ValueError as error:
                         st.error(
-                            f"Could not load generated questions: {error}"
+                            tr(f"Could not load generated questions: {error}")
                         )
                     else:
                         st.session_state[
@@ -224,9 +225,9 @@ if confirmed_topic_ids:
                         )
                         if sync_outcome is not None and not sync_outcome.success:
                             st.warning(
-                                "Questions kept in this session but not saved "
+                                tr("Questions kept in this session but not saved "
                                 f"to your account: {sync_outcome.message} "
-                                "Use Save below to retry."
+                                "Use Save below to retry.")
                             )
 
                         # Previous practice used the old question set.
@@ -242,7 +243,7 @@ if confirmed_topic_ids:
     )
 
     st.caption(
-        f"Available questions in confirmed scope: {available_count}"
+        tr(f"Available questions in confirmed scope: {available_count}")
     )
 
     if available_count:
@@ -255,16 +256,16 @@ if confirmed_topic_ids:
                 st.session_state.pop(f"practice_entry_{course.course_id}", None)
             st.switch_page("pages/2_Practice_Center.py")
     elif any(status_for(course, q.id) == "pending" for q in course.questions):
-        st.info("Review and approve your generated questions below before starting practice.")
+        st.info(tr("Review and approve your generated questions below before starting practice."))
     elif document is not None:
         st.info(
-            "Generate questions for the confirmed scope "
-            "before starting practice."
+            tr("Generate questions for the confirmed scope "
+            "before starting practice.")
         )
     else:
-        st.info("No questions are available in the confirmed scope.")
+        st.info(tr("No questions are available in the confirmed scope."))
 else:
-    st.info("Confirm your topic selection before starting practice.")
+    st.info(tr("Confirm your topic selection before starting practice."))
 
 # Learning Radar is only available for the built-in demo courses.
 if learning_radar.radar_enabled(course.course_id):
@@ -273,30 +274,30 @@ if learning_radar.radar_enabled(course.course_id):
 pending_count = sum(status_for(course, q.id) == "pending" for q in course.questions)
 if pending_count:
     st.caption(f"{pending_count} questions await review before they can be practised.")
-    if st.button("Review pending questions", key=f"open_question_review_{course.course_id}"):
+    if st.button(tr("Review pending questions"), key=f"open_question_review_{course.course_id}"):
         st.session_state[f"question_review_open_{course.course_id}"] = True
-with st.expander("Course tools", expanded=st.session_state.get(f"question_review_open_{course.course_id}", False)):
-    st.caption("Manage questions, account backups and source material when needed.")
-    with st.expander("Review and edit questions", expanded=st.session_state.get(f"question_review_open_{course.course_id}", False)):
+with st.expander(tr("Course tools"), expanded=st.session_state.get(f"question_review_open_{course.course_id}", False)):
+    st.caption(tr("Manage questions, account backups and source material when needed."))
+    with st.expander(tr("Review and edit questions"), expanded=st.session_state.get(f"question_review_open_{course.course_id}", False)):
         editable = sorted([q for q in course.questions if status_for(course, q.id) != "superseded"], key=lambda q: status_for(course, q.id) != "pending")
         if editable:
             by_id = {q.id: q for q in editable}
             question_id = st.selectbox(
-                "Question to review", list(by_id),
+                tr("Question to review"), list(by_id),
                 format_func=lambda qid: f"[{status_for(course, qid)}] {by_id[qid].question[:100]}",
                 key=f"editor_question_{course.course_id}",
             )
             original = by_id[question_id]
-            st.caption("Approve only after checking the answer and explanation. Editing creates a new version; past results stay unchanged. Legacy means no review decision was recorded.")
+            st.caption(tr("Approve only after checking the answer and explanation. Editing creates a new version; past results stay unchanged. Legacy means no review decision was recorded."))
             with st.form(f"question_review_{course.course_id}_{question_id}"):
-                prompt = st.text_area("Question text", value=original.question)
+                prompt = st.text_area(tr("Question text"), value=original.question)
                 options = [st.text_input(f"Option {chr(65 + index)}", value=value) for index, value in enumerate(original.options)]
-                correct = st.selectbox("Correct answer", list(range(4)), index=original.correct_index, format_func=lambda i: chr(65+i))
-                explanation = st.text_area("Explanation", value=original.explanation)
-                with st.expander("Question classification (advanced)"):
+                correct = st.selectbox(tr("Correct answer"), list(range(4)), index=original.correct_index, format_func=lambda i: chr(65+i))
+                explanation = st.text_area(tr("Explanation"), value=original.explanation)
+                with st.expander(tr("Question classification (advanced)")):
                     dimensions = [None, "computation", "conceptual"]
                     dimension = st.selectbox(
-                        "Learning DNA evidence type", dimensions,
+                        tr("Learning DNA evidence type"), dimensions,
                         index=dimensions.index(original.cognitive_dimension),
                         format_func=lambda value: {
                             None: "Untagged", "computation": "Computation",
@@ -305,47 +306,47 @@ with st.expander("Course tools", expanded=st.session_state.get(f"question_review
                         help="Choose what this question tests. Leave uncertain or mixed questions untagged; this label is not a student ability score.",
                     )
                     structure = st.text_input(
-                        "Practice structure label", value=original.practice_structure or "", max_chars=80,
+                        tr("Practice structure label"), value=original.practice_structure or "", max_chars=80,
                         help="A task type such as tangent_equation or derivative_at_point. Use the same label for the same task structure; leave uncertain questions blank.",
                     )
-                decision = st.radio("Review decision", ["Approve", "Flag as problematic"], horizontal=True)
-                apply_review = st.form_submit_button("Save review", type="primary")
+                decision = st.radio(tr("Review decision"), ["Approve", "Flag as problematic"], horizontal=True)
+                apply_review = st.form_submit_button(tr("Save review"), type="primary")
             if apply_review:
                 try:
                     revised = review_question(course, question_id, "approved" if decision == "Approve" else "flagged",
                                               {"question": prompt, "options": options, "correct_index": correct, "explanation": explanation, "cognitive_dimension": dimension, "practice_structure": structure.strip() or None})
                 except ValueError as error:
-                    st.error(str(error))
+                    st.error(tr(str(error)))
                 else:
                     save_course(st.session_state, revised)
                     outcome = save_course_to_account(st.session_state, revised)
                     if outcome is not None and not outcome.success:
-                        st.warning("Review kept locally but not saved to your account. Use Save to retry. " + outcome.message)
+                        st.warning(tr("Review kept locally but not saved to your account. Use Save to retry. ") + tr(outcome.message))
                     else:
                         st.session_state[f"question_review_notice_{course.course_id}"] = "Question review saved."
                         st.rerun()
         else:
-            st.caption("No questions available for review.")
+            st.caption(tr("No questions available for review."))
     notice = st.session_state.pop(f"question_review_notice_{course.course_id}", None)
     if notice:
-        st.success(notice)
+        st.success(tr(notice))
 
-    with st.expander("Account backup and recovery"):
+    with st.expander(tr("Account backup and recovery")):
         render_save_restore_controls(course)
 
 
-    with st.expander("Source material"):
+    with st.expander(tr("Source material")):
         material = st.session_state.get(f"course_document_{course.course_id}")
         if material:
             st.caption(material.get("filename", "Course material"))
-            st.caption("The text from your material is saved with this course. The original uploaded file is not stored.")
-            with st.expander("Read saved text"):
+            st.caption(tr("The text from your material is saved with this course. The original uploaded file is not stored."))
+            with st.expander(tr("Read saved text")):
                 st.text(material.get("text", ""))
             with st.form(f"material_delete_form_{course.course_id}"):
-                confirm_delete = st.checkbox("Delete this course's saved material", key=f"confirm_material_delete_{course.course_id}")
-                submitted_delete = st.form_submit_button("Delete saved material", key=f"delete_material_{course.course_id}")
+                confirm_delete = st.checkbox(tr("Delete this course's saved material"), key=f"confirm_material_delete_{course.course_id}")
+                submitted_delete = st.form_submit_button(tr("Delete saved material"), key=f"delete_material_{course.course_id}")
             if submitted_delete and not confirm_delete:
-                st.warning("Select the confirmation checkbox before deleting material.")
+                st.warning(tr("Select the confirmation checkbox before deleting material."))
             if submitted_delete and confirm_delete:
                 metadata = dict(course.learning_state)
                 metadata["document"] = None
@@ -354,14 +355,14 @@ with st.expander("Course tools", expanded=st.session_state.get(f"question_review
                 staged.pop(f"course_document_{course.course_id}", None)
                 outcome = save_course_to_account(staged, updated)
                 if outcome is not None and not outcome.success:
-                    st.error("Material was not deleted from your account. " + outcome.message)
+                    st.error(tr("Material was not deleted from your account. ") + tr(outcome.message))
                 else:
                     save_course(st.session_state, updated)
                     st.session_state.pop(f"course_document_{course.course_id}", None)
                     st.session_state[f"material_delete_notice_{course.course_id}"] = True
                     st.rerun()
         else:
-            st.caption("No saved material for this course.")
+            st.caption(tr("No saved material for this course."))
 
 if st.session_state.pop(f"material_delete_notice_{course.course_id}", False):
-    st.success("Saved material deleted.")
+    st.success(tr("Saved material deleted."))

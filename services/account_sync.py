@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import streamlit as st
+from services.i18n import tr
 
 from models.schemas import AttemptResult, ExamSession, StudyPackage
 from services import postgres_store
@@ -209,7 +210,7 @@ def restore_after_login(session_state: MutableMapping[str, Any]) -> None:
     user_id = _user_id(session_state)
     if user_id is None or _state(session_state, user_id)["restore_attempted"]:
         return
-    with st.spinner("Restoring your saved study records…"):
+    with st.spinner(tr("Restoring your saved study records…")):
         restore_all(session_state)
 
 
@@ -335,30 +336,21 @@ def render_sidebar_status() -> None:
     state = _state(session_state, user_id)
 
     if state["restore_errors"]:
-        st.warning(
-            "Some saved records could not be restored. Your current work is "
-            "unchanged.\n\n" + "\n".join(f"- {e}" for e in state["restore_errors"])
-        )
-        if st.button("Retry restore", key="retry_restore", use_container_width=True):
-            with st.spinner("Restoring your saved study records…"):
+        st.warning(tr("Some saved records could not be restored. Your current work is unchanged.")
+                   + "\n\n" + "\n".join(f"- {tr(e)}" for e in state["restore_errors"]))
+        if st.button(tr("Retry restore"), key="retry_restore", use_container_width=True):
+            with st.spinner(tr("Restoring your saved study records…")):
                 restore_all(session_state)
             st.rerun()
     elif state["restore_message"]:
-        st.caption(state["restore_message"])
+        st.caption(tr(state["restore_message"]))
 
     if state.get("restore_conflicts"):
-        st.warning(
-            "Database history is used for statistics. Conflicting local practice "
-            "records are kept separately in this login session and are not counted "
-            "or automatically uploaded. Do not log out before resolving them."
-        )
+        st.warning(tr("Database history is used for statistics. Conflicting local practice records are kept separately in this login session and are not counted or automatically uploaded. Do not log out before resolving them."))
 
     unsaved = len(state["unsaved_courses"]) + len(state["unsaved_exams"])
     if unsaved:
-        st.warning(
-            f"{unsaved} item(s) are not saved to your account yet. "
-            "Use Save in Study Plan to retry."
-        )
+        st.warning(tr(f"{unsaved} item(s) are not saved to your account yet. Use Save in Study Plan to retry."))
 
 
 def render_save_restore_controls(course: StudyPackage) -> None:
@@ -366,35 +358,32 @@ def render_save_restore_controls(course: StudyPackage) -> None:
     session_state = st.session_state
     user_id = _user_id(session_state)
     if user_id is None:
-        st.caption(PENDING_INTEGRATION_MESSAGES["database"])
+        st.caption(tr(PENDING_INTEGRATION_MESSAGES["database"]))
         for column, label, kind in zip(st.columns(2), ("Save", "Restore"), ("save", "restore")):
             column.button(
-                label, key=f"database_{kind}_{course.course_id}",
+                tr(label), key=f"database_{kind}_{course.course_id}",
                 disabled=True, use_container_width=True,
             )
         return
 
     state = _state(session_state, user_id)
     message_key = course.course_id
-    st.caption(
-        "Saves this course and its graded practice to your account. "
-        "Anonymous records from before login are not migrated."
-    )
+    st.caption(tr("Saves this course and its graded practice to your account. Anonymous records from before login are not migrated."))
     save_column, restore_column = st.columns(2)
     save_clicked = save_column.button(
-        "Save", key=f"database_save_{course.course_id}", use_container_width=True,
+        tr("Save"), key=f"database_save_{course.course_id}", use_container_width=True,
     )
     restore_clicked = restore_column.button(
-        "Restore", key=f"database_restore_{course.course_id}",
+        tr("Restore"), key=f"database_restore_{course.course_id}",
         use_container_width=True,
     )
 
     if save_clicked:
-        with st.spinner("Saving…"):
+        with st.spinner(tr("Saving…")):
             outcome = save_course_with_history(session_state, course)
         state["course_messages"][message_key] = outcome
     elif restore_clicked:
-        with st.spinner("Restoring…"):
+        with st.spinner(tr("Restoring…")):
             outcome = restore_course(session_state, course.course_id)
         state["course_messages"][message_key] = outcome
         if outcome.success:
@@ -402,7 +391,7 @@ def render_save_restore_controls(course: StudyPackage) -> None:
 
     outcome = state["course_messages"].get(message_key)
     if outcome is not None:
-        (st.success if outcome.success else st.error)(outcome.message)
+        (st.success if outcome.success else st.error)(tr(outcome.message))
 
 
 def render_last_save_status() -> None:
@@ -414,9 +403,6 @@ def render_last_save_status() -> None:
     if outcome is None:
         return
     if outcome.success:
-        st.caption("Saved to your account.")
+        st.caption(tr("Saved to your account."))
     else:
-        st.warning(
-            f"Not saved to your account: {outcome.message} "
-            "Your local work is kept; use Save in Study Plan to retry."
-        )
+        st.warning(tr(f"Not saved to your account: {outcome.message} Your local work is kept; use Save in Study Plan to retry."))

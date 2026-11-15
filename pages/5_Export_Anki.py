@@ -1,3 +1,4 @@
+from services.i18n import tr
 import csv
 import re
 from io import StringIO
@@ -24,31 +25,31 @@ def _topic_tag(topic_id: str) -> str:
 
 apply_app_styles()
 
-st.title("Export to Anki")
+st.title(tr("Export to Anki"))
 st.caption(
-    "Review course knowledge cards here or download a UTF-8 TSV file "
-    "for Anki text import."
+    tr("Review course knowledge cards here or download a UTF-8 TSV file "
+    "for Anki text import.")
 )
 
-with st.expander("Import instructions and limitations"):
-    st.write("Download the TSV, then use Anki Desktop → File → Import and map Front, Back and Tags. AnkiWeb sync is not supported; Anki Desktop import has not been verified.")
+with st.expander(tr("Import instructions and limitations")):
+    st.write(tr("Download the TSV, then use Anki Desktop → File → Import and map Front, Back and Tags. AnkiWeb sync is not supported; Anki Desktop import has not been verified."))
 
 course = st.session_state.get("current_course")
 
 if course is None:
-    st.info("Load a course from the dashboard first.")
+    st.info(tr("Load a course from the dashboard first."))
     st.stop()
 
 with st.container(key="anki_course_heading"):
     st.subheader(course.course_name)
 
 if not course.questions:
-    st.info("This course has no questions to export.")
+    st.info(tr("This course has no questions to export."))
     st.stop()
 
 export_scope = st.radio(
-    "Questions to export",
-    options=["All Questions", "Weak Topics"],
+    tr("Questions to export"),
+    options=[tr("All Questions"), tr("Weak Topics")],
     key=f"anki_export_scope_{course.course_id}",
     horizontal=True,
     width="stretch",
@@ -56,15 +57,15 @@ export_scope = st.radio(
 
 topic_ids = None
 
-if export_scope == "Weak Topics":
+if export_scope == tr("Weak Topics"):
     mode_label = st.radio(
-        "Practice mode",
-        options=["Mock Exam", "Topic Practice"],
+        tr("Practice mode"),
+        options=[tr("Mock Exam"), tr("Topic Practice")],
         key=f"anki_export_mode_{course.course_id}",
         horizontal=True,
     width="stretch",
     )
-    mode = "mock" if mode_label == "Mock Exam" else "topic"
+    mode = "mock" if mode_label == tr("Mock Exam") else "topic"
 
     history_key = f"practice_history_{course.course_id}"
     history = st.session_state.get(history_key, {})
@@ -87,25 +88,25 @@ if export_scope == "Weak Topics":
             questions=list(questions_by_id.values()),
         )
     except ValueError as error:
-        st.error(f"Could not calculate mastery: {error}")
+        st.error(tr(f"Could not calculate mastery: {error}"))
         st.stop()
 
     topic_ids = get_weak_topic_ids(stats, mode)
     if not topic_ids:
-        st.info("No weak or developing topics in this practice mode.")
+        st.info(tr("No weak or developing topics in this practice mode."))
         st.stop()
 
     if not any(question.topic_id in topic_ids for question in course.questions):
-        st.info("No questions match the weak or developing topics.")
+        st.info(tr("No questions match the weak or developing topics."))
         st.stop()
 
 content = export_anki_tsv(course, topic_ids=topic_ids)
 if not content:
-    st.info("No questions match the selected export.")
+    st.info(tr("No questions match the selected export."))
     st.stop()
 
 cards = list(csv.reader(StringIO(content), delimiter="\t"))
-st.caption(f"{len(cards)} study cards shown and ready to export.")
+st.caption(tr(f"{len(cards)} study cards shown and ready to export."))
 topic_names_by_tag = {
     _topic_tag(topic.id): topic.name
     for topic in course.topics
@@ -114,11 +115,11 @@ topic_names_by_tag = {
 with st.container(border=True, key="anki_export_summary"):
     summary_column, download_column = st.columns([1.4, 1], vertical_alignment="center")
     with summary_column:
-        st.markdown("**Your review deck**")
-        st.caption(f"{len(cards)} cards · {export_scope} · UTF-8 TSV")
+        st.markdown(tr("**Your review deck**"))
+        st.caption(tr(f"{len(cards)} cards · {export_scope} · UTF-8 TSV"))
     with download_column:
         st.download_button(
-            "Download Anki TSV",
+            tr("Download Anki TSV"),
             data=content.encode("utf-8"),
             file_name=_safe_filename(course.course_name),
             mime="text/tab-separated-values; charset=utf-8",
@@ -126,8 +127,8 @@ with st.container(border=True, key="anki_export_summary"):
             use_container_width=True,
         )
 
-st.subheader("Study cards")
-st.caption("Try each question, then reveal its answer and explanation.")
+st.subheader(tr("Study cards"))
+st.caption(tr("Try each question, then reveal its answer and explanation."))
 for index, (front, back, tags) in enumerate(cards, start=1):
     question, _, options = front.partition("\n")
     answer, _, explanation = back.partition("\n")
@@ -141,9 +142,9 @@ for index, (front, back, tags) in enumerate(cards, start=1):
     )
 
     with st.container(border=True, key=f"anki_study_card_{index}"):
-        st.caption(f"{index:02d} / {len(cards)} · {topic_name}")
-        st.markdown(f"#### {question}")
+        st.caption(tr(f"{index:02d} / {len(cards)} · {topic_name}"))
+        st.markdown(tr(f"#### {question}"))
         st.text(options, width="stretch")
-        with st.expander("Show answer and explanation"):
+        with st.expander(tr("Show answer and explanation")):
             st.success(answer.removeprefix("Correct answer: "))
             st.write(explanation.removeprefix("Explanation: "))
