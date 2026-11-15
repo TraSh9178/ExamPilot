@@ -94,7 +94,13 @@ def test_sidebar_lists_pages_in_study_order(monkeypatch):
     assert position == "sidebar"
     assert [page.title for page in visible] == expected_sidebar_titles()
     assert visible[0]._default
-    assert [(page.title, page.url_path) for page in hidden] == [("My account", "account")]
+    # Hidden: the account page, then the focus pages whose files exist.
+    from services.page_registry import existing_focus_pages
+
+    assert [(page.title, page.url_path) for page in hidden] == [
+        ("My account", "account"),
+        *[(title, url_path) for _, title, url_path in existing_focus_pages()],
+    ]
     if RADAR_PAGE.exists():
         radar = next(page for page in visible if page.title == "Learning Radar")
         assert radar.icon == ":material/radar:"

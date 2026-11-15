@@ -12,6 +12,7 @@ from services.auth_session import current_user
 from services.auth_ui import render_auth_page
 from services.account_ui import render_account_menu, render_account_page
 from services.accessibility import render_accessibility_controls
+from services.page_registry import existing_focus_pages
 from services.ui_style import BRAND_LOGO, BRAND_PLANE, apply_app_styles
 from services.tutor_assistant_ui import clear_tutor_browser_state, render_tutor_assistant
 
@@ -99,8 +100,14 @@ pages += [
     ),
 ]
 
+# Pages opened from a button on another page; they are not in the sidebar.
+focus_pages = [
+    st.Page(path, title=tr(title), url_path=url_path, visibility="hidden")
+    for path, title, url_path in existing_focus_pages()
+]
+
 # Default position: the page list lives in Streamlit's collapsible sidebar.
-navigation = st.navigation([*pages, account_page])
+navigation = st.navigation([*pages, account_page, *focus_pages])
 # Page widgets are cleaned up during navigation; rehydrate a course's saved
 # scope once when entering its study page, not on every form interaction.
 if st.session_state.get("_learning_page_path") != navigation.url_path:

@@ -513,6 +513,12 @@ _TRANSLATIONS.update({
     "Pause when you take a break.": "休息时可以暂停。",
 })
 
+# focus pages
+_TRANSLATIONS.update({
+    "Practice history": "练习记录",
+    "Answers behind Learning DNA": "学习画像的依据",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
