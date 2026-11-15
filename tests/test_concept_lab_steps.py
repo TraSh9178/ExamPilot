@@ -160,15 +160,15 @@ def test_each_step_shows_only_its_controls_beside_the_same_chart(topic, step):
     assert not app.exception
     left, right = _columns(app, topic)
     assert _widget_keys(left) == step_widgets(topic, step)
-    # The indicator starts the column and no bordered box indents a step.
+    # The indicator starts the column; prediction choices have their own panel.
     first = list(left.children.values())[0]
     assert first.type == "markdown" and "lab-steps" in first.value
-    assert not any(
-        isinstance(node, Block) and getattr(getattr(node.proto, "flex_container", None), "border", False)
+    assert sum(
+        bool(isinstance(node, Block) and getattr(getattr(node.proto, "flex_container", None), "border", False))
         for node in _walk(left)
-    )
+    ) == (1 if step == 1 else 0)
     if step == 1:
-        assert f"lab_{topic}_prediction" in {getattr(node, "key", None) for node in left.children.values()}
+        assert f"lab_{topic}_prediction" in {getattr(node, "key", None) for node in _walk(left)}
     # The other tabs stay on step 1.
     for other in TOPICS:
         if other != topic:

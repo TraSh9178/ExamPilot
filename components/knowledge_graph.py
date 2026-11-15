@@ -1,4 +1,5 @@
 import json
+import html
 import time
 from collections.abc import MutableMapping, Sequence
 from pathlib import Path
@@ -229,8 +230,9 @@ def render_topic_details(
         st.write(details["summary"])
 
     if course is not None:
-        from components.topic_explanation import render_topic_explanation
-        render_topic_explanation(course, details["id"])
+        if st.button(tr("Detailed explanation & examples"), key="topic_details_open", icon=":material/open_in_new:"):
+            st.session_state[f"topic_details_{course.course_id}"] = details["id"]
+            st.switch_page("pages/14_Topic_Details.py")
 
     source_pages = details["source_pages"]
     if source_pages:
@@ -475,6 +477,7 @@ def render_radar_panel(
     focus_topic_id: str | None = None,
     chart_key: str = "learning_radar_panel_chart",
     title: str = "**Learning Radar**",
+    scrollable: bool = False,
 ) -> None:
     """List the course's flagged topics in the order given (most flagged first).
 
@@ -512,7 +515,26 @@ def render_radar_panel(
                     if topic_radar.reasons.get(code, 0) > 0
                 ]
                 lines.append(f"{' ' * len(marker)}- {' · '.join(parts)}")
-        st.markdown("\n".join(lines))
+        if scrollable:
+            rows = []
+            for index, item in enumerate(flagged, start=1):
+                reasons = radar_reason_breakdown(item)
+                detail = " · ".join(
+                    f"{tr(learning_radar.REASON_LABELS[code])} {item.reasons[code]}"
+                    for code in learning_radar.REASON_LABELS
+                    if item.reasons.get(code, 0) > 0
+                ) if reasons is not None else ""
+                rows.append(
+                    '<li class="radar-ranked-row"><strong>'
+                    + html.escape(f"{index}. {topic_names[item.topic_id]}")
+                    + '</strong><span>' + html.escape(tr(radar_count_text(item)))
+                    + '</span><small>' + html.escape(detail) + '</small></li>'
+                )
+            st.html('<div class="radar-ranking-scroll" tabindex="0" role="region" aria-label="'
+                    + html.escape(tr("Most flagged topics"), quote=True)
+                    + '"><ol>' + ''.join(rows) + '</ol></div>')
+        else:
+            st.markdown("\n".join(lines))
     else:
         st.caption(tr("No topics have been flagged yet."))
     if radar.has_sample:

@@ -17,7 +17,7 @@ def render_topic_explanation(course: StudyPackage, topic_id: str) -> None:
     fingerprint = hashlib.sha256(
         (course.model_dump_json() + topic_id + str(chinese)).encode()
     ).hexdigest()
-    with st.expander(tr("Detailed explanation & examples")):
+    with st.container(key="topic_teaching_content"):
         st.caption(tr("Go beyond the summary: understand the idea, then work through an example."))
         if st.button(tr("Explain step by step"), key=f"graph_explain_{fingerprint}"):
             language = "Simplified Chinese" if chinese else "English"
