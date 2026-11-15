@@ -218,3 +218,10 @@ def test_practice_result_opens_the_same_topic_in_concept_lab():
     assert not app.exception
     assert app.session_state[f"concept_lab_topic_{course.course_id}"] == topic_id
     assert app.session_state[f"active_practice_{course.course_id}"]["session"] == session
+
+def test_top_review_menu_opens_destination_with_a_clear_selection():
+    app = signed_in_app(ROOT / "app.py").run()
+    menu = app.selectbox(key="flight_review_destination_")
+    menu.set_value("Study_Hub").run()
+    assert not app.exception
+    assert app.selectbox(key="flight_review_destination_Study_Hub").value is None
