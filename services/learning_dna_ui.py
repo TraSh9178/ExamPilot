@@ -35,13 +35,12 @@ def render_learning_dna(course, attempts, sessions, questions, mode):
             evidence = [
                 {"Dimension": DIMENSIONS[item.dimension], "Question": row['question'],
                  "Latest answer": "Correct" if row['correct'] else "Incorrect",
-                 "Question ID": row['question_id'], "Session": row['session_id'],
                  "In-app hints shown": course.learning_state.get("practice_insights", {}).get(row['session_id'], {}).get(row['question_id'], {}).get("hints_used", "Not recorded"),
-                 "Confidence": course.learning_state.get("practice_insights", {}).get(row['session_id'], {}).get(row['question_id'], {}).get("confidence") or "Not recorded"}
+                 "Confidence": {"sure": "Sure", "unsure": "Unsure", "guessed": "Guessed"}.get(course.learning_state.get("practice_insights", {}).get(row['session_id'], {}).get(row['question_id'], {}).get("confidence"), "Not recorded")}
                 for item in pair if item for row in item.evidence
             ]
             if evidence:
                 with st.expander(f"View evidence: {topic.name}"):
                     st.dataframe(evidence, hide_index=True, width="stretch")
     with st.expander("Question labels and saved history"):
-        st.caption("Tag a question's evidence type under Study Plan → Review and edit questions. Saved questions and graded history restore with your course; editing a tag creates a new question version and preserves earlier evidence.")
+        st.caption("Tag a question's evidence type under Study Plan → Course tools → Review and edit questions. Saved questions and graded history restore with your course; editing a tag creates a new question version and preserves earlier evidence.")

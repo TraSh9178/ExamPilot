@@ -16,6 +16,22 @@ from services.practice_insights import session_insights
 from services.learning_flow import install_practice, resume_draft, remember_widget, hydrate_widgets
 from services.ui_style import apply_app_styles
 
+def practice_label(records, sid, *, unfinished=False):
+    """Human-readable choices; stable session IDs remain internal widget values."""
+    record = records[sid]
+    number = list(records).index(sid) + 1
+    if "session" not in record:
+        return f"{number} · Saved practice"
+    mode = "Topic practice" if record["session"].mode == "topic" else "Mock exam"
+    label = f"{number} · {mode} · {len(record['questions'])} questions"
+    result = record.get("result")
+    if result is not None:
+        label += f" · {result['correct_count']}/{result['total_count']} correct"
+    elif unfinished:
+        label += " · Unfinished"
+    return label
+
+
 def submit_practice(course, practice_key):
     active = st.session_state[practice_key]
     session, questions = active["session"], active["questions"]
@@ -99,7 +115,7 @@ st.session_state.pop("priority_ready", None)
 drafts = st.session_state.get(f"practice_drafts_{course.course_id}", {})
 if drafts:
     with st.expander(f"Unfinished sessions ({len(drafts)})"):
-        draft_id = st.selectbox("Unfinished session", list(drafts), key=f"draft_choice_{course.course_id}")
+        draft_id = st.selectbox("Unfinished session", list(drafts), format_func=lambda sid: practice_label(drafts, sid, unfinished=True), key=f"draft_choice_{course.course_id}")
         st.button("Resume unfinished session", key=f"resume_draft_{course.course_id}",
             on_click=resume_draft, args=(st.session_state, course.course_id, draft_id))
 
@@ -371,7 +387,7 @@ history = st.session_state.get(history_key, {})
 st.caption(f"Saved practice sessions: {len(history)}")
 if history:
     with st.expander("Review a saved session"):
-        saved_sid = st.selectbox("Saved session", list(history), key=f"saved_session_{course.course_id}")
+        saved_sid = st.selectbox("Saved session", list(history), format_func=lambda sid: practice_label(history, sid), key=f"saved_session_{course.course_id}")
         if st.button("Open saved result", key=f"open_saved_result_{course.course_id}"):
             record = history[saved_sid]
             saved_session = record["session"]

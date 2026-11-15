@@ -98,9 +98,6 @@ def render_account_page() -> None:
         st.markdown(_avatar_html(user.username, large=True), unsafe_allow_html=True)
         st.subheader(user.username)
         st.caption("Currently signed in")
-        with st.expander("Account details"):
-            st.text("Account ID")
-            st.text(user.user_id)
         discard_confirmed = True
         if has_unresolved_conflicts(st.session_state):
             discard_confirmed = st.checkbox(

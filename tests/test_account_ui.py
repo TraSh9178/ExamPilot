@@ -76,7 +76,7 @@ def test_account_page_displays_canonical_read_only_identity():
     assert not app.exception
     assert [heading.value for heading in app.title] == ["My account"]
     assert TEST_USER.username in [heading.value for heading in app.subheader]
-    assert TEST_USER.user_id in [text.value for text in app.text]
+    assert TEST_USER.user_id not in [text.value for text in app.text]
     assert not app.text_input
     assert len(app.get("file_uploader")) == 1
     assert app.button(key="account_remove_avatar").disabled

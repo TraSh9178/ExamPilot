@@ -318,7 +318,7 @@ def test_panel_sits_between_start_practice_and_question_review(monkeypatch):
     panel = index_of(lambda node: _block_key(node) == PANEL_KEY)
     review = index_of(
         lambda node: node.type == "expander"
-        and node.label == "Review and edit questions"
+        and node.label == "Course tools"
     )
     assert scope < start < panel < review
 
