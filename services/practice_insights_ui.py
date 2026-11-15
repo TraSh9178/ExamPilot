@@ -145,12 +145,12 @@ def result_overview(course, session, questions, result):
         st.info(tr(f"{guesses} correct answers were marked Guessed. Revisit them before treating them as secure knowledge."))
     if data['topic_seconds']:
         names={t.id:t.name for t in course.topics}
-        with st.expander(tr('Time breakdown')):
-            st.markdown(tr('**Tracked focus time by topic**'))
-            st.dataframe([{tr('Topic'):names.get(t,tr('Topic')),tr('Tracked seconds'):round(seconds,1)}
-                for t,seconds in sorted(data['topic_seconds'].items(),key=lambda p:-p[1])],hide_index=True,width='stretch')
-            slowest=max(questions,key=lambda q:rows.get(q.id,{}).get('focus_seconds') or 0)
-            st.caption(tr('Longest tracked question: ') + slowest.question)
+        # Shown directly: where the time went is part of the result, not a detail to dig for.
+        st.markdown(tr('**Tracked focus time by topic**'))
+        st.dataframe([{tr('Topic'):names.get(t,tr('Topic')),tr('Tracked seconds'):round(seconds,1)}
+            for t,seconds in sorted(data['topic_seconds'].items(),key=lambda p:-p[1])],hide_index=True,width='stretch')
+        slowest=max(questions,key=lambda q:rows.get(q.id,{}).get('focus_seconds') or 0)
+        st.caption(tr('Longest tracked question: ') + slowest.question)
     render_priorities(course, data['priorities'])
 
 
@@ -170,12 +170,12 @@ def render_priorities(course, priorities):
     if priorities:
         st.caption(tr('1 question could benefit from another look.') if len(priorities) == 1
                    else tr(f"{len(priorities)} questions could benefit from another look."))
-        with st.expander(tr("Why this review order")):
-            st.caption(tr('Priority uses incorrect/unanswered responses, confidence, hints and relative tracked time. It is a transparent practice suggestion, not a diagnosis.'))
-            names={t.id:t.name for t in course.topics}
-            st.dataframe([{tr('Rank'):i,tr('Topic'):names.get(r['topic_id'],tr('Topic')),
-                           tr('Question'):r['question'],tr('Why review'):', '.join(tr(reason) for reason in r['reasons'])}
-                          for i,r in enumerate(priorities,1)],hide_index=True,width='stretch')
+        # The list is the point of this section, so it is on the page, not behind a click.
+        names={t.id:t.name for t in course.topics}
+        st.dataframe([{tr('Rank'):i,tr('Topic'):names.get(r['topic_id'],tr('Topic')),
+                       tr('Question'):r['question'],tr('Why review'):', '.join(tr(reason) for reason in r['reasons'])}
+                      for i,r in enumerate(priorities,1)],hide_index=True,width='stretch')
+        st.caption(tr('Priority uses incorrect/unanswered responses, confidence, hints and relative tracked time. It is a transparent practice suggestion, not a diagnosis.'))
         st.button(tr('Practise review priorities'), key=f'priorities_{course.course_id}',
             on_click=launch_priority, args=(course, priorities))
         if error := st.session_state.pop('priority_launch_error', None):

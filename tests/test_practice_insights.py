@@ -59,6 +59,23 @@ def test_focus_estimates_switch_pause_idle_cap_and_clock_regression():
     with pytest.raises(ValueError):focus_question(active,'other',2001)
 
 
+def test_smart_review_list_is_on_the_page_not_behind_an_expander():
+    app,_=start_app(graded=True)
+    assert not app.exception
+    labels=[e.label for e in app.expander]
+    assert 'Why this review order' not in labels and 'Time breakdown' not in labels
+    # The ranked list is rendered directly, with the one question that was missed.
+    ranked=[f.value for f in app.dataframe if 'Why review' in f.value.columns]
+    assert len(ranked)==1
+    assert list(ranked[0]['Question'])==['Question 1']
+    assert list(ranked[0]['Rank'])==[1]
+    for expander in app.expander:
+        assert not any('Why review' in f.value.columns for f in expander.dataframe)
+    # The note on how the order is decided stays, as a line of text under the list.
+    assert any(c.value.startswith('Priority uses incorrect/unanswered responses') for c in app.caption)
+    assert app.button(key='priorities_insights').label=='Practise review priorities'
+
+
 def test_checklist_identifies_unanswered_uncertain_guessed_without_grading():
     qs=setup_course().questions
     rows=before_submit(qs,{'q0':0,'q1':1,'q2':0},{'q0':'sure','q1':'unsure','q2':'guessed'})
