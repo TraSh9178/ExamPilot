@@ -317,11 +317,6 @@ a[data-testid="stSidebarNavLink"]:focus-visible {
   margin-top: .5rem;
 }
 
-/* Practice: and below the focus controls, which sit right above the question. */
-.st-key-flight_worksheet > [data-testid="stLayoutWrapper"]:has(> [data-testid="stExpander"]) {
-  margin-bottom: .5rem;
-}
-
 .account-sidebar-copy strong {
   color: var(--ink);
 }

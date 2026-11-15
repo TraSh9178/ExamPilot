@@ -113,7 +113,11 @@
 }
 
 /* ---- Buttons under the card ------------------------------------------------- */
+/* Grouped in the middle like a player's controls, which also keeps Next card
+   clear of the floating Pilot button in the lower-right corner. */
 [data-testid="stMain"] [class*="st-key-flashcards_actions_"] {
+  justify-content: center !important;
+  column-gap: .75rem;
   margin-top: .35rem;
   row-gap: .5rem;
 }
