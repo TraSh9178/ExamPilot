@@ -58,7 +58,7 @@ def apply_app_styles() -> None:
     # Later sheets win: the paper theme layers over the earlier academic styles.
     paper = "\n".join(_stylesheet(path) for path in paper_stylesheets())
     st.markdown(
-        "<style>\n" + typography + """
+        "<style>\n" + _stylesheet(ASSETS / "ui_tokens.css") + typography + """
         :root {
             color-scheme: light;
             --exam-blue: #2166DB;

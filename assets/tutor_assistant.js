@@ -72,6 +72,22 @@ export default function(component) {
       left: visual ? visual.offsetLeft : 0, top: visual ? visual.offsetTop : 0 };
   };
   const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
+  const avoidFocusedControl = () => {
+    if (state.open) return;
+    const active = document.activeElement;
+    if (!active || active === document.body || active === bubble || active.contains(root)) return;
+    const focusTarget = active.matches('input[type="radio"], input[type="checkbox"]') ? active.closest("label") || active : active;
+    const target = focusTarget.getBoundingClientRect();
+    const entry = bubble.getBoundingClientRect();
+    if (!target.width || !target.height || target.bottom <= entry.top || target.top >= entry.bottom
+        || target.right <= entry.left || target.left >= entry.right) return;
+    const view = viewport();
+    const headerBottom = document.querySelector('[data-testid="stHeader"]')?.getBoundingClientRect().bottom || view.top;
+    const above = target.top - entry.height - 12;
+    const below = target.bottom + 12;
+    const y = above >= Math.max(view.top + 12, headerBottom + 12) ? above : below;
+    bubble.style.top = `${clamp(y, Math.max(view.top + 12, headerBottom + 12), view.top + view.height - entry.height - 12)}px`;
+  };
   const position = () => {
     const view = viewport();
     const margin = 12;
@@ -127,6 +143,7 @@ export default function(component) {
     bubble.classList.toggle('is-panel-overlap', state.open && overlap);
     bubble.tabIndex = state.open && overlap ? -1 : 0;
     bubble.setAttribute('aria-hidden', String(state.open && overlap));
+    avoidFocusedControl();
   };
   const updateInput = () => {
     const busy = Boolean(state.pending);
@@ -191,13 +208,13 @@ export default function(component) {
       if (!destroyed && !question.disabled) question.focus({ preventScroll: true });
     });
   };
-  const closePanel = () => {
+  const closePanel = (restoreFocus = true) => {
     state.open = false;
     panel.hidden = true;
     bubble.setAttribute('aria-expanded', 'false');
     bubble.setAttribute('aria-label', text('Open Pilot, your AI study assistant', '打开 Pilot AI 学习助手'));
     position();
-    bubble.focus({ preventScroll: true });
+    if (restoreFocus) bubble.focus({ preventScroll: true });
   };
   const submit = (event) => {
     if (event) event.preventDefault();
@@ -319,6 +336,11 @@ export default function(component) {
     clear.disabled = true;
     state.validation = '';
     setTriggerValue('clear', { request_id: crypto.randomUUID(), session_id: data.session_id, course_id: courseId });
+  });
+  // A non-modal helper must not conceal keyboard focus in the study page.
+  on(document, 'focusin', event => {
+    if (state.open && !event.composedPath().includes(root)) closePanel(false);
+    avoidFocusedControl();
   });
   on(window, 'resize', position);
   if (window.visualViewport) {

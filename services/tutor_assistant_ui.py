@@ -21,14 +21,15 @@ ASSETS = Path(__file__).resolve().parents[1] / "assets"
 
 @lru_cache(maxsize=1)
 def _component():
-    icon = base64.b64encode((ASSETS / "pilot-robot.svg").read_bytes()).decode("ascii")
+    icon = base64.b64encode((ASSETS / "brand-plane.svg").read_bytes()).decode("ascii")
     html = (ASSETS / "tutor_assistant.html").read_text(encoding="utf-8").replace(
         "__PILOT_MASCOT_DATA_URI__", f"data:image/svg+xml;base64,{icon}",
     )
     return components.component(
         "exampilot_floating_tutor",
         html=html,
-        css=(ASSETS / "ui_typography.css").read_text(encoding="utf-8")
+        css=(ASSETS / "ui_tokens.css").read_text(encoding="utf-8")
+        + "\n" + (ASSETS / "ui_typography.css").read_text(encoding="utf-8")
         + "\n"
         + (ASSETS / "tutor_assistant.css").read_text(encoding="utf-8"),
         js=(ASSETS / "tutor_assistant.js").read_text(encoding="utf-8"),
