@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 STUDY_PLAN_PATH = ROOT / "pages" / "1_Study_Hub.py"
 DASHBOARD_PATH = ROOT / "pages" / "0_Dashboard.py"
 PROGRESS_PATH = ROOT / "pages" / "3_Performance.py"
-ANKI_PATH = ROOT / "pages" / "5_Export_Anki.py"
+ANKI_PATH = ROOT / "pages" / "11_Anki_Export.py"
 
 
 def make_reviewed_course() -> StudyPackage:

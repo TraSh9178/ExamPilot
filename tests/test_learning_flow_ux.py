@@ -230,7 +230,8 @@ def test_sidebar_lists_every_study_page_and_opens_each_one(monkeypatch):
     visible, hidden, position = sidebar_navigation(monkeypatch)
     assert position == "sidebar"
     assert [page.title for page in visible] == expected_sidebar_titles()
-    assert [page.url_path for page in hidden] == ["account"]
+    from services.page_registry import existing_focus_pages
+    assert [page.url_path for page in hidden] == ["account", *[url for _, _, url in existing_focus_pages()]]
 
     # Opening a page from the list leaves no top review menu behind.
     app = signed_in_app(ROOT / "app.py").run()
