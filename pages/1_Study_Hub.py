@@ -256,12 +256,16 @@ with st.expander("Review and edit questions", expanded=any(status_for(course, q.
                 }[value],
                 help="Choose what this question tests. Leave uncertain or mixed questions untagged; this label is not a student ability score.",
             )
+            structure = st.text_input(
+                "Practice structure label", value=original.practice_structure or "", max_chars=80,
+                help="A task type such as tangent_equation or derivative_at_point. Use the same label for the same task structure; leave uncertain questions blank.",
+            )
             decision = st.radio("Review decision", ["Approve", "Flag as problematic"], horizontal=True)
             apply_review = st.form_submit_button("Save review", type="primary")
         if apply_review:
             try:
                 revised = review_question(course, question_id, "approved" if decision == "Approve" else "flagged",
-                                          {"question": prompt, "options": options, "correct_index": correct, "explanation": explanation, "cognitive_dimension": dimension})
+                                          {"question": prompt, "options": options, "correct_index": correct, "explanation": explanation, "cognitive_dimension": dimension, "practice_structure": structure.strip() or None})
             except ValueError as error:
                 st.error(str(error))
             else:

@@ -6,6 +6,7 @@ from services.mastery_engine import (
 )
 from services.ui_style import apply_app_styles
 from services.learning_dna_ui import render_learning_dna
+from services.practice_insights_ui import render_history_insights
 
 
 apply_app_styles()
@@ -106,6 +107,8 @@ render_learning_dna(
     course, attempts, [history[sid]["session"] for sid in ordered_ids],
     list(questions_by_id.values()), mode,
 )
+
+render_history_insights(course, history, mode)
 
 status_labels = {
     "unattempted": "Unattempted",

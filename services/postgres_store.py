@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 import json
 import os
 from dataclasses import dataclass
@@ -144,7 +146,7 @@ def _merge_course_packages(
     for question in incoming.questions:
         existing_question = questions_by_id.get(question.id)
         if existing_question is not None:
-            if existing_question != question:
+            if existing_question.model_dump(exclude={"cognitive_dimension", "hints", "practice_structure"}) != question.model_dump(exclude={"cognitive_dimension", "hints", "practice_structure"}):
                 raise _PersistenceError(
                     "A saved question ID was reused with different content."
                 )
@@ -161,6 +163,11 @@ def _merge_course_packages(
     reviews = {**existing.learning_state.get("question_reviews", {}), **incoming.learning_state.get("question_reviews", {})}
     if reviews:
         metadata["question_reviews"] = reviews
+    insights = deepcopy(existing.learning_state.get("practice_insights", {}))
+    for sid, rows in incoming.learning_state.get("practice_insights", {}).items():
+        insights[sid] = {**insights.get(sid, {}), **rows}
+    if insights:
+        metadata["practice_insights"] = insights
     merged_data["learning_state"] = metadata
     order = list(existing.learning_state.get("session_order", []))
     for session_id in incoming.learning_state.get("session_order", []):

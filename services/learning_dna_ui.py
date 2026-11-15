@@ -34,7 +34,9 @@ def render_learning_dna(course, attempts, sessions, questions, mode):
             evidence = [
                 {"Dimension": DIMENSIONS[item.dimension], "Question": row['question'],
                  "Latest answer": "Correct" if row['correct'] else "Incorrect",
-                 "Question ID": row['question_id'], "Session": row['session_id']}
+                 "Question ID": row['question_id'], "Session": row['session_id'],
+                 "In-app hints shown": course.learning_state.get("practice_insights", {}).get(row['session_id'], {}).get(row['question_id'], {}).get("hints_used", "Not recorded"),
+                 "Confidence": course.learning_state.get("practice_insights", {}).get(row['session_id'], {}).get(row['question_id'], {}).get("confidence") or "Not recorded"}
                 for item in pair if item for row in item.evidence
             ]
             if evidence:

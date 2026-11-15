@@ -43,6 +43,8 @@ def validate_metadata(metadata, topic_ids, question_ids):
             total += len(page["text"])
         if total > MAX_TEXT:
             raise ValueError("Saved page text exceeds 50,000 characters.")
+    from services.practice_insights import validate_insights
+    validate_insights(metadata.get("practice_insights", {}), question_ids)
     reviews = metadata.get("question_reviews", {})
     if not isinstance(reviews, dict) or any(qid not in question_ids or (not isinstance(status, str) or status not in {"pending", "approved", "flagged", "superseded"}) for qid, status in reviews.items()):
         raise ValueError("Invalid question review state.")
