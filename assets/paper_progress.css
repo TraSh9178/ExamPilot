@@ -236,12 +236,26 @@
   white-space: nowrap;
 }
 
-/* ---- The three figures: a long label wraps instead of being cut off ----------- */
+/* ---- The three figures -------------------------------------------------------
+   A long label wraps between words instead of being cut off, and when the
+   page is too narrow for three tiles side by side they wrap onto a second row
+   rather than squeezing the figures. */
 [data-testid="stMain"] .st-key-progress_overview [data-testid="stMetricLabel"],
 [data-testid="stMain"] .st-key-progress_overview [data-testid="stMetricLabel"] * {
   overflow: visible;
   white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
   text-overflow: clip;
+}
+
+[data-testid="stMain"] .st-key-progress_overview [data-testid="stHorizontalBlock"] {
+  flex-wrap: wrap;
+}
+
+[data-testid="stMain"] .st-key-progress_overview [data-testid="stColumn"] {
+  flex: 1 1 12rem;
+  min-width: 12rem;
 }
 
 /* ---- Learning DNA: topic cards side by side when the page is wide enough ------ */
