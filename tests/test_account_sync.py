@@ -379,6 +379,36 @@ def test_restoring_a_course_with_nothing_saved_hides_its_id(store):
     assert "course-1" not in outcome.message
 
 
+def test_restore_with_nothing_saved_does_not_block_later_saves(store):
+    course = make_course()
+    state = signed_in_state()
+
+    assert account_sync.restore_course(state, course.course_id).message == (
+        account_sync.NOTHING_SAVED_MESSAGE
+    )
+    assert account_sync.save_course_to_account(state, course).success
+    assert account_sync.save_course_with_history(state, course).success
+    assert course.course_id in store.courses[TEST_USER.user_id]
+
+
+def test_failed_restore_still_blocks_later_saves(store):
+    course = make_course()
+    seed(store, TEST_USER, course)
+    store.fail_course_ids.add(course.course_id)
+    state = signed_in_state()
+
+    assert not account_sync.restore_course(state, course.course_id).success
+    assert not account_sync.save_course_to_account(state, course).success
+    assert not account_sync.save_course_with_history(state, course).success
+    assert store.names("save_course") == []
+
+    # A later restore that finds nothing stored clears the earlier block.
+    store.fail_course_ids.clear()
+    del store.courses[TEST_USER.user_id][course.course_id]
+    account_sync.restore_course(state, course.course_id)
+    assert account_sync.save_course_to_account(state, course).success
+
+
 def test_app_restores_once_per_login_despite_reruns(store):
     course = make_course()
     seed(store, TEST_USER, course, make_exam(course, "s1"))
@@ -661,3 +691,40 @@ def test_has_unresolved_conflicts_tracks_quarantined_records():
     assert account_sync.has_unresolved_conflicts(session_state)
     session_state["account_sync"]["restore_conflicts"] = {}
     assert not account_sync.has_unresolved_conflicts(session_state)
+
+
+def test_dashboard_save_failure_warning_survives_the_rerun(store, monkeypatch):
+    from types import SimpleNamespace
+
+    import streamlit as st
+
+    from services import ai_service
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    uploaded = SimpleNamespace(name="notes.txt", getvalue=lambda: b"Course notes.")
+    monkeypatch.setattr(st, "file_uploader", lambda *_args, **_kwargs: uploaded)
+
+    def generate_topics(document, course_id, course_name):
+        return {"ok": True, "package": {
+            "course_id": course_id, "course_name": course_name,
+            "topics": [{"id": "t1", "name": "Topic", "summary": "Summary."}],
+            "relationships": [], "questions": [],
+        }}
+
+    monkeypatch.setattr(ai_service, "generate_topics", generate_topics)
+    store.fail.add("save_course")
+    app = signed_in_app(ROOT / "pages" / "0_Dashboard.py").run()
+    app.button(key="create_course_button").click().run()
+    app.text_input(key="setup_course_name").set_value("New course").run()
+    next(b for b in app.button if b.label == "Extract text").click().run()
+    next(b for b in app.button if b.label == "Generate topics").click().run()
+
+    assert not app.exception
+    assert store.names("save_course")
+    warnings = [w.value for w in app.warning]
+    assert warnings.count(account_sync.SAVE_FAILED_MESSAGE) == 1
+    assert not any("course save failed" in text for text in warnings)
+
+    # Shown once: the next run no longer repeats it.
+    app.run()
+    assert account_sync.SAVE_FAILED_MESSAGE not in [w.value for w in app.warning]

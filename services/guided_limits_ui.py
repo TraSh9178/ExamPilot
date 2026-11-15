@@ -75,7 +75,7 @@ def render_guided_review(course, session, questions, result) -> bool:
 
     key = f"guided_limits_{session.session_id}"
     progress = st.session_state.setdefault(key, {})
-    first_answer = question.options[attempt.selected_index] if attempt.selected_index is not None else "Unanswered"
+    first_answer = question.options[attempt.selected_index] if attempt.selected_index is not None else tr("Unanswered")
 
     with st.container(border=True, key="guided_limits_review"):
         st.subheader(tr("Redo the step that stopped you"))

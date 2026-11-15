@@ -353,6 +353,9 @@ _TRANSLATIONS = {
     "You marked this topic.": "你已标记此知识点。",
     "Couldn't update Learning Radar. Try again in a moment.": "暂时无法更新学习雷达，请稍后再试。",
     "Connections kept in this session but not saved to your account. Use Save on the Study Plan page to retry.": "关联已保留在当前会话中，但未保存到账户。请在学习计划页面点击保存重试。",
+    # paper UI: fixes
+    "Open Study Plan": "打开学习计划", "Continue practice": "继续练习",
+    "Calculus I · Limits": "微积分 I · 极限",
 }
 
 _TRANSLATIONS.update(
@@ -508,6 +511,8 @@ _DYNAMIC = [
     (r"^(\d+) new questions? needs? your check$", r"有 \1 道新题需要你检查"),
     (r"^(\d+) cards · (.*)$", r"\1 张卡片 · \2"),
     (r"^An error occurred while .+\. Try again later\.$", r"处理请求时出错，请稍后重试。"),
+    # paper UI: fixes
+    (r"^Delete (.+)\? Its materials and practice progress will be removed from this session\.$", r"删除“\1”？课程资料和练习进度将从本次会话中移除。"),
 ]
 
 

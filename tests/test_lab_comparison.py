@@ -71,3 +71,13 @@ def test_corner_and_saved_graph_labels_follow_chinese_setting():
     names=spec['layer'][0]['encoding']['color']['scale']['domain']
     assert names==spec['layer'][0]['encoding']['strokeDash']['scale']['domain']
     assert '已保存的割线' in names
+
+
+@pytest.mark.parametrize('topic',['calc_limits','calc_derivatives'])
+def test_all_tab_labels_follow_chinese_setting(topic):
+    app=AppTest.from_file(str(PAGE))
+    app.session_state[LANGUAGE_KEY]=True
+    app.session_state['concept_lab_topic_calculus-i-demo']=topic
+    app.run()
+    assert not app.exception
+    assert [tab.label for tab in app.tabs]==['极限','导数','尖点与可导性']
