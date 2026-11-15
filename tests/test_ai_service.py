@@ -164,6 +164,7 @@ def make_relationships(edges=None):
 
 def api_error(status_code, message):
     classes = {
+        400: anthropic.BadRequestError,
         401: anthropic.AuthenticationError,
         403: anthropic.PermissionDeniedError,
         404: anthropic.NotFoundError,
@@ -581,15 +582,16 @@ def test_generate_topics_missing_api_key_does_not_create_client(monkeypatch):
 
     assert result["ok"] is False
     assert result["error_code"] == "MISSING_API_KEY"
-    assert result["message"] == "ANTHROPIC_API_KEY is not configured."
+    assert result["message"] == "AI generation is unavailable right now."
 
 
 @pytest.mark.parametrize(
     ("status_code", "expected_message"),
     [
-        (401, "API key was rejected"),
-        (403, "not allowed to use"),
-        (404, "not available to this account"),
+        (401, "AI generation is unavailable right now."),
+        (403, "AI generation is unavailable right now."),
+        (404, "AI generation is unavailable right now."),
+        (400, "AI generation is unavailable right now. Try again later."),
         (429, "quota or rate limit"),
         (500, "temporarily unavailable"),
         (503, "temporarily unavailable"),
@@ -609,6 +611,8 @@ def test_generate_topics_explains_api_errors_without_leaking(
     assert result["error_code"] == "API_ERROR"
     assert result["status_code"] == status_code
     assert expected_message in result["message"]
+    assert "ANTHROPIC" not in result["message"]
+    assert "configur" not in result["message"]
     assert FAKE_API_KEY not in str(result)
     assert private_message not in str(result)
 
@@ -1152,7 +1156,7 @@ def test_ask_tutor_rejects_missing_api_key_without_creating_client(monkeypatch):
     assert result == {
         "ok": False,
         "error_code": "MISSING_API_KEY",
-        "message": "ANTHROPIC_API_KEY is not configured.",
+        "message": "AI generation is unavailable right now.",
     }
 
 
@@ -1263,6 +1267,8 @@ def test_ask_tutor_handles_api_errors_without_exposing_details(
     assert result["error_code"] == "API_ERROR"
     assert result["status_code"] == status_code
     assert expected_message in result["message"]
+    assert "ANTHROPIC" not in result["message"]
+    assert "configur" not in result["message"]
     assert FAKE_API_KEY not in str(result)
     assert private_message not in str(result)
     assert "Private question text." not in str(result)

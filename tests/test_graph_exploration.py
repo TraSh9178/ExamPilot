@@ -45,7 +45,15 @@ def test_missing_topic_is_rejected(course):
             fn(course, "not-a-topic")
 
 
-def test_search_shows_summary_and_local_graph_preserves_original_course(course):
+def test_search_shows_summary_and_local_graph_preserves_original_course(course, monkeypatch):
+    from components import knowledge_graph
+
+    rendered = []
+    monkeypatch.setattr(
+        knowledge_graph,
+        "agraph",
+        lambda nodes, edges, config, node_scale: rendered.append(nodes) or None,
+    )
     app = AppTest.from_file(str(ROOT / "pages/4_Knowledge_Graph.py"))
     app.session_state["current_course"] = course
     app.run()
@@ -53,9 +61,13 @@ def test_search_shows_summary_and_local_graph_preserves_original_course(course):
     assert not app.exception
     assert any(header.value == "Summary" for header in app.subheader)
     assert any("Limits describe" in entry.value for entry in app.markdown)
+    assert len(rendered[-1]) == 3
     app.toggle(key="graph_local_calculus-i-demo").set_value(True).run()
     assert not app.exception
-    assert any("Showing 2 of 3" in entry.value for entry in app.caption)
+    # The local graph draws only the topic and its neighbour; the topic and
+    # connection counts are no longer printed for students.
+    assert [node.id for node in rendered[-1]] == ["calc_limits", "calc_derivatives"]
+    assert not any(entry.value.startswith("Showing ") for entry in app.caption)
     assert len(app.session_state["current_course"].topics) == 3
     app.selectbox(key="graph_focus_calculus-i-demo").set_value(None).run()
     assert not app.exception

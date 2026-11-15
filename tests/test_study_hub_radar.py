@@ -183,7 +183,8 @@ def test_panel_lists_top_three_most_flagged_first_with_counts(monkeypatch):
         ("Practice now", _practice_key("radar-course", "t4")),
         ("Practice now", _practice_key("radar-course", "t1")),
     ]
-    assert radar.calls["top_hard_topics"] == [3]
+    # The page takes the whole ranking and cuts it to three after ordering it for display.
+    assert radar.calls["top_hard_topics"] == [4]
     assert radar.calls["get_course_radar"] == ["radar-course"]
     assert EMPTY_CAPTION not in _captions(panel)
 
@@ -245,7 +246,8 @@ def test_panel_captions_for_sample_and_offline_data(monkeypatch, live, has_sampl
     assert not app.exception
     captions = _captions(_panel(app))
     assert captions.count(SAMPLE_CAPTION) == (1 if has_sample else 0)
-    assert captions.count(OFFLINE_CAPTION) == (0 if live else 1)
+    # Whether live flags loaded is a storage detail students do not see.
+    assert OFFLINE_CAPTION not in captions
     assert EMPTY_CAPTION not in captions
 
 
@@ -471,4 +473,4 @@ def test_page_renders_with_real_backend_when_database_is_unavailable():
         "**3. Limits** — 5 students are stuck here",
     ]
     assert SAMPLE_CAPTION in _captions(panel)
-    assert OFFLINE_CAPTION in _captions(panel)
+    assert OFFLINE_CAPTION not in _captions(panel)

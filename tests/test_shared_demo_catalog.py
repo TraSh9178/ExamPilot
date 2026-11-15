@@ -66,3 +66,53 @@ def test_current_course_work_is_preserved_when_course_list_is_stale():
     assert state['current_course'].topics[0].summary == 'My saved summary'
     assert state['current_course'].questions[:30] == old.questions
     assert len(state['current_course'].topics) == 15
+
+
+def _failing_update_for(monkeypatch, course_id):
+    from services import demo_updates
+    real_update = demo_updates.demo_update
+
+    def update(course):
+        if course.course_id == course_id:
+            raise ValueError('broken demo update')
+        return real_update(course)
+
+    monkeypatch.setattr(demo_updates, 'demo_update', update)
+
+
+def test_one_failing_demo_update_keeps_that_course_and_updates_the_others(monkeypatch):
+    from tests.test_demo_courses import load_demo
+    econ = load_demo('sample_course.json')
+    old = legacy()
+    state = {'courses': [econ, old], 'current_course': econ}
+    _failing_update_for(monkeypatch, 'econ101')
+
+    sync_demo_catalog(state)
+
+    assert state['courses'][0] is econ
+    assert state['current_course'] is econ
+    calc = next(c for c in state['courses'] if c.course_id == 'calculus-i-demo')
+    assert len(calc.topics) == 15
+    assert {c.course_id for c in state['courses']} == set(FILES)
+
+
+def test_unreadable_demo_file_is_skipped_without_stopping_the_catalog(monkeypatch):
+    from services import demo_updates
+    monkeypatch.setattr(demo_updates, 'FILES', {'broken-demo': 'missing_demo.json', **FILES})
+    state = {}
+
+    sync_demo_catalog(state)
+
+    assert {c.course_id for c in state['courses']} == set(FILES)
+
+
+def test_failing_demo_update_does_not_stop_the_app(monkeypatch):
+    _failing_update_for(monkeypatch, 'calculus-i-demo')
+    app = signed_in_app(ROOT / 'app.py')
+    old = legacy()
+    app.session_state['courses'] = [old]
+    app.session_state['current_course'] = old
+    app.run()
+
+    assert not app.exception
+    assert app.session_state['current_course'] == old

@@ -367,7 +367,46 @@ def test_single_course_restore_failure_does_not_claim_success(store):
     seed(store, TEST_USER, course)
     store.fail_course_ids.add("course-1")
     outcome = account_sync.restore_course(signed_in_state(), "course-1")
-    assert not outcome.success and "load failed" in outcome.message
+    assert not outcome.success
+    assert outcome.message == account_sync.RESTORE_FAILED_MESSAGE
+    assert "load failed" not in outcome.message
+
+
+def test_restoring_a_course_with_nothing_saved_hides_its_id(store):
+    outcome = account_sync.restore_course(signed_in_state(), "course-1")
+    assert not outcome.success
+    assert outcome.message == "Nothing saved for this course yet."
+    assert "course-1" not in outcome.message
+
+
+def test_restore_with_nothing_saved_does_not_block_later_saves(store):
+    course = make_course()
+    state = signed_in_state()
+
+    assert account_sync.restore_course(state, course.course_id).message == (
+        account_sync.NOTHING_SAVED_MESSAGE
+    )
+    assert account_sync.save_course_to_account(state, course).success
+    assert account_sync.save_course_with_history(state, course).success
+    assert course.course_id in store.courses[TEST_USER.user_id]
+
+
+def test_failed_restore_still_blocks_later_saves(store):
+    course = make_course()
+    seed(store, TEST_USER, course)
+    store.fail_course_ids.add(course.course_id)
+    state = signed_in_state()
+
+    assert not account_sync.restore_course(state, course.course_id).success
+    assert not account_sync.save_course_to_account(state, course).success
+    assert not account_sync.save_course_with_history(state, course).success
+    assert store.names("save_course") == []
+
+    # A later restore that finds nothing stored clears the earlier block.
+    store.fail_course_ids.clear()
+    del store.courses[TEST_USER.user_id][course.course_id]
+    account_sync.restore_course(state, course.course_id)
+    assert account_sync.save_course_to_account(state, course).success
 
 
 def test_app_restores_once_per_login_despite_reruns(store):
@@ -393,12 +432,17 @@ def test_failed_login_restore_shows_retry_and_keeps_local_state(store):
     app.run()
 
     assert [w.value for w in app.warning if "could not be restored" in w.value]
+    assert not [w for w in app.warning if "list failed" in w.value]
     assert len(store.names("list")) == 1
 
     store.fail.clear()
     app.button(key="retry_restore").click().run()
 
     assert not app.exception
+    assert app.session_state["account_sync"]["restore_errors"] == []
+    # A successful retry shows nothing in that spot. AppTest keeps the element
+    # from before st.rerun() when nothing replaces it, so render once more.
+    app.run()
     assert not [w for w in app.warning if "could not be restored" in w.value]
     assert "s1" in app.session_state["practice_history_course-1"]
 
@@ -449,7 +493,9 @@ def test_practice_submit_saves_course_then_exam_for_signed_in_user(store):
     )
     saved_attempts = store.exams[TEST_USER.user_id]["session-1"][2]
     assert [a.selected_index for a in saved_attempts] == [1]
-    assert not [w for w in app.warning if "Not saved" in w.value]
+    assert not [w for w in app.warning if "Couldn't save" in w.value]
+    # A successful save is not announced on the result page.
+    assert not [c for c in app.caption if c.value == "Saved to your account."]
 
 
 def test_practice_submit_failure_warns_and_keeps_local_history(store):
@@ -467,7 +513,8 @@ def test_practice_submit_failure_warns_and_keeps_local_history(store):
 
     assert not app.exception
     assert "session-1" in app.session_state["practice_history_course-1"]
-    assert [w for w in app.warning if "Not saved to your account" in w.value]
+    assert [w.value for w in app.warning] == [account_sync.SAVE_FAILED_MESSAGE]
+    assert not [w for w in app.warning if "exam save failed" in w.value]
     assert not [c for c in app.caption if c.value == "Saved to your account."]
 
 
@@ -485,14 +532,12 @@ def test_study_hub_save_button_reports_success_and_failure(store):
 
     app.button(key="database_save_course-1").click().run()
     assert not app.exception
-    assert [s.value for s in app.success] == [
-        "Course and practice history saved to your account."
-    ]
+    assert [s.value for s in app.success] == ["Saved to your account."]
     assert course.course_id in store.courses[TEST_USER.user_id]
 
     store.fail.add("save_course")
     app.button(key="database_save_course-1").click().run()
-    assert [e.value for e in app.error] == ["course save failed"]
+    assert [e.value for e in app.error] == [account_sync.SAVE_FAILED_MESSAGE]
     assert not app.success
 
 
@@ -509,8 +554,37 @@ def test_study_hub_restore_button_replaces_course_and_reports_failure(store):
 
     store.fail_course_ids.add("course-1")
     app.button(key="database_restore_course-1").click().run()
-    assert [e.value for e in app.error] == ["course-1: load failed"]
+    assert [e.value for e in app.error] == [account_sync.RESTORE_FAILED_MESSAGE]
     assert app.session_state["current_course"].course_name == "Saved Name"
+
+
+def test_study_hub_restore_of_unsaved_course_says_nothing_is_saved(store):
+    app = study_hub_app(make_course("course-1", "Local Name"))
+    app.run()
+
+    app.button(key="database_restore_course-1").click().run()
+
+    assert not app.exception
+    assert [i.value for i in app.info if "Nothing saved" in i.value] == [
+        "Nothing saved for this course yet."
+    ]
+    assert not app.error
+    assert not any(
+        "course-1" in element.value
+        for element in [*app.info, *app.error, *app.caption]
+    )
+
+
+def test_successful_login_restore_shows_no_status_message(store):
+    course = make_course()
+    seed(store, TEST_USER, course, make_exam(course, "s1"))
+    app = signed_in_app(APP_PATH)
+    app.run()
+
+    assert not app.exception
+    texts = [item.value for item in [*app.caption, *app.warning, *app.success]]
+    assert not any("Restored" in text or "restored" in text for text in texts)
+    assert not any("No saved study records" in text for text in texts)
 
 
 def test_regenerated_questions_keep_saved_history_restorable(store):
@@ -617,3 +691,70 @@ def test_has_unresolved_conflicts_tracks_quarantined_records():
     assert account_sync.has_unresolved_conflicts(session_state)
     session_state["account_sync"]["restore_conflicts"] = {}
     assert not account_sync.has_unresolved_conflicts(session_state)
+
+
+def test_dashboard_save_failure_warning_survives_the_rerun(store, monkeypatch):
+    from types import SimpleNamespace
+
+    import streamlit as st
+
+    from services import ai_service
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    uploaded = SimpleNamespace(name="notes.txt", getvalue=lambda: b"Course notes.")
+    monkeypatch.setattr(st, "file_uploader", lambda *_args, **_kwargs: uploaded)
+
+    def generate_topics(document, course_id, course_name):
+        return {"ok": True, "package": {
+            "course_id": course_id, "course_name": course_name,
+            "topics": [{"id": "t1", "name": "Topic", "summary": "Summary."}],
+            "relationships": [], "questions": [],
+        }}
+
+    monkeypatch.setattr(ai_service, "generate_topics", generate_topics)
+    store.fail.add("save_course")
+    app = signed_in_app(ROOT / "pages" / "0_Dashboard.py").run()
+    app.button(key="create_course_button").click().run()
+    app.text_input(key="setup_course_name").set_value("New course").run()
+    next(b for b in app.button if b.label == "Extract text").click().run()
+    next(b for b in app.button if b.label == "Generate topics").click().run()
+
+    assert not app.exception
+    assert store.names("save_course")
+    warnings = [w.value for w in app.warning]
+    assert warnings.count(account_sync.SAVE_FAILED_MESSAGE) == 1
+    assert not any("course save failed" in text for text in warnings)
+
+    # Shown once: the next run no longer repeats it.
+    app.run()
+    assert account_sync.SAVE_FAILED_MESSAGE not in [w.value for w in app.warning]
+
+
+def test_study_hub_save_says_restore_first_when_a_failed_restore_blocks_saving(store):
+    course = make_course()
+    app = study_hub_app(course)
+    app.run()
+    state = app.session_state[account_sync.STATE_KEY]
+    state["failed_course_ids"].add(course.course_id)
+    app.session_state[account_sync.STATE_KEY] = state
+
+    app.button(key="database_save_course-1").click().run()
+
+    assert not app.exception
+    assert [e.value for e in app.error] == [account_sync.RESTORE_FIRST_MESSAGE]
+
+
+def test_study_hub_keeps_the_failed_save_warning_after_confirming_the_scope(store):
+    course = make_course()
+    app = study_hub_app(course)
+    app.run()
+    store.fail.add("save_course")
+
+    app.button_group(key=f"scope_selection_{course.course_id}").set_value([course.topics[0].id]).run()
+    next(b for b in app.button if b.label == "Confirm exam scope").click().run()
+
+    assert not app.exception
+    assert account_sync.SAVE_FAILED_MESSAGE in [w.value for w in app.warning]
+    # Shown once: the next run no longer repeats it.
+    app.run()
+    assert account_sync.SAVE_FAILED_MESSAGE not in [w.value for w in app.warning]

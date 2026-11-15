@@ -15,16 +15,23 @@ from services.ai_service import generation_available, check_explanation
 from services.learning_flow import remember_widget, install_practice
 
 
+# Save failures never show the stored reason; the student only needs to know the outcome.
+REFLECTION_NOT_SAVED = "Couldn't save your reflection. Your score is unchanged."
+ACCOUNT_NOT_SAVED = "Couldn't save to your account. Your work is kept on this device for now."
+NOTES_NOT_SAVED = "Your answers were graded, but your practice notes couldn't be saved."
+CONFIRM_TOPIC = 'Confirm this topic in Study Plan first.'
+
+
 def save_rows(course, sid, rows):
     try:
         updated = set_session_insights(course, sid, rows)
     except ValueError:
-        st.error(tr("Reflection could not be saved because the course metadata is invalid or exceeds its storage limit. Your grade is unchanged."))
+        st.error(tr(REFLECTION_NOT_SAVED))
         return None
     save_course(st.session_state, updated)
     outcome = save_course_with_history(st.session_state, updated)
     if outcome is not None and not outcome.success:
-        st.warning(tr('Reflection kept in this session but not saved to your account. ') + tr(outcome.message))
+        st.warning(tr(ACCOUNT_NOT_SAVED))
     return updated
 
 
@@ -50,11 +57,11 @@ def answer_controls(active, question, course_id):
     if st.button(tr('Work on this question'), key=f'focus_{sid}_{question.id}'):
         focus_question(active, question.id, time.monotonic())
         st.rerun()
-    if active.get('focus_timer', {}).get('question_id') == question.id:
-        st.caption(tr('Selected for focus-time tracking'))
-    st.selectbox(tr('How confident are you?'), list(CONFIDENCE),
-        format_func=lambda value: tr(CONFIDENCE[value]), key=f'confidence_{sid}_{question.id}',
-        on_change=remember_widget, args=(st.session_state, course_id, sid, f'confidence_{sid}_{question.id}'))
+    # One click records confidence; no selection (None) means "not recorded".
+    key = f'confidence_{sid}_{question.id}'
+    st.segmented_control(tr('How confident are you?'), [value for value in CONFIDENCE if value is not None],
+        format_func=lambda value: tr(CONFIDENCE[value]), key=key,
+        on_change=remember_widget, args=(st.session_state, course_id, sid, key))
 
 
 def checklist(active):
@@ -91,32 +98,23 @@ def capture_submission(course, active):
 
 def result_overview(course, session, questions, result):
     if st.session_state.pop('insights_capture_error', False):
-        st.warning(tr('Your answers were graded, but optional practice tracking exceeded its storage limit and was not saved.'))
+        st.warning(tr(NOTES_NOT_SAVED))
     rows = session_insights(course, session.session_id)
     data = analytics(questions, result['attempts'], rows)
     st.subheader(tr('Practice insights'))
-    st.caption(tr('Confidence is self-reported. No in-app hints used does not prove unaided understanding; older sessions may have no tracking data.'))
-    answered = {a.question_id for a in result['attempts'] if a.selected_index is not None}
-    assisted_answers = len(answered.intersection(data['assisted']))
-    unknown_answers = len(answered.intersection(data['unknown_hints']))
-    without_hints = len(answered) - assisted_answers - unknown_answers
-    st.caption(tr(f"Answered questions: {without_hints} without in-app hints · {assisted_answers} hint-assisted · {unknown_answers} hint use not recorded."))
-    if data['correct_guesses']:
-        st.info(tr(f"{len(data['correct_guesses'])} correct answer(s) were marked Guessed. Revisit them before treating them as secure knowledge."))
-    if data['assisted']:
-        st.caption(tr(f"{len(data['assisted'])} answer(s) used in-app hints."))
-    if data['unknown_hints']:
-        st.caption(tr(f"Hint use was not recorded for {len(data['unknown_hints'])} answer(s)."))
+    guesses = len(data['correct_guesses'])
+    if guesses == 1:
+        st.info(tr('1 correct answer was marked Guessed. Revisit it before treating it as secure knowledge.'))
+    elif guesses:
+        st.info(tr(f"{guesses} correct answers were marked Guessed. Revisit them before treating them as secure knowledge."))
     if data['topic_seconds']:
         names={t.id:t.name for t in course.topics}
         with st.expander(tr('Time breakdown')):
             st.markdown(tr('**Tracked focus time by topic**'))
-            st.dataframe([{tr('Topic'):names.get(t,t),tr('Tracked seconds'):round(seconds,1)}
+            st.dataframe([{tr('Topic'):names.get(t,tr('Topic')),tr('Tracked seconds'):round(seconds,1)}
                 for t,seconds in sorted(data['topic_seconds'].items(),key=lambda p:-p[1])],hide_index=True,width='stretch')
             slowest=max(questions,key=lambda q:rows.get(q.id,{}).get('focus_seconds') or 0)
             st.caption(tr('Longest tracked question: ') + slowest.question)
-    else:
-        st.caption(tr('No focus-time measurements were recorded for this session.'))
     render_priorities(course, data['priorities'])
 
 
@@ -134,11 +132,12 @@ def launch_priority(course, priorities):
 def render_priorities(course, priorities):
     st.markdown(tr('**Smart review list**'))
     if priorities:
-        st.caption(tr(f"{len(priorities)} questions could benefit from another look."))
+        st.caption(tr('1 question could benefit from another look.') if len(priorities) == 1
+                   else tr(f"{len(priorities)} questions could benefit from another look."))
         with st.expander(tr("Why this review order")):
             st.caption(tr('Priority uses incorrect/unanswered responses, confidence, hints and relative tracked time. It is a transparent practice suggestion, not a diagnosis.'))
             names={t.id:t.name for t in course.topics}
-            st.dataframe([{tr('Rank'):i,tr('Topic'):names.get(r['topic_id'],r['topic_id']),
+            st.dataframe([{tr('Rank'):i,tr('Topic'):names.get(r['topic_id'],tr('Topic')),
                            tr('Question'):r['question'],tr('Why review'):', '.join(tr(reason) for reason in r['reasons'])}
                           for i,r in enumerate(priorities,1)],hide_index=True,width='stretch')
         st.button(tr('Practise review priorities'), key=f'priorities_{course.course_id}',
@@ -156,29 +155,37 @@ def launch_transfer(course, question, session, confirmed, practice_key):
     try:
         install_practice(st.session_state, course.course_id, transfer_session(course, question, session, confirmed))
     except ValueError as error:
-        st.session_state['transfer_launch_error'] = str(error)
+        # Only the scope message asks the student to act; any other reason means no match yet.
+        st.session_state['transfer_launch_error'] = CONFIRM_TOPIC if str(error) == CONFIRM_TOPIC else 'No similar question yet.'
+
+
+def evidence_line(saved):
+    """One short line such as "Sure · 1 hint · 42 s"; unrecorded parts are left out."""
+    parts = []
+    if saved.confidence is not None:
+        parts.append(tr(CONFIDENCE[saved.confidence]))
+    if saved.hints_used is not None:
+        hints = saved.hints_used
+        parts.append(tr('No hints') if hints == 0 else tr('1 hint') if hints == 1 else tr(f'{hints} hints'))
+    if saved.focus_seconds is not None:
+        parts.append(tr(f'{round(saved.focus_seconds)} s'))
+    return ' · '.join(parts)
 
 
 def reflection_controls(course, session, question, review, confirmed, practice_key):
     sid=session.session_id
     rows=deepcopy(session_insights(course,sid))
     saved=ResponseInsight.model_validate(rows.get(question.id,{}))
-    st.caption(tr('Confidence') + ': ' + tr(CONFIDENCE[saved.confidence]))
-    if saved.hints_used is None:
-        st.caption(tr('Completion evidence: hint use not recorded'))
-    else:
-        st.caption(tr(f'In-app hints shown: {saved.hints_used}'))
-        label = 'Hint exposure' if review['selected_index'] is None else 'Completion evidence'
-        st.caption(tr(label) + (': ' + tr('hint-assisted') if saved.hints_used else ': ' + tr('no in-app hints used')))
-    if saved.focus_seconds is not None:
-        st.caption(tr(f'Tracked focus time: {saved.focus_seconds:.1f} seconds'))
+    if line := evidence_line(saved):
+        st.caption(line)
     with st.expander(tr('Reflect and explain your answer')):
         st.caption(tr('Write your reasoning in your own words. This reflection is after feedback and never changes your score.'))
         with st.form(f'reflection_{sid}_{question.id}'):
             reason=saved.mistake_reason
             if not review['is_correct']:
-                reason=st.selectbox(tr('Why did you miss this question?'),list(REASONS),
-                    index=list(REASONS).index(reason),format_func=lambda v:tr(REASONS[v]),
+                # No pill selected (None) keeps the reason "not recorded".
+                reason=st.pills(tr('Why did you miss this question?'),[v for v in REASONS if v is not None],
+                    default=reason,format_func=lambda v:tr(REASONS[v]),
                     key=f'reason_{sid}_{question.id}')
             text=st.text_area(tr('Explain your answer'),value=saved.explanation,max_chars=4000,
                 key=f'explain_{sid}_{question.id}')
@@ -205,7 +212,7 @@ def reflection_controls(course, session, question, review, confirmed, practice_k
             rows[question.id]=row.model_dump(mode='json')
             updated = save_rows(course,sid,rows)
             if updated is not None:
-                st.success(tr('Reflection saved in this session.'))
+                st.success(tr('Saved.'))
                 saved=row
         if saved.feedback is not None and saved.checked_explanation==saved.explanation:
             st.markdown(tr('**AI reasoning feedback — not a grade**'))
@@ -245,12 +252,11 @@ def render_history_insights(course, history, mode):
         with st.expander(tr('Time by topic')):
             st.subheader(tr('Tracked focus time by topic'))
             st.caption(tr('Totals across recorded sessions in this mode; missing time is not treated as zero.'))
-            st.dataframe([{tr('Topic'):names.get(t,t),tr('Tracked seconds'):round(seconds,1)}
+            st.dataframe([{tr('Topic'):names.get(t,tr('Topic')),tr('Tracked seconds'):round(seconds,1)}
                 for t,seconds in sorted(total_seconds.items(),key=lambda p:-p[1])],hide_index=True,width='stretch')
     qs=[value[0] for value in latest.values()]
     attempts=[value[1] for value in latest.values()]
     rows={q.id:r for q,a,r in latest.values()}
     data=analytics(qs,attempts,rows)
     st.subheader(tr('Your next review'))
-    st.caption(tr('Uses each question family’s latest response in the selected mode. Older sessions with missing confidence or timing are not treated as measured.'))
     render_priorities(course,data['priorities'])

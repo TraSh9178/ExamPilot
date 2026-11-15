@@ -42,7 +42,9 @@ GENERATION_TIMEOUT_SECONDS = 180.0
 TUTOR_TIMEOUT_SECONDS = 60.0
 
 CONNECTION_CHECK_PROMPT = "Reply with only: ExamPilot API OK"
-MISSING_API_KEY_MESSAGE = "ANTHROPIC_API_KEY is not configured."
+# Shown to students: no key names or configuration details.
+AI_UNAVAILABLE_MESSAGE = "AI generation is unavailable right now."
+MISSING_API_KEY_MESSAGE = AI_UNAVAILABLE_MESSAGE
 INVALID_DOCUMENT_MESSAGE = "The course material is invalid. Upload and extract it again."
 TOO_LONG_MESSAGE = "The course material exceeds 50,000 characters and cannot be analysed."
 
@@ -114,17 +116,17 @@ def _api_error_result(exc: anthropic.APIStatusError) -> dict:
     """Describe an API error to the user without exposing the raw exception."""
     status = exc.status_code
     if isinstance(exc, anthropic.AuthenticationError):
-        message = "The Claude API key was rejected. Check ANTHROPIC_API_KEY."
+        message = AI_UNAVAILABLE_MESSAGE
     elif isinstance(exc, anthropic.PermissionDeniedError):
-        message = "This Claude API key is not allowed to use the configured model."
+        message = AI_UNAVAILABLE_MESSAGE
     elif isinstance(exc, anthropic.NotFoundError):
-        message = "The configured Claude model is not available to this account. Check ANTHROPIC_MODEL."
+        message = AI_UNAVAILABLE_MESSAGE
     elif isinstance(exc, anthropic.RateLimitError):
         message = "Claude quota or rate limit reached. Try again later."
     elif isinstance(status, int) and status >= 500:
         message = "Claude is temporarily unavailable. Try again later."
     else:
-        message = "The Claude API request failed. Check the configuration or try again later."
+        message = "AI generation is unavailable right now. Try again later."
     return _failure("API_ERROR", message, status_code=status)
 
 
@@ -135,7 +137,7 @@ def _request_failure(exc: Exception, activity: str) -> dict:
     elif isinstance(exc, anthropic.APIConnectionError):
         message = f"Could not reach Claude while {activity}. Check the network and try again."
     else:
-        message = f"An error occurred while {activity}. Check the configuration or try again later."
+        message = f"An error occurred while {activity}. Try again later."
     return _failure("GENERATION_ERROR", message)
 
 

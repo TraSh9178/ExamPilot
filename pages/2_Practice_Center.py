@@ -22,20 +22,43 @@ from components.knowledge_graph import load_course_radar, render_topic_radar
 from services.learning_flow import install_practice, resume_draft, remember_widget, hydrate_widgets, open_lab
 from services.ui_style import apply_app_styles
 
+try:
+    from components import radar_chart
+except ImportError:  # merged later
+    radar_chart = None
+
+# "All missed topics" choice of the review-topic pills; it means no topic filter.
+ALL_MISSED_TOPICS = "__all_missed_topics__"
+
+
+def question_count(count):
+    return tr("1 question") if count == 1 else tr(f"{count} questions")
+
+
 def practice_label(records, sid, *, unfinished=False):
     """Human-readable choices; stable session IDs remain internal widget values."""
     record = records[sid]
     number = list(records).index(sid) + 1
     if "session" not in record:
-        return f"{number} · Saved practice"
-    mode = "Topic practice" if record["session"].mode == "topic" else "Mock exam"
-    label = f"{number} · {mode} · {len(record['questions'])} questions"
+        return f"{number} · {tr('Saved practice')}"
+    mode = tr("Topic practice") if record["session"].mode == "topic" else tr("Mock exam")
+    label = f"{number} · {mode} · {question_count(len(record['questions']))}"
     result = record.get("result")
     if result is not None:
-        label += f" · {result['correct_count']}/{result['total_count']} correct"
+        label += " · " + tr(f"{result['correct_count']}/{result['total_count']} correct")
     elif unfinished:
-        label += " · Unfinished"
+        label += " · " + tr("Unfinished")
     return label
+
+
+def render_question_heading(number, text):
+    """Paper question card: a two-digit badge beside the question text."""
+    body = "<br>".join(escape(line, quote=False) for line in text.splitlines())
+    st.markdown(
+        f'<div class="paper-question"><span class="paper-question-badge">{escape(tr(f"Q{number:02}"))}</span>'
+        f'<div class="paper-question-text">{body}</div></div>',
+        unsafe_allow_html=True,
+    )
 
 
 def submit_practice(course, practice_key):
@@ -47,8 +70,8 @@ def submit_practice(course, practice_key):
     answers = {q.id: st.session_state.get(f"answer_{session.session_id}_{q.id}") for q in questions}
     try:
         result = grade_exam(session, questions, answers)
-    except ValueError as error:
-        st.session_state["practice_submit_error"] = str(error)
+    except ValueError:
+        st.session_state["practice_submit_error"] = True
         return
     updated = capture_submission(course, active)
     active["result"] = result
@@ -102,32 +125,29 @@ if (
     st.page_link("pages/1_Study_Hub.py", label=tr("Go to Study Plan"))
     st.stop()
 
-unavailable_count = len(course.questions) - len(available_questions(course))
-if unavailable_count:
-    with st.expander(tr("Question availability")):
-        st.caption(f"{unavailable_count} pending, flagged or older-version questions are excluded from new practice.")
-        st.page_link("pages/1_Study_Hub.py", label="Review questions in Study Plan")
-
 practice_key = f"active_practice_{course.course_id}"
 active_practice = st.session_state.get(practice_key)
 entry_key = f"practice_entry_{course.course_id}"
 pending_entry = st.session_state.get(entry_key)
 if pending_entry is not None:
     target = pending_entry.get("topic_id")
-    st.info("Set up a new practice" + (": " + topic_names[target] if target else " for your confirmed topics") + ". Your previous session is kept.")
+    st.info(
+        (tr("New practice: ") + topic_names[target]) if target
+        else tr("New practice for your confirmed topics.")
+    )
     if active_practice and st.button(tr("Return to previous session"), key="practice_return_previous"):
         st.session_state.pop(entry_key, None)
         st.rerun()
 st.session_state.pop("priority_ready", None)
 drafts = st.session_state.get(f"practice_drafts_{course.course_id}", {})
 if drafts:
-    with st.expander(f"Unfinished sessions ({len(drafts)})"):
+    with st.expander(tr(f"Unfinished sessions ({len(drafts)})")):
         draft_id = st.selectbox(tr("Unfinished session"), list(drafts), format_func=lambda sid: practice_label(drafts, sid, unfinished=True), key=f"draft_choice_{course.course_id}")
         st.button(tr("Resume unfinished session"), key=f"resume_draft_{course.course_id}",
             on_click=resume_draft, args=(st.session_state, course.course_id, draft_id))
 
 with st.expander(
-    "Change settings" if active_practice and pending_entry is None else "Practice settings",
+    tr("Change settings") if active_practice and pending_entry is None else tr("Practice settings"),
     expanded=active_practice is None or pending_entry is not None,
 ):
     with st.container(border=True):
@@ -188,8 +208,8 @@ with st.expander(
                 confirmed_topic_ids=list(confirmed_topic_ids),
                 topic_id=topic_id,
             )
-        except ValueError as error:
-            st.error(tr(f"Could not create practice: {error}"))
+        except ValueError:
+            st.error(tr("Could not create practice. Try another topic or check your exam scope in Study Plan."))
         else:
             install_practice(st.session_state, course.course_id, {
                 "settings": practice_settings,
@@ -215,24 +235,28 @@ if active_practice is not None:
                 st.markdown(f"**{escape(course.course_name)}**")
         with overview[1]:
             st.caption(tr("Mode"))
-            st.markdown(tr(f"**{mode_name}**"))
+            st.markdown(f"**{tr(mode_name)}**")
         with overview[2]:
             st.caption(tr("Questions"))
-            st.markdown(tr(f"**{len(questions)}**"))
+            st.markdown(f"**{len(questions)}**")
 
     if active_practice["warning"]:
-        st.warning(active_practice["warning"])
+        st.warning(tr(active_practice["warning"]))
 
     submitted = "result" in active_practice
 
     if not submitted:
         hydrate_widgets(st.session_state, active_practice, force=st.session_state.pop(f"rehydrate_practice_{course.course_id}", False))
-        question_index = min(active_practice.get("worksheet_index", 0), len(questions) - 1)
+        question_index = max(0, min(active_practice.get("worksheet_index", 0), len(questions) - 1))
         selected_question = questions[question_index]
         answered = sum(
             st.session_state.get(f"answer_{session.session_id}_{question.id}") is not None
             for question in questions
         )
+        radar_on = learning_radar.radar_enabled(course.course_id)
+        user = current_user(st.session_state) if radar_on else None
+        # The "I'm stuck" choices are only offered to signed-in users of demo courses.
+        offer_stuck = radar_chart is not None and user is not None
         if session.mode == "topic":
             paper, margin = st.columns([3, 1], gap="large")
             visible_questions = [(question_index + 1, selected_question)]
@@ -261,14 +285,15 @@ if active_practice is not None:
             with st.expander(tr("Focus controls")):
                 start_focus_controls(active_practice)
 
+            paging = margin is not None and len(questions) > 1
+            movement = 0
             for question_number, question in visible_questions:
                 display = display_question(course.course_id, question, st.session_state)
                 with st.container(
                     border=session.mode == "mock",
                     key=f"practice_question_{question.id}",
                 ):
-                    st.caption(tr(f"QUESTION {question_number} OF {len(questions)}"))
-                    st.markdown(f"### {display.question}")
+                    render_question_heading(question_number, display.question)
                     if display.simplified:
                         st.caption(tr("Simplified wording"))
                         with st.expander(tr("Show original wording")):
@@ -280,7 +305,7 @@ if active_practice is not None:
                         tr("Choose an answer"),
                         options=list(range(len(question.options))),
                         format_func=lambda index, options=display.options: (
-                            options[index]
+                            f"{chr(ord('A') + index)}. {options[index]}"
                         ),
                         index=None,
                         width="stretch",
@@ -291,48 +316,66 @@ if active_practice is not None:
 
                     answer_controls(active_practice, question, course.course_id)
 
-                    if session.mode == "topic" and (hints := hints_for(question)):
-                        state_key = hint_state_key(session.session_id, question.id)
-                        shown = st.session_state.get(state_key, 0)
-                        for number, hint in enumerate(hints[:shown], start=1):
-                            st.info(tr(f"Hint {number} of {len(hints)}: {display_text(hint, st.session_state)}"))
-                        if shown < len(hints) and st.button(
-                            tr("Show a hint") if shown == 0 else tr("Show next hint"),
-                            key=f"hint_button_{session.session_id}_{question.id}",
-                        ):
-                            st.session_state[state_key] = shown + 1
-                            remember_widget(st.session_state, course.course_id, session.session_id, state_key)
-                            st.rerun()
+                    hints = hints_for(question) if session.mode == "topic" else []
+                    state_key = hint_state_key(session.session_id, question.id)
+                    shown = st.session_state.get(state_key, 0) if hints else 0
+                    for number, hint in enumerate(hints[:shown], start=1):
+                        st.info(tr(f"Hint {number} of {len(hints)}: {display_text(hint, st.session_state)}"))
 
-            if margin is not None and len(questions) > 1:
-                previous, next_button = st.columns(2)
-                movement = 0
-                if previous.button(
-                    tr("Previous"), icon=":material/arrow_back:", disabled=question_index == 0,
-                    key=f"worksheet_previous_{session.session_id}",
-                ):
-                    movement = -1
-                if next_button.button(
-                    tr("Next"), icon=":material/arrow_forward:", disabled=question_index == len(questions) - 1,
-                    key=f"worksheet_next_{session.session_id}",
-                ):
-                    movement = 1
-                if movement:
-                    new_index = question_index + movement
-                    active_practice["worksheet_index"] = new_index
-                    timer = active_practice.get("focus_timer", {})
-                    if timer.get("since") is not None:
-                        focus_question(active_practice, questions[new_index].id, time.monotonic())
-                    elif timer:
-                        timer["question_id"] = questions[new_index].id
-                    st.rerun()
+                    # Actions under the question: Previous · Hint · Learning Radar · Next.
+                    if paging or shown < len(hints) or offer_stuck:
+                        with st.container(
+                            horizontal=True, horizontal_alignment="distribute",
+                            vertical_alignment="center", key=f"paper_actions_{question.id}",
+                        ):
+                            if paging and st.button(
+                                tr("Previous"), icon=":material/arrow_back:", disabled=question_index == 0,
+                                key=f"worksheet_previous_{session.session_id}",
+                            ):
+                                movement = -1
+                            if shown < len(hints) and st.button(
+                                tr("Hint") if shown == 0 else tr("Next hint"), icon=":material/lightbulb:",
+                                key=f"hint_button_{session.session_id}_{question.id}",
+                            ):
+                                st.session_state[state_key] = shown + 1
+                                remember_widget(st.session_state, course.course_id, session.session_id, state_key)
+                                st.rerun()
+                            if offer_stuck:
+                                with st.popover(
+                                    tr("Learning Radar"), icon=":material/radar:",
+                                    key=f"practice_radar_menu_{session.session_id}_{question.id}",
+                                ):
+                                    radar_chart.render_stuck_buttons(
+                                        st.session_state, course.course_id, question.topic_id, user.user_id,
+                                        key=f"practice_stuck_{session.session_id}_{question.id}",
+                                    )
+                            if paging and st.button(
+                                tr("Next"), icon=":material/arrow_forward:", disabled=question_index == len(questions) - 1,
+                                key=f"worksheet_next_{session.session_id}",
+                            ):
+                                movement = 1
+
+            if movement:
+                # A click can still arrive after the button was disabled; stay in range.
+                new_index = max(0, min(len(questions) - 1, question_index + movement))
+                active_practice["worksheet_index"] = new_index
+                timer = active_practice.get("focus_timer", {})
+                if timer.get("since") is not None:
+                    focus_question(active_practice, questions[new_index].id, time.monotonic())
+                elif timer:
+                    timer["question_id"] = questions[new_index].id
+                st.rerun()
 
         if margin is not None:
             with margin, st.container(key="flight_worksheet_margin"):
-                if learning_radar.radar_enabled(course.course_id):
+                if radar_on:
                     st.subheader(tr("Learning Radar"))
-                    user = current_user(st.session_state)
                     radar, _ = load_course_radar(st.session_state, course.course_id, user.user_id if user else None)
+                    if radar_chart is not None:
+                        # Chart only: the count below already says when sample data is included.
+                        radar_chart.render_radar_figure(
+                            course, radar, focus_topic_id=selected_question.topic_id, key="practice_radar",
+                        )
                     render_topic_radar(radar.topics.get(selected_question.topic_id))
                     if st.button(tr("Explore this topic"), key=f"worksheet_radar_{session.session_id}"):
                         st.session_state[f"graph_pending_focus_{course.course_id}"] = selected_question.topic_id
@@ -346,8 +389,8 @@ if active_practice is not None:
 
         checklist(active_practice)
         st.button(tr("Submit answers"), type="primary", on_click=submit_practice, args=(course, practice_key))
-        if error := st.session_state.pop("practice_submit_error", None):
-            st.error(tr(f"Could not grade practice: {error}"))
+        if st.session_state.pop("practice_submit_error", None):
+            st.error(tr("Could not grade this practice. Please try again."))
 
     if "result" in active_practice:
         result = active_practice["result"]
@@ -374,7 +417,7 @@ if active_practice is not None:
             next_question = next((q for q in questions if q.id in missed_ids), questions[0])
             with st.container(border=True, key="flight_next_topic"):
                 st.caption(tr("Take the next step"))
-                st.markdown(f"**{escape(topic_names.get(next_question.topic_id, next_question.topic_id))}**")
+                st.markdown(f"**{escape(topic_names.get(next_question.topic_id, tr('Topic')))}**")
                 if next_question.topic_id in topic_names and st.button(
                     tr("Open this topic in Knowledge Map"), key=f"flight_map_{session.session_id}",
                     icon=":material/hub:",
@@ -401,13 +444,18 @@ if active_practice is not None:
                     st.warning(tr("This result could not be prepared for mistake review."))
                 if missed:
                     st.markdown(tr("**Review missed questions**"))
-                    st.caption(tr(f"{len(missed)} incorrect or unanswered questions. A review creates a new graded session; your original score is preserved."))
+                    st.caption(
+                        tr("1 missed question to practise; your score stays the same.") if len(missed) == 1
+                        else tr(f"{len(missed)} missed questions to practise; your score stays the same.")
+                    )
                     missed_topics = list(dict.fromkeys(q.topic_id for q in missed if q.topic_id in confirmed_topic_ids))
-                    review_topic = st.selectbox(
-                        tr("Review topic"), [None, *missed_topics],
-                        format_func=lambda value: tr("All missed topics") if value is None else topic_names[value],
+                    review_choice = st.pills(
+                        tr("Review topic"), [ALL_MISSED_TOPICS, *missed_topics], default=ALL_MISSED_TOPICS,
+                        format_func=lambda value: tr("All missed topics") if value == ALL_MISSED_TOPICS else topic_names[value],
                         key=f"mistake_topic_{course.course_id}_{session.session_id}",
                     )
+                    # No pill, or the "All missed topics" pill, keeps every missed topic.
+                    review_topic = None if review_choice in (None, ALL_MISSED_TOPICS) else review_choice
                     st.button(
                         tr("Practise missed questions"), type="secondary" if guided_review_available else "primary",
                         key=f"review_mistakes_{session.session_id}",
@@ -430,8 +478,7 @@ if active_practice is not None:
                     border=True,
                     key=f"practice_review_{question.id}",
                 ):
-                    st.caption(tr(f"QUESTION {question_number}"))
-                    st.markdown(f"### {display.question}")
+                    render_question_heading(question_number, display.question)
                     if display.simplified:
                         st.caption(tr("Simplified wording"))
                         with st.expander(tr("Show original wording")):
@@ -472,16 +519,11 @@ if active_practice is not None:
                                 for page, text in sources:
                                     st.caption(tr(f"Page / slide {page}"))
                                     st.text(text, width="stretch")
-                        else:
-                            st.caption(tr("Source text is not available in this session; check the original material."))
-                    else:
-                        st.caption(tr("No source page was provided for this question."))
 
-# Show the number of graded sessions saved for this course.
+# Graded sessions saved for this course can be reopened.
 history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})
 
-st.caption(tr(f"Saved practice sessions: {len(history)}"))
 if history:
     with st.expander(tr("Review a saved session")):
         saved_sid = st.selectbox(tr("Saved session"), list(history), format_func=lambda sid: practice_label(history, sid), key=f"saved_session_{course.course_id}")

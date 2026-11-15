@@ -97,13 +97,17 @@ def test_apply_rejects_suggestions_for_unknown_topics():
         )
 
 
-def test_describe_uses_topic_names_and_falls_back_to_ids():
+def test_describe_uses_topic_names_and_never_shows_ids():
     labels = describe_suggestions(
         make_course(),
-        [SUGGESTION, {"from_topic": "topic-1", "to_topic": "gone", "type": "related"}],
+        [
+            SUGGESTION,
+            {"from_topic": "topic-1", "to_topic": "gone", "type": "related"},
+            {"to_topic": "topic-2", "type": "related"},
+        ],
     )
 
-    assert labels == ["Limits ↔ Derivatives", "Limits ↔ gone"]
+    assert labels == ["Limits ↔ Derivatives", "Limits ↔ Topic", "Topic ↔ Derivatives"]
 
 
 def test_page_hides_suggestions_without_saved_material():
@@ -163,7 +167,7 @@ def test_page_shows_service_error_without_storing_suggestions(monkeypatch):
         {
             "ok": False,
             "error_code": "MISSING_API_KEY",
-            "message": "ANTHROPIC_API_KEY is not configured.",
+            "message": "AI generation is unavailable right now.",
         },
     )
     app = run_page(make_course(), make_document())
@@ -172,7 +176,7 @@ def test_page_shows_service_error_without_storing_suggestions(monkeypatch):
 
     assert not app.exception
     assert any(
-        "ANTHROPIC_API_KEY is not configured." in item.value for item in app.error
+        "AI generation is unavailable right now." in item.value for item in app.error
     )
     assert suggestions_key("course-1") not in app.session_state
 

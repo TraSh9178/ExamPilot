@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 120" role="img" aria-label="ExamPilot, your study flight plan">
+  <g transform="translate(6,14) scale(0.27)">
+    <polygon points="28,158 436,34 140,212" fill="#F4B45B"/>
+    <polygon points="436,34 238,302 150,224" fill="#5F849F"/>
+    <polygon points="126,230 170,256 130,296" fill="#5F849F"/>
+  </g>
+  <text x="150" y="62" font-family="Georgia, 'Times New Roman', serif" font-size="54" font-weight="700" fill="#13224F">ExamPilot</text>
+  <text x="152" y="98" font-family="Georgia, 'Times New Roman', serif" font-size="26" font-style="italic" fill="#4E5673">Your Study Flight Plan</text>
+</svg>

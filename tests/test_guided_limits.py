@@ -31,7 +31,7 @@ def test_demo_launches_from_dashboard_and_keeps_answer_hints():
     assert session.mode == "topic"
     assert session.question_ids == [guided_limits_ui.QUESTION_ID]
     assert app.session_state[f"confirmed_scope_{COURSE_ID}"] == [guided_limits_ui.TOPIC_ID]
-    assert any(button.label == "Show a hint" for button in app.button)
+    assert any(button.label == "Hint" for button in app.button)
 
 
 def test_starter_does_not_replace_an_existing_scope():
@@ -87,3 +87,26 @@ def test_guided_review_reports_retry_and_only_shares_when_requested(monkeypatch)
     assert app.session_state[key]["complete"]
     assert "Solved after a retry." in [item.value for item in app.caption]
     assert result["correct_count"] == 0
+
+
+def test_guided_review_heading_and_unanswered_follow_chinese_setting():
+    from services.i18n import LANGUAGE_KEY
+
+    course = calculus()
+    question = guided_limits_ui.starter_question(course)
+    state = {"courses": [course]}
+    guided_limits_ui.start_demo(state, course, question)
+    session = state[f"active_practice_{COURSE_ID}"]["session"]
+    result = grade_exam(session, [question], {question.id: None})
+    app = AppTest.from_string(
+        "import streamlit as st\n"
+        "from services.guided_limits_ui import render_guided_review\n"
+        "render_guided_review(*st.session_state['fixture'])\n"
+    )
+    app.session_state["fixture"] = (course, session, [question], result)
+    app.session_state[LANGUAGE_KEY] = True
+    app.run()
+
+    assert not app.exception
+    assert "微积分 I · 极限" in [item.value for item in app.caption]
+    assert "**第一次答案：** 未作答" in [item.value for item in app.markdown]

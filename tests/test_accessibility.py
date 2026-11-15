@@ -70,6 +70,48 @@ def test_display_text_reads_glossary_only_when_enabled(monkeypatch) -> None:
     )
 
 
+def test_mapping_files_are_parsed_once_and_returned_read_only(monkeypatch, tmp_path) -> None:
+    from types import SimpleNamespace
+
+    from services import accessibility
+
+    (tmp_path / "glossary_zh.json").write_text(
+        json.dumps({"limit": "极限"}, ensure_ascii=False), encoding="utf-8"
+    )
+    monkeypatch.setattr(accessibility, "_DATA_DIR", tmp_path)
+    loads = []
+
+    def counting_load(source):
+        loads.append(source)
+        return json.load(source)
+
+    monkeypatch.setattr(accessibility, "json", SimpleNamespace(load=counting_load))
+
+    for _ in range(3):
+        assert display_text("Limit", {BILINGUAL_KEY: True}) == "Limit (极限)"
+    assert len(loads) == 1
+
+    mapping = accessibility._read_mapping("glossary_zh.json")
+    with pytest.raises(TypeError):
+        mapping["limit"] = "changed"
+    assert display_text("Limit", {BILINGUAL_KEY: True}) == "Limit (极限)"
+
+
+def test_a_different_data_directory_is_not_served_from_the_cache(monkeypatch, tmp_path) -> None:
+    from services import accessibility
+
+    for name, translation in (("first", "极限"), ("second", "界限")):
+        folder = tmp_path / name
+        folder.mkdir()
+        (folder / "glossary_zh.json").write_text(
+            json.dumps({"limit": translation}, ensure_ascii=False), encoding="utf-8"
+        )
+    monkeypatch.setattr(accessibility, "_DATA_DIR", tmp_path / "first")
+    assert display_text("Limit", {BILINGUAL_KEY: True}) == "Limit (极限)"
+    monkeypatch.setattr(accessibility, "_DATA_DIR", tmp_path / "second")
+    assert display_text("Limit", {BILINGUAL_KEY: True}) == "Limit (界限)"
+
+
 ROOT = Path(__file__).resolve().parents[1]
 DEMO_FILES = {
     "econ101": "sample_course.json",
@@ -190,3 +232,16 @@ def test_glossary_has_course_terms_and_two_modes_work_together() -> None:
                                {SIMPLIFY_KEY: True, BILINGUAL_KEY: True})
     assert display.simplified is True
     assert "需求" in display.question
+
+
+def test_cached_accessibility_data_is_read_only_at_every_level():
+    from services import accessibility
+
+    data = accessibility._read_mapping("simplified_econ101.json")
+    wording = next(iter(data["questions"].values()))
+
+    with pytest.raises(TypeError):
+        wording["question"] = "changed"
+    with pytest.raises(TypeError):
+        data["questions"]["new"] = {}
+    assert isinstance(wording["options"], tuple)

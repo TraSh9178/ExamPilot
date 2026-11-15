@@ -142,8 +142,10 @@ def test_review_ui_can_tag_an_untagged_question_without_rewriting_history():
     app.session_state['current_course']=course
     app.run()
     assert not app.exception
-    dimension=next(s for s in app.selectbox if s.label=='Learning DNA evidence type')
-    assert dimension.value is None
+    dimension=next(s for s in app.radio if s.label=='Learning DNA evidence type')
+    assert dimension.horizontal
+    assert dimension.options==['Untagged','Computation','Conceptual understanding']
+    assert dimension.value=='untagged'
     dimension.set_value('conceptual')
     next(b for b in app.button if b.label=='Save review').click().run()
     assert not app.exception
@@ -189,7 +191,7 @@ def test_progress_for_old_untagged_history_does_not_infer_abilities():
     app.session_state['performance_mode_test-dna']='Topic Practice'
     app.run()
     assert not app.exception
-    assert '6 latest question-family response(s) excluded' in ' '.join(c.value for c in app.caption)
+    assert 'excluded' not in ' '.join(c.value for c in app.caption)
     assert not any("Dimension" in frame.value.columns for frame in app.dataframe)
     assert next(m for m in app.metric if m.label=='Computation').value=='—'
 

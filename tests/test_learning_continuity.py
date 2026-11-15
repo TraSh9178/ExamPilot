@@ -165,9 +165,10 @@ def test_first_study_page_entry_hydrates_saved_scope_over_stale_widget_default()
     app.session_state[f"scope_selection_{course.course_id}"] = []
     app.run()
     assert not app.exception
-    assert app.multiselect[0].value == ["t1"]
+    scope = app.button_group(key=f"scope_selection_{course.course_id}")
+    assert scope.value == ["t1"]
     assert app.session_state[f"confirmed_scope_{course.course_id}"] == ["t1"]
-    app.multiselect[0].set_value([]).run()
+    scope.set_value([]).run()
     assert f"confirmed_scope_{course.course_id}" not in app.session_state
 
 

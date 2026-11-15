@@ -6,6 +6,7 @@ in the course are rejected instead of saved.
 """
 
 from models.schemas import StudyPackage
+from services.i18n import tr
 
 
 def suggestions_key(course_id: str) -> str:
@@ -17,13 +18,17 @@ def notice_key(course_id: str) -> str:
 
 
 def describe_suggestions(course: StudyPackage, suggestions: list[dict]) -> list[str]:
-    """Return one human-readable label per suggestion, using topic names."""
+    """Return one human-readable label per suggestion, using topic names.
+
+    An unknown topic shows as the plain word "Topic", never its internal ID.
+    """
     names = {topic.id: topic.name for topic in course.topics}
+    fallback = tr("Topic")
     labels = []
     for suggestion in suggestions:
-        source = suggestion.get("from_topic", "?")
-        target = suggestion.get("to_topic", "?")
-        labels.append(f"{names.get(source, source)} ↔ {names.get(target, target)}")
+        source = names.get(suggestion.get("from_topic"), fallback)
+        target = names.get(suggestion.get("to_topic"), fallback)
+        labels.append(f"{source} ↔ {target}")
     return labels
 
 

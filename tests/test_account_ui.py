@@ -83,16 +83,33 @@ def test_account_page_displays_canonical_read_only_identity():
     assert "clears when you log out" in " ".join(caption.value for caption in app.caption)
 
 
-def test_dashboard_header_identifies_the_signed_in_account_and_links_to_account():
+def test_sidebar_identifies_the_signed_in_account_and_links_to_account():
     app = signed_in_app(APP_PATH).run()
 
     assert not app.exception
-    header_text = " ".join(item.value for item in app.markdown)
-    assert TEST_USER.username in header_text
-    assert "SIGNED IN AS" in header_text
-    assert any(link.proto.label == "My account" for link in app.get("page_link"))
-    assert app.button(key="logout_button").label == "Log out"
-    assert not app.sidebar.get("page_link")
+    sidebar_text = " ".join(item.value for item in app.sidebar.markdown)
+    assert TEST_USER.username in sidebar_text
+    assert "SIGNED IN AS" in sidebar_text
+    assert [link.proto.label for link in app.sidebar.get("page_link")] == ["My account"]
+    assert app.sidebar.button(key="logout_button").label == "Log out"
+    # Account controls live only in the sidebar, not in a top header row.
+    assert not [link for link in app.main.get("page_link") if link.proto.label == "My account"]
+    assert not [button for button in app.main.button if button.key == "logout_button"]
+
+
+def test_accessibility_settings_sit_in_the_sidebar_under_the_account():
+    app = signed_in_app(APP_PATH).run()
+
+    assert not app.exception
+    assert [item.label for item in app.sidebar.expander] == ["Accessibility settings"]
+    assert [item.key for item in app.sidebar.toggle] == ["a11y_simplify", "_ui_chinese_toggle"]
+    assert not app.main.get("toggle")
+
+    next(item for item in app.sidebar.toggle if item.key == "_ui_chinese_toggle").set_value(True).run()
+
+    assert not app.exception
+    assert [item.label for item in app.sidebar.expander] == ["无障碍设置"]
+    assert app.sidebar.button(key="logout_button").label == "退出登录"
 
 
 @pytest.mark.parametrize("logout_location", ["sidebar", "account_page"])

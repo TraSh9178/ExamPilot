@@ -17,9 +17,20 @@ from services import postgres_store
 from services.auth_session import current_user
 from services.exam_engine import grade_exam
 from services.learning_state import capture_learning_state, restored_learning_state
-from services.ui_adapters import PENDING_INTEGRATION_MESSAGES
 
 STATE_KEY = "account_sync"
+
+# Student-facing texts. Raw database reasons stay in SyncOutcome.message for
+# diagnostics and are never shown on the page.
+SAVE_FAILED_MESSAGE = (
+    "Couldn't save to your account. Your work is kept on this device for now."
+)
+RESTORE_FAILED_MESSAGE = (
+    "Couldn't restore from your account. Your work on this device is unchanged."
+)
+NOTHING_SAVED_MESSAGE = "Nothing saved for this course yet."
+RESTORE_FIRST_MESSAGE = "Restore this course from your account first, then save."
+_COURSE_NOT_FOUND = "Course was not found."
 
 
 @dataclass(frozen=True)
@@ -149,19 +160,21 @@ def _restore_one(
     state: dict,
     user_id: str,
     course_id: str,
-    label: str,
 ) -> str | None:
-    """Restore one course; return an error text, or None on success."""
+    """Restore one course; return the internal failure reason, or None on success."""
     restored = postgres_store.load_course_history(user_id, course_id)
-    if not restored.success or restored.package is None:
+    if not restored.success:
         state.setdefault("failed_course_ids", set()).add(course_id)
-        reason = restored.message if not restored.success else "Course was not found."
-        return f"{label}: {reason}"
+        return restored.message
+    if restored.package is None:
+        # Nothing saved yet is not a failed restore; it must not block saves.
+        state.setdefault("failed_course_ids", set()).discard(course_id)
+        return _COURSE_NOT_FOUND
     try:
         _apply_restored_course(session_state, state, restored)
     except (KeyError, ValueError):
         state.setdefault("failed_course_ids", set()).add(course_id)
-        return f"{label}: Stored exam data could not be matched to its questions."
+        return "Stored exam data could not be matched to its questions."
     state.setdefault("failed_course_ids", set()).discard(course_id)
     return None
 
@@ -190,13 +203,11 @@ def restore_all(session_state: MutableMapping[str, Any]) -> SyncOutcome | None:
     errors = []
     restored_count = 0
     for summary in listing.courses:
-        error = _restore_one(
-            session_state, state, user_id, summary.course_id, summary.course_name
-        )
+        error = _restore_one(session_state, state, user_id, summary.course_id)
         if error is None:
             restored_count += 1
         else:
-            errors.append(error)
+            errors.append(f"{summary.course_name}: {error}")
 
     state["restore_errors"] = errors
     state["restore_message"] = (
@@ -321,9 +332,11 @@ def restore_course(
     if user_id is None:
         return None
     state = _state(session_state, user_id)
-    error = _restore_one(session_state, state, user_id, course_id, course_id)
+    error = _restore_one(session_state, state, user_id, course_id)
+    if error == _COURSE_NOT_FOUND:
+        return SyncOutcome(False, NOTHING_SAVED_MESSAGE)
     if error is not None:
-        return SyncOutcome(False, error)
+        return SyncOutcome(False, RESTORE_FAILED_MESSAGE)
     return SyncOutcome(True, "Course and practice history restored.")
 
 
@@ -335,22 +348,20 @@ def render_sidebar_status() -> None:
         return
     state = _state(session_state, user_id)
 
+    # A successful restore needs no message; only failures are shown.
     if state["restore_errors"]:
-        st.warning(tr("Some saved records could not be restored. Your current work is unchanged.")
-                   + "\n\n" + "\n".join(f"- {tr(e)}" for e in state["restore_errors"]))
+        st.warning(tr("Some saved records could not be restored. Your current work is unchanged."))
         if st.button(tr("Retry restore"), key="retry_restore", use_container_width=True):
             with st.spinner(tr("Restoring your saved study records…")):
                 restore_all(session_state)
             st.rerun()
-    elif state["restore_message"]:
-        st.caption(tr(state["restore_message"]))
 
     if state.get("restore_conflicts"):
-        st.warning(tr("Database history is used for statistics. Conflicting local practice records are kept separately in this login session and are not counted or automatically uploaded. Do not log out before resolving them."))
+        st.warning(tr("Some practice on this device differs from your saved records and is not counted. Logging out will remove it."))
 
     unsaved = len(state["unsaved_courses"]) + len(state["unsaved_exams"])
     if unsaved:
-        st.warning(tr(f"{unsaved} item(s) are not saved to your account yet. Use Save in Study Plan to retry."))
+        st.warning(tr(f"{unsaved} item(s) not saved yet. Use Save in Study Plan to retry."))
 
 
 def render_save_restore_controls(course: StudyPackage) -> None:
@@ -358,7 +369,7 @@ def render_save_restore_controls(course: StudyPackage) -> None:
     session_state = st.session_state
     user_id = _user_id(session_state)
     if user_id is None:
-        st.caption(tr(PENDING_INTEGRATION_MESSAGES["database"]))
+        st.caption(tr("Log in to back up this course."))
         for column, label, kind in zip(st.columns(2), ("Save", "Restore"), ("save", "restore")):
             column.button(
                 tr(label), key=f"database_{kind}_{course.course_id}",
@@ -368,7 +379,7 @@ def render_save_restore_controls(course: StudyPackage) -> None:
 
     state = _state(session_state, user_id)
     message_key = course.course_id
-    st.caption(tr("Saves this course and its graded practice to your account. Anonymous records from before login are not migrated."))
+    st.caption(tr("Back up this course to your account."))
     save_column, restore_column = st.columns(2)
     save_clicked = save_column.button(
         tr("Save"), key=f"database_save_{course.course_id}", use_container_width=True,
@@ -381,7 +392,15 @@ def render_save_restore_controls(course: StudyPackage) -> None:
     if save_clicked:
         with st.spinner(tr("Saving…")):
             outcome = save_course_with_history(session_state, course)
-        state["course_messages"][message_key] = outcome
+        # Show a fixed text; the raw reason from the database stays internal.
+        if outcome.success:
+            message = "Saved to your account."
+        elif state.get("listing_failed") or course.course_id in state.get("failed_course_ids", set()):
+            # Saving stays blocked until a restore works; retrying Save cannot help.
+            message = RESTORE_FIRST_MESSAGE
+        else:
+            message = SAVE_FAILED_MESSAGE
+        state["course_messages"][message_key] = SyncOutcome(outcome.success, message)
     elif restore_clicked:
         with st.spinner(tr("Restoring…")):
             outcome = restore_course(session_state, course.course_id)
@@ -390,8 +409,14 @@ def render_save_restore_controls(course: StudyPackage) -> None:
             st.rerun()
 
     outcome = state["course_messages"].get(message_key)
-    if outcome is not None:
-        (st.success if outcome.success else st.error)(tr(outcome.message))
+    if outcome is None:
+        return
+    if outcome.success:
+        st.success(tr(outcome.message))
+    elif outcome.message == NOTHING_SAVED_MESSAGE:
+        st.info(tr(outcome.message))
+    else:
+        st.error(tr(outcome.message))
 
 
 def render_last_save_status() -> None:
@@ -400,9 +425,7 @@ def render_last_save_status() -> None:
     if user_id is None:
         return
     outcome = _state(st.session_state, user_id)["last_save"]
-    if outcome is None:
+    # A successful save needs no message on the page.
+    if outcome is None or outcome.success:
         return
-    if outcome.success:
-        st.caption(tr("Saved to your account."))
-    else:
-        st.warning(tr(f"Not saved to your account: {outcome.message} Your local work is kept; use Save in Study Plan to retry."))
+    st.warning(tr(SAVE_FAILED_MESSAGE))

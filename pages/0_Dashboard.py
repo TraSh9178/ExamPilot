@@ -5,7 +5,7 @@ from uuid import uuid4
 import streamlit as st
 
 from models.schemas import StudyPackage
-from services.account_sync import save_course_to_account
+from services.account_sync import SAVE_FAILED_MESSAGE, save_course_to_account
 from services.course_state import (
     initialize_courses,
     remove_course,
@@ -140,7 +140,7 @@ if st.session_state.show_course_setup:
         )
 
         st.caption(tr("2 · Upload materials and extract text"))
-        st.caption(tr("When you save the course, extracted text and source pages are stored with your account. Original files are not stored."))
+        st.caption(tr("Only the extracted text is saved with your course, not the original file."))
         uploaded_file = st.file_uploader(
             tr("Upload course materials"),
             type=["pdf", "pptx", "txt", "png", "jpg", "jpeg"],
@@ -205,10 +205,6 @@ if st.session_state.show_course_setup:
                 ".png", ".jpg", ".jpeg"
             }
 
-            st.caption(
-                tr(f"Extracted text: {len(extracted_text):,} / 50,000 characters")
-            )
-
             st.caption(tr("Sources"))
             for source in document["sources"]:
                 page = source["page"]
@@ -227,26 +223,6 @@ if st.session_state.show_course_setup:
                 )
                 st.caption(tr(f"{source['filename']} · {location}"))
 
-            if "pages" in document:
-                page_label = (
-                    "PPTX slides"
-                    if document_extension == ".pptx"
-                    else ("Image" if is_image_document else "PDF pages")
-                )
-                with st.expander(
-                    tr(f"{page_label} ({len(document['pages'])})")
-                ):
-                    for page in document["pages"]:
-                        page_unit = (
-                            "Slide"
-                            if document_extension == ".pptx"
-                            else ("Image" if is_image_document else "Page")
-                        )
-                        st.markdown(
-                            tr(f"**{page_unit} {page['page']}** · "
-                            f"{len(page['text']):,} characters")
-                        )
-
             with st.expander(tr("Preview extracted text")):
                 st.text(extracted_text)
 
@@ -254,6 +230,8 @@ if st.session_state.show_course_setup:
                 "setup_course_name", ""
             ).strip()
 
+            if st.session_state.pop("course_save_failed_notice", False):
+                st.warning(tr(SAVE_FAILED_MESSAGE))
             if st.session_state.pop("course_generation_notice", False):
                 st.success(
                     tr("Topics generated. Review them in Study Hub, "
@@ -287,9 +265,9 @@ if st.session_state.show_course_setup:
                         new_course = StudyPackage.model_validate(
                             generated["package"]
                         )
-                    except ValueError as error:
+                    except ValueError:
                         st.error(
-                            tr(f"Could not load generated topics: {error}")
+                            tr("Couldn't use the generated topics. Try generating them again.")
                         )
                     else:
                         # Retain the material for later question generation.
@@ -304,11 +282,8 @@ if st.session_state.show_course_setup:
                             st.session_state, new_course
                         )
                         if sync_outcome is not None and not sync_outcome.success:
-                            st.warning(
-                                tr("Course kept in this session but not saved to "
-                                f"your account: {sync_outcome.message} "
-                                "Use Save in Study Plan to retry.")
-                            )
+                            # Shown after the rerun below, which would wipe it now.
+                            st.session_state["course_save_failed_notice"] = True
 
                         st.success(
                             tr("Topics generated. Review them in Study Hub, "
@@ -319,11 +294,7 @@ if st.session_state.show_course_setup:
 
 
             if not ai_available:
-                st.info(
-                    tr("AI topic generation is not available on this server "
-                    "because ANTHROPIC_API_KEY is not configured. The built-in "
-                    "demo courses still work.")
-                )
+                st.info(tr("AI generation is unavailable right now."))
             elif not course_name:
                 st.info(tr("Enter a course name to enable topic generation."))
         else:
@@ -434,10 +405,10 @@ else:
                     if not is_demo and st.session_state.get(
                         f"pending_course_removal_{course.course_id}", False
                     ):
-                        st.warning(
+                        st.warning(tr(
                             f"Delete {course.course_name}? Its materials and practice "
                             "progress will be removed from this session."
-                        )
+                        ))
                         confirmation_columns = st.columns(2)
                         with confirmation_columns[0]:
                             cancel_removal = st.button(

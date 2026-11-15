@@ -1,16 +1,62 @@
+"""Shared stylesheets, brand files and paper illustrations for every page."""
+
+import base64
+from functools import lru_cache
 from pathlib import Path
 
 import streamlit as st
 
+ASSETS = Path(__file__).resolve().parents[1] / "assets"
+BRAND_LOGO = ASSETS / "brand-logo.svg"
+BRAND_PLANE = ASSETS / "brand-plane.svg"
+ILLUSTRATIONS = ASSETS / "illustrations"
+# Decorations that stylesheets use as var(--paper-<name>).
+CSS_ILLUSTRATIONS = ("landscape-left", "landscape-right", "home-foliage")
+
+
+@lru_cache(maxsize=32)
+def _read_text(path: str, modified_ns: int) -> str:
+    # The modification time is part of the key, so an edited file is read again.
+    return Path(path).read_text(encoding="utf-8")
+
+
+def _stylesheet(path: Path) -> str:
+    return _read_text(str(path), path.stat().st_mtime_ns)
+
+
+def paper_stylesheets() -> list[Path]:
+    """paper_shell.css first, then the page sheets (paper_practice.css, ...) by name.
+
+    The shell holds the app-wide base, so page sheets that follow it win ties.
+    """
+    return sorted(
+        ASSETS.glob("paper_*.css"),
+        key=lambda path: (path.name != "paper_shell.css", path.name),
+    )
+
+
+@lru_cache(maxsize=None)
+def illustration_data_uri(name: str) -> str:
+    """Embed a watercolour from assets/illustrations; Streamlit serves no asset folder."""
+    data = (ILLUSTRATIONS / f"{name}.webp").read_bytes()
+    return "data:image/webp;base64," + base64.b64encode(data).decode("ascii")
+
+
+@lru_cache(maxsize=1)
+def _illustration_properties() -> str:
+    properties = "".join(
+        f'    --paper-{name}: url("{illustration_data_uri(name)}");\n'
+        for name in CSS_ILLUSTRATIONS
+    )
+    return ":root {\n" + properties + "}\n"
+
 
 def apply_app_styles() -> None:
     """Apply shared presentation styles without changing page behavior."""
-    typography = (
-        Path(__file__).resolve().parents[1] / "assets" / "ui_typography.css"
-    ).read_text(encoding="utf-8")
-    academic = (
-        Path(__file__).resolve().parents[1] / "assets" / "academic_ui.css"
-    ).read_text(encoding="utf-8")
+    typography = _stylesheet(ASSETS / "ui_typography.css")
+    academic = _stylesheet(ASSETS / "academic_ui.css")
+    # Later sheets win: the paper theme layers over the earlier academic styles.
+    paper = "\n".join(_stylesheet(path) for path in paper_stylesheets())
     st.markdown(
         "<style>\n" + typography + """
         :root {
@@ -28,11 +74,7 @@ def apply_app_styles() -> None:
             color: var(--exam-ink);
         }
 
-        [data-testid="stHeader"] {
-            background: rgba(248, 250, 254, 0.95);
-        }
-
-        /* Do not reserve navigation space around the standalone login form. */
+        /* Sign-in has no navigation; only there is the sidebar kept out of view. */
         [data-testid="stApp"]:has(.st-key-auth_forms) [data-testid="stSidebar"],
         [data-testid="stApp"]:has(.st-key-auth_forms) [data-testid="stExpandSidebarButton"] {
             display: none;
@@ -114,55 +156,10 @@ def apply_app_styles() -> None:
             line-height: 1.5;
         }
 
-        [data-testid="stSidebar"] {
-            background: #F0F5FD;
-            border-right: 1px solid var(--exam-border);
-        }
-
+        /* Sidebar surfaces, navigation and brand are styled in paper_shell.css. */
         [data-testid="stSidebar"] [data-testid="stText"] {
             white-space: pre-wrap;
             overflow-wrap: anywhere;
-        }
-
-        [data-testid="stSidebarNav"] {
-            position: relative;
-            padding-top: 0.8rem;
-        }
-
-        [data-testid="stSidebarNav"]::before {
-            content: "🎓  ExamPilot";
-            display: block;
-            padding: 0.45rem 0.8rem 1.1rem;
-            margin: 0 0.65rem 0.5rem;
-            border-bottom: 1px solid var(--exam-border);
-            color: var(--exam-ink);
-            font-size: 1.45rem;
-            font-weight: 750;
-            letter-spacing: -0.03em;
-        }
-
-        [data-testid="stSidebarNav"] a {
-            min-height: 2.8rem;
-            margin: 0.15rem 0.55rem;
-            border-radius: 0.65rem;
-            color: #304461;
-            font-size: var(--exam-font-body);
-            font-weight: 550;
-        }
-
-        [data-testid="stSidebarNav"] a [data-testid="stIconMaterial"] {
-            font-size: 1.3rem !important;
-        }
-
-        [data-testid="stSidebarNav"] a:hover {
-            background: #E2EDFF;
-            color: var(--exam-ink);
-        }
-
-        [data-testid="stSidebarNav"] a[aria-current="page"] {
-            background: #DCEAFF;
-            color: #174FAF;
-            font-weight: 700;
         }
 
         /* These Streamlit button kinds also cover form submits and downloads. */
@@ -323,12 +320,15 @@ def apply_app_styles() -> None:
             [class*="st-key-knowledge_graph_details"],
             [class*="st-key-anki_export_settings"],
             [class*="st-key-anki_export_summary"],
-            [class*="st-key-anki_study_card_"]
+            [class*="st-key-anki_study_card_"],
+            [class*="st-key-dashboard_continue"],
+            [class*="st-key-account_identity"],
+            [class*="st-key-account_avatar_controls"]
         ) {
             border-color: var(--exam-border) !important;
-            border-radius: 0.9rem !important;
+            border-radius: 14px !important;
             background: var(--exam-panel);
-            box-shadow: 0 3px 14px rgba(20, 55, 105, 0.04);
+            box-shadow: none;
         }
 
         [class*="st-key-knowledge_topic_heading"] {
@@ -900,12 +900,13 @@ def apply_app_styles() -> None:
             flex: 1;
         }
 
-        [data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-account_sidebar) {
-            order: 999;
+        /* Account, save status and accessibility sit at the foot of the sidebar. */
+        [data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_footer),
+        [data-testid="stSidebarUserContent"] [data-testid="stVerticalBlock"] > .st-key-sidebar_footer {
             margin-top: auto;
         }
 
-        .st-key-account_sidebar {
+        .st-key-sidebar_footer {
             padding-top: 1rem;
             border-top: 1px solid var(--exam-border);
         }
@@ -923,15 +924,15 @@ def apply_app_styles() -> None:
             flex-shrink: 0;
             border-radius: 50%;
             object-fit: cover;
-            border: 2px solid #D9E7FB;
+            border: 2px solid var(--paper-line, #D9E7FB);
         }
 
         .account-avatar-initial {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: #E1ECFF;
-            color: #184FAE;
+            background: var(--paper-select, #E1ECFF);
+            color: var(--ink, #184FAE);
             font-size: 1.35rem;
             font-weight: 750;
         }
@@ -962,8 +963,8 @@ def apply_app_styles() -> None:
         }
 
         .st-key-account_sidebar [data-testid="stPageLink"] {
-            border-radius: 0.65rem;
-            background: #E8F0FE;
+            border-radius: 999px;
+            background: var(--paper-badge, #E8F0FE);
         }
 
         .st-key-account_sidebar button,
@@ -990,6 +991,6 @@ def apply_app_styles() -> None:
         @media (prefers-reduced-motion: reduce) {
             button[data-testid^="stBaseButton-"] { transition: none; }
         }
-        """ + academic + "</style>",
+        """ + academic + "\n" + paper + "\n" + _illustration_properties() + "</style>",
         unsafe_allow_html=True,
     )

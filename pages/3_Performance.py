@@ -51,8 +51,8 @@ try:
         sessions=sessions,
         questions=list(questions_by_id.values()),
     )
-except ValueError as error:
-    st.error(tr(f"Could not calculate performance: {error}"))
+except ValueError:
+    st.error(tr("Couldn't calculate your progress from this practice history."))
     st.stop()
 
 mode_label = st.radio(
@@ -189,10 +189,6 @@ with details_tab:
         "in the selected mode. "
         "Below 60%: Weak · 60–79.99%: Developing · 80% or above: Mastered."
    ) )
-    st.caption(
-        tr("Signed-in users' saved practice records can be restored across sessions. "
-        "Unsaved records remain in the current session only.")
-    )
 if st.button(tr("Start practice"), type="primary"):
     from services.learning_flow import stage_practice
     stage_practice(st.session_state, course)

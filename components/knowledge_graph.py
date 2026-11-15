@@ -230,8 +230,6 @@ def render_topic_details(
     source_pages = details["source_pages"]
     if source_pages:
         st.caption(tr(f"Source pages: {', '.join(map(str, source_pages))}"))
-    else:
-        st.caption(tr("Source pages not provided"))
 
     st.divider()
     st.markdown(tr("**Your Progress**"))
@@ -333,11 +331,12 @@ def radar_count_text(topic_radar: learning_radar.TopicRadar | None) -> str:
     return f"{count} students are stuck here"
 
 
-NO_REASON_LABEL = "No specific reason"
-# Choices offered before flagging: no reason (stored as None), then each code.
+NO_REASON_LABEL = "Just stuck"
+# One-click choices offered before flagging: each reason code, then no reason
+# (stored as None).
 RADAR_REASON_OPTIONS: tuple[str | None, ...] = (
-    None,
     *learning_radar.REASON_LABELS,
+    None,
 )
 WORDING_HINT = (
     "Turn on Accessibility in the sidebar for simpler wording and "
@@ -416,17 +415,25 @@ def render_reason_hint(reason: str | None) -> None:
 
 
 def render_saved_reason(reason: str | None) -> None:
-    """Show the reason the user gave when flagging the selected topic."""
-    st.caption(tr("Your reason: ") + tr(radar_reason_label(reason)))
+    """Show the reason the user gave when flagging; "Just stuck" shows none."""
+    if reason is not None:
+        st.caption(tr("Your reason: ") + tr(radar_reason_label(reason)))
     render_reason_hint(reason)
 
 
 def render_topic_radar(
     topic_radar: learning_radar.TopicRadar | None,
     prerequisite_names: Sequence[str] = (),
+    *,
+    show_count: bool = True,
 ) -> None:
-    """Show how many students are stuck on the selected topic."""
-    st.markdown(tr(radar_count_text(topic_radar)))
+    """Show how many students are stuck on the selected topic.
+
+    Pass ``show_count=False`` when the count is already on screen (the
+    "I'm stuck here" buttons show it); the notes below it still appear.
+    """
+    if show_count:
+        st.markdown(tr(radar_count_text(topic_radar)))
     if topic_radar is not None and topic_radar.sample_count > 0:
         st.caption(tr("Includes sample data"))
     hint = radar_prerequisite_hint(topic_radar, prerequisite_names)
@@ -434,18 +441,54 @@ def render_topic_radar(
         st.info(tr(hint))
 
 
+def radar_display_order(
+    topics: Sequence[learning_radar.TopicRadar], topic_ids: Sequence[str]
+) -> list[learning_radar.TopicRadar]:
+    """Order flagged topics for display without revealing hidden counts.
+
+    Topics with a visible count come first, highest first. Topics whose count
+    is hidden by the privacy rule follow in course order, so their position
+    says nothing about how many students flagged them.
+    """
+    position = {topic_id: index for index, topic_id in enumerate(topic_ids)}
+    return sorted(
+        (topic for topic in topics if topic.topic_id in position),
+        key=lambda topic: (
+            topic.display_count is None,
+            -(topic.display_count or 0),
+            position[topic.topic_id],
+        ),
+    )
+
+
 def render_radar_panel(
     radar: learning_radar.CourseRadar,
     ranked_topics: list[learning_radar.TopicRadar],
     topic_names: dict[str, str],
+    *,
+    course: StudyPackage | None = None,
+    focus_topic_id: str | None = None,
+    chart_key: str = "learning_radar_panel_chart",
+    title: str = "**Learning Radar**",
 ) -> None:
-    """List the course's flagged topics in the order given (most flagged first)."""
-    st.markdown(tr("**Learning Radar**"))
+    """List the course's flagged topics in the order given (most flagged first).
+
+    With ``course`` the spider chart is drawn above the list, highlighting
+    ``focus_topic_id`` when one is given.
+    """
+    st.markdown(tr(title))
     st.caption(tr("Topics where students marked \"I'm stuck here\", most flagged first."))
+    if course is not None:
+        # Imported here: components.radar_chart imports this module.
+        from components.radar_chart import render_radar_figure
+
+        render_radar_figure(
+            course, radar, focus_topic_id=focus_topic_id, key=chart_key
+        )
     flagged = [
         topic_radar
-        for topic_radar in ranked_topics
-        if _has_flags(topic_radar) and topic_radar.topic_id in topic_names
+        for topic_radar in radar_display_order(ranked_topics, list(topic_names))
+        if _has_flags(topic_radar)
     ]
     if flagged:
         lines = []
@@ -469,5 +512,3 @@ def render_radar_panel(
         st.caption(tr("No topics have been flagged yet."))
     if radar.has_sample:
         st.caption(tr("Includes sample data"))
-    if not radar.live:
-        st.caption(tr("Live flags are unavailable right now."))

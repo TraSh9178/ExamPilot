@@ -40,9 +40,10 @@ for key, value in {"concept_lab_limit_distance": 0.1, "concept_lab_x0": 1.0,
     st.session_state.setdefault(key, value)
 
 requested_topic = st.session_state.get("concept_lab_topic_calculus-i-demo", "calc_limits")
+limits_label, derivatives_label = tr("Limits"), tr("Derivatives")
 limits_tab, derivatives_tab, corner_tab = st.tabs(
-    ["Limits", "Derivatives", tr("Corners & differentiability")],
-    default="Derivatives" if requested_topic == "calc_derivatives" else "Limits",
+    [limits_label, derivatives_label, tr("Corners & differentiability")],
+    default=derivatives_label if requested_topic == "calc_derivatives" else limits_label,
 )
 
 with limits_tab:

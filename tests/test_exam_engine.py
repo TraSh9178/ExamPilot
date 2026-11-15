@@ -90,8 +90,16 @@ def test_create_exam_topic_mode_can_narrow_to_a_confirmed_topic(
 
     assert session.question_ids == ["q2"]
     assert [question.id for question in questions] == ["q2"]
-    assert result["warning"] is not None
-    assert "only 1 are available" in result["warning"]
+    assert result["warning"] == "1 question available; included."
+
+
+def test_create_exam_availability_notice_is_short_and_plural(
+    package: StudyPackage,
+) -> None:
+    result = create_exam(package, "mock", 10, ["topic-a", "topic-b"])
+
+    assert len(result["questions"]) == 3
+    assert result["warning"] == "3 questions available; all included."
 
 
 @pytest.mark.parametrize(

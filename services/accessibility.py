@@ -8,8 +8,10 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from collections.abc import Mapping
+from types import MappingProxyType
 
 from models.schemas import Question
 from services.i18n import tr, render_language_control
@@ -39,13 +41,29 @@ def render_accessibility_controls() -> None:
     st.caption(tr("Interface language only; uploaded material and AI-generated answers retain their original language."))
 
 
-def _read_mapping(filename: str) -> dict:
-    path = _DATA_DIR / filename
+def _read_mapping(filename: str) -> Mapping:
+    # Keyed by the full path, so a different data directory is never served
+    # from the cache.
+    return _load_mapping(_DATA_DIR / filename)
+
+
+def _freeze(value):
+    """Make parsed JSON read-only at every level, so the cached copy cannot change."""
+    if isinstance(value, dict):
+        return MappingProxyType({key: _freeze(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(item) for item in value)
+    return value
+
+
+@lru_cache(maxsize=None)
+def _load_mapping(path: Path) -> Mapping:
+    """Parse a data file once; callers get a read-only view of the cached data."""
     if not path.is_file():
-        return {}
+        return MappingProxyType({})
     with path.open("r", encoding="utf-8") as source:
         data = json.load(source)
-    return data if isinstance(data, dict) else {}
+    return _freeze(data) if isinstance(data, dict) else MappingProxyType({})
 
 
 def annotate_terms(text: str, glossary: dict[str, str]) -> str:
@@ -99,10 +117,10 @@ def display_question(
             data = _read_mapping(f"simplified_{course_id}.json")
             wording = data.get("questions", {}).get(question.id)
     simplified = bool(
-        isinstance(wording, dict)
+        isinstance(wording, Mapping)
         and isinstance(wording.get("question"), str)
         and isinstance(wording.get("explanation"), str)
-        and isinstance(wording.get("options"), list)
+        and isinstance(wording.get("options"), (list, tuple))
         and len(wording["options"]) == 4
         and all(isinstance(option, str) for option in wording["options"])
     )

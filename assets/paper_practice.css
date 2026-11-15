@@ -1,0 +1,82 @@
+/* Paper UI: practice page question card, badge, action row and margin panel. */
+
+/* Question card: a beige "Q01" badge beside the question text. */
+.paper-question {
+  display: flex;
+  align-items: flex-start;
+  gap: .9rem;
+  margin: .4rem 0 .75rem;
+}
+.paper-question-badge {
+  flex: 0 0 auto;
+  min-width: 3.4rem;
+  padding: .32rem .7rem .38rem;
+  border-radius: .6rem;
+  background: var(--paper-badge, #F0EADA);
+  color: var(--accent-rust, #B5622E);
+  font-family: var(--font-title, Georgia, "Times New Roman", serif);
+  font-size: 1.45rem;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.paper-question-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-top: .3rem;
+  color: var(--ink, #13224F);
+  font-family: var(--font-title, Georgia, "Times New Roman", serif);
+  font-size: 1.2rem;
+  line-height: 1.5;
+  /* Keeps the line breaks and indentation of code questions. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Answer options sit under the question text, aligned with it. */
+[data-testid="stMain"] [class*="st-key-practice_question_"] [data-testid="stRadio"] {
+  padding-left: calc(3.4rem + .9rem);
+}
+
+/* Actions under the question: Previous · Hint · Learning Radar · Next. */
+[data-testid="stMain"] [class*="st-key-paper_actions_"] {
+  margin-top: .5rem;
+  padding-top: .85rem;
+  border-top: 1px solid var(--paper-line, #EEE7DF);
+}
+
+/* Right margin: a quiet paper panel for Learning Radar and Quick Notes. */
+[data-testid="stMain"] .st-key-flight_worksheet_margin {
+  background: var(--paper-panel, #FAF3E9);
+  border-radius: .75rem;
+  padding-right: clamp(.6rem, 1.5vw, 1.1rem);
+}
+[data-testid="stMain"] .st-key-flight_worksheet_margin h3 {
+  color: var(--ink, #13224F);
+  font-family: var(--font-title, Georgia, "Times New Roman", serif);
+  font-size: 1.3rem;
+}
+[data-testid="stMain"] .st-key-flight_worksheet_margin [data-testid="stCaptionContainer"] {
+  color: var(--ink-muted, #6B7280);
+}
+[data-testid="stMain"] .st-key-flight_worksheet_margin [data-testid="stMarkdownContainer"] p {
+  color: var(--ink-body, #2A2F33);
+}
+
+@media (max-width: 640px) {
+  .paper-question { gap: .6rem; }
+  .paper-question-badge {
+    min-width: 2.8rem;
+    padding: .25rem .5rem .3rem;
+    font-size: 1.15rem;
+  }
+  .paper-question-text {
+    padding-top: .15rem;
+    font-size: 1.08rem;
+  }
+  [data-testid="stMain"] [class*="st-key-practice_question_"] [data-testid="stRadio"] {
+    padding-left: 0;
+  }
+  [data-testid="stMain"] .st-key-flight_worksheet_margin { padding: .75rem; }
+}

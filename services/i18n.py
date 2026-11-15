@@ -330,6 +330,70 @@ _TRANSLATIONS = {
     "See computation and conceptual understanding separately, with the answers behind each pattern.": "分别查看计算与概念理解，以及各项判断依据的答案。",
     "These are question-based observations, not a validated cognitive diagnosis. Multiple-choice answers do not demonstrate that you can explain an idea in your own words.": "这些是基于题目的观察，并非经过验证的认知诊断；选择题无法证明你能用自己的话解释概念。",
     "Answer more different questions in both dimensions before comparing them.": "在两个维度上多做不同题目，再进行比较。",
+    # paper UI: pages
+    "Couldn't save to your account. Your work is kept on this device for now.": "未能保存到账户，你的内容暂时保留在此设备上。",
+    "Couldn't restore from your account. Your work on this device is unchanged.": "未能从账户恢复，此设备上的内容没有改变。",
+    "Nothing saved for this course yet.": "此课程还没有保存的内容。",
+    "Some practice on this device differs from your saved records and is not counted. Logging out will remove it.": "此设备上有部分练习与已保存记录不一致，暂不计入统计；退出登录后将被删除。",
+    "Log in to back up this course.": "登录后可备份此课程。",
+    "Back up this course to your account.": "将此课程备份到你的账户。",
+    "Only the extracted text is saved with your course, not the original file.": "课程只保存提取的文字，不保存原始文件。",
+    "Couldn't use the generated topics. Try generating them again.": "无法使用生成的知识点，请重新生成。",
+    "Couldn't use the generated questions. Try generating them again.": "无法使用生成的题目，请重新生成。",
+    "AI generation is unavailable right now.": "AI 生成功能暂时不可用。",
+    "AI generation is unavailable right now. Try again later.": "AI 生成功能暂时不可用，请稍后重试。",
+    "Each topic can be selected only once.": "每个知识点只能选择一次。",
+    "Needs check": "待检查", "Approved": "已批准", "Flagged": "已标记",
+    "Check the answer and explanation before approving; edits never change past results.": "批准前请检查答案与解析；编辑不会改变以往成绩。",
+    "Couldn't delete the material from your account. Nothing was changed.": "未能从账户删除资料，内容没有任何改变。",
+    "Review course knowledge cards here or download them for Anki.": "在此查看课程知识卡片，或下载后导入 Anki。",
+    "Download the file, then in Anki on your computer choose File → Import and match Front, Back and Tags. Cards are not sent to AnkiWeb automatically.": "下载文件后，在电脑上的 Anki 中选择 文件 → 导入，并将字段对应到 Front、Back 和 Tags。卡片不会自动同步到 AnkiWeb。",
+    "Uses your latest answer to each question. Fewer than 3 different questions shows as insufficient evidence.": "按每道题的最近一次回答计算；不同题目少于 3 道时显示为证据不足。",
+    "Learning DNA couldn't read this practice history.": "学习画像无法读取这段练习历史。",
+    "Couldn't calculate your progress from this practice history.": "无法根据这段练习历史计算学习进度。",
+    "Couldn't find your weak topics from this practice history.": "无法根据这段练习历史找出薄弱知识点。",
+    # paper UI: radar
+    "Learning Radar": "学习雷达",
+    "See where students get stuck, and mark the topics that stop you.": "查看同学们在哪些知识点卡住，并标记让你卡住的知识点。",
+    "Learning Radar is available for the built-in demo courses.": "学习雷达仅适用于内置演示课程。",
+    "**Most flagged topics**": "**被标记最多的知识点**",
+    "Where are you stuck?": "你卡在哪个知识点？",
+    "Pick a topic": "选择知识点",
+    "Pick a topic above to mark it.": "在上方选择一个知识点进行标记。",
+    "Students stuck per topic": "各知识点卡住的学生人数",
+    "I'm stuck here because…": "我卡在这里，因为……",
+    "Just stuck": "就是没搞懂",
+    "You marked this topic.": "你已标记此知识点。",
+    "Couldn't update Learning Radar. Try again in a moment.": "暂时无法更新学习雷达，请稍后再试。",
+    "Connections kept in this session but not saved to your account. Use Save on the Study Plan page to retry.": "关联已保留在当前会话中，但未保存到账户。请在学习计划页面点击保存重试。",
+    # paper UI: fixes
+    "Open Study Plan": "打开学习计划", "Continue practice": "继续练习",
+    "Calculus I · Limits": "微积分 I · 极限",
+    # paper UI: practice
+    "Hint": "提示", "Next hint": "下一条提示", "Previous": "上一题", "Next": "下一题",
+    "Learning Radar": "学习雷达", "Explore this topic": "探索此知识点", "Quick Notes": "速记要点",
+    "Focus controls": "专注计时", "Answered": "已作答",
+    "1 question": "1 道题", "Topic practice": "知识点练习", "Mock exam": "模拟考试",
+    "Saved practice": "已保存的练习", "Unfinished": "未完成",
+    "New practice: ": "新练习：", "New practice for your confirmed topics.": "为已确认的知识点开始新练习。",
+    "Could not create practice. Try another topic or check your exam scope in Study Plan.": "无法创建练习。请换一个知识点，或到学习计划检查考试范围。",
+    "Could not grade this practice. Please try again.": "无法为本次练习评分，请重试。",
+    "1 question available; included.": "仅有 1 道题可用，已加入。",
+    "1 missed question to practise; your score stays the same.": "有 1 道错题可再练习；成绩保持不变。",
+    "1 question could benefit from another look.": "有 1 道题值得再看一遍。",
+    "1 correct answer was marked Guessed. Revisit it before treating it as secure knowledge.": "有 1 道答对的题被标记为猜测；请复习后再认为自己已掌握。",
+    "No hints": "未用提示", "1 hint": "1 条提示", "Saved.": "已保存。",
+    "No similar question yet.": "暂时没有类似的题目。",
+    "Couldn't save your reflection. Your score is unchanged.": "反思未能保存；成绩不变。",
+    "Couldn't save to your account. Your work is kept on this device for now.": "未能保存到账户；你的内容暂时保留在此设备上。",
+    "Your answers were graded, but your practice notes couldn't be saved.": "答案已评分，但练习记录未能保存。",
+    "Mixed-topic smart review is recorded in Mock Exam mode.": "多知识点智能复习按模拟考试模式记录。",
+    "No approved review questions are in the confirmed scope. Review questions or confirm your scope in Study Plan first.": "已确认范围中没有可用的复习题。请先到学习计划审核题目或确认范围。",
+    "Review topic is outside the confirmed scope.": "复习知识点不在已确认范围内。",
+    "No missed questions in this confirmed topic scope.": "已确认范围中没有错题。",
+    # paper UI: review fixes
+    "Couldn't load the Calculus demo course. Try again later.": "无法加载微积分演示课程，请稍后再试。",
+    "Restore this course from your account first, then save.": "请先从账户恢复此课程，然后再保存。",
 }
 
 _TRANSLATIONS.update(
@@ -419,6 +483,12 @@ _TRANSLATIONS.update(
                                                                                                                                                           '处不存在唯一的导数。'}
 )
 
+# paper UI: shell
+_TRANSLATIONS.update({
+    "Learning Radar": "学习雷达",
+    "Illustration of a university campus": "大学校园插画",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
@@ -426,7 +496,7 @@ _DYNAMIC = [
     (r"^🔥 (\d+) stuck$", r"🔥 \1 人遇到困难"),
     (r"^Applied (\d+) suggested connections?\.$", r"已应用 \1 条建议的关联。"),
     (r"^Many students are stuck here\. Reviewing (.*) first may help\.$", r"许多学生在这里遇到困难；先复习\1可能有帮助。"),
-    (r"^(\d+) knowledge points$", r"\1 个知识点"),
+    (r"^(\d+) knowledge points?$", r"\1 个知识点"),
     (r"^Select (.+)$", r"选择\1"),
     (r"^Source pages: (.+)$", r"来源页：\1"),
     (r"^Option ([A-D])$", r"选项 \1"),
@@ -473,6 +543,24 @@ _DYNAMIC = [
     (r"^(\d+) correct answer\(s\) were marked Guessed\. Revisit them before treating them as secure knowledge\.$", r"有 \1 道答对的题被标记为猜测；请复习后再认为自己已掌握。"),
     (r"^(\d+) answer\(s\) used in-app hints\.$", r"\1 道题使用了应用内提示。"),
     (r"^Hint use was not recorded for (\d+) answer\(s\)\.$", r"\1 道题没有记录提示使用情况。"),
+    # paper UI: pages
+    (r"^(\d+) item\(s\) not saved yet\. Use Save in Study Plan to retry\.$", r"还有 \1 项未保存；请在学习计划中点击保存重试。"),
+    (r"^(\d+) questions? ready$", r"\1 道题可以练习"),
+    (r"^(\d+) new questions? needs? your check$", r"有 \1 道新题需要你检查"),
+    (r"^(\d+) cards · (.*)$", r"\1 张卡片 · \2"),
+    (r"^An error occurred while .+\. Try again later\.$", r"处理请求时出错，请稍后重试。"),
+    # paper UI: fixes
+    (r"^Delete (.+)\? Its materials and practice progress will be removed from this session\.$", r"删除“\1”？课程资料和练习进度将从本次会话中移除。"),
+    # paper UI: practice
+    (r"^Q0?(\d+)$", r"第 \1 题"),
+    (r"^(\d+) questions$", r"\1 道题"),
+    (r"^(\d+)/(\d+) correct$", r"答对 \1/\2"),
+    (r"^Unfinished sessions \((\d+)\)$", r"未完成的场次（\1）"),
+    (r"^(\d+) questions available; all included\.$", r"仅有 \1 道题可用，已全部加入。"),
+    (r"^(\d+) missed questions to practise; your score stays the same\.$", r"有 \1 道错题可再练习；成绩保持不变。"),
+    (r"^(\d+) correct answers were marked Guessed\. Revisit them before treating them as secure knowledge\.$", r"有 \1 道答对的题被标记为猜测；请复习后再认为自己已掌握。"),
+    (r"^(\d+) hints$", r"\1 条提示"),
+    (r"^(\d+) s$", r"\1 秒"),
 ]
 
 
