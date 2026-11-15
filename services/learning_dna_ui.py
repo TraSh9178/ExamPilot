@@ -1,5 +1,5 @@
 """Render evidence dimensions alongside the existing Progress statistics."""
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 from services.i18n import tr
 import streamlit as st
 
@@ -92,8 +92,7 @@ def render_learning_dna(course, attempts, sessions, questions, mode, *, example=
     there are no answers to open.
     """
     title = f"{tr('Example')} · {tr('Learning DNA')}" if example else tr("Learning DNA")
-    st.subheader(title)
-    help_tip(tr("How to read this profile") + " · " + tr("These are question-based observations, not a validated cognitive diagnosis. Multiple-choice answers do not demonstrate that you can explain an idea in your own words.") + " " + tr("Uses your latest answer to each question. Fewer than 3 different questions shows as insufficient evidence."))
+    help_heading(title, tr("How to read this profile") + " · " + tr("These are question-based observations, not a validated cognitive diagnosis. Multiple-choice answers do not demonstrate that you can explain an idea in your own words.") + " " + tr("Uses your latest answer to each question. Fewer than 3 different questions shows as insufficient evidence."))
     try:
         profile, _excluded = evidence_profile(attempts, sessions, questions, mode)
     except ValueError:

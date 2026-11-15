@@ -3,7 +3,7 @@
 Opened from a topic's "View answers" button on Progress. Real practice only:
 the example report on the demo courses has no answers to show.
 """
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 import streamlit as st
 
 from components.page_links import back_button
@@ -20,14 +20,13 @@ back_button(
     tr("Back to Progress"), "pages/3_Performance.py", key="learning_evidence_back",
     keep=(f"performance_mode_{course.course_id}",) if course is not None else (),
 )
-st.title(tr("Answers behind Learning DNA"))
+help_heading(tr("Answers behind Learning DNA"), tr("Your latest answer to each question behind your Learning DNA, topic by topic."), level="title")
 
 if course is None:
     st.info(tr("Load a course from the dashboard first."))
     st.page_link("pages/0_Dashboard.py", label=tr("Back to Dashboard"))
     st.stop()
 
-help_tip(tr("Your latest answer to each question behind your Learning DNA, topic by topic."))
 
 # The same widget key as on Progress, so the chosen mode carries over: the
 # "View answers" button keeps that key's value for this page as it switches.

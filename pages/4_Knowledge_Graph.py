@@ -1,4 +1,4 @@
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 from services.i18n import tr
 from pathlib import Path
 
@@ -33,8 +33,7 @@ from services.learning_flow import open_lab, stage_practice
 
 apply_app_styles()
 
-st.title(tr("Knowledge Map"))
-help_tip(tr("Explore connected ideas. Click a topic to read its summary and learning progress."))
+help_heading(tr("Knowledge Map"), tr("Explore connected ideas. Click a topic to read its summary and learning progress.") + "\n\n" + tr("Click for details · Drag to rearrange · Scroll to zoom"), level='title')
 
 course = st.session_state.get("current_course")
 
@@ -113,8 +112,6 @@ with graph_controls[0]:
         )
         st.session_state[zoom_key] = 0
         st.rerun()
-with graph_controls[1]:
-    help_tip(tr("Click for details · Drag to rearrange · Scroll to zoom"))
 
 history_key = f"practice_history_{course.course_id}"
 history = st.session_state.get(history_key, {})

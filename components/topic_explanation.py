@@ -1,5 +1,5 @@
 """On-demand topic teaching, with existing course examples available offline."""
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 import hashlib
 
 import streamlit as st
@@ -41,7 +41,7 @@ def render_topic_explanation(course: StudyPackage, topic_id: str) -> None:
                 st.write(first.question)
                 st.write(first.explanation)
         else:
-            help_tip(tr("Go beyond the summary: understand the idea, then work through an example."))
+            help_heading(tr("Step-by-step explanation"), tr("Go beyond the summary: understand the idea, then work through an example."))
             if st.button(tr("Explain step by step"), key=f"graph_explain_{fingerprint}"):
                 language = "Simplified Chinese" if chinese else "English"
                 prompt = (
@@ -68,7 +68,7 @@ def render_topic_explanation(course: StudyPackage, topic_id: str) -> None:
                 st.write(saved["answer"])
 
         examples = [question for question in course.questions if question.topic_id == topic_id]
-        st.subheader(tr("Example from this course"))
+        help_heading(tr("Example from this course"), tr("Original course wording is preserved. Reading examples does not count as a graded attempt."))
         if not examples:
             st.caption(tr("There is no example for this topic in the current course yet."))
             return
@@ -97,8 +97,6 @@ def render_topic_explanation(course: StudyPackage, topic_id: str) -> None:
                 st.write(f"{chr(65 + example.correct_index)}. {example.options[example.correct_index]}")
                 st.markdown(tr("**Why this answer**"))
                 st.write(example.explanation)
-            with st.container(key='example_footer'):
-                help_tip(tr("Original course wording is preserved. Reading examples does not count as a graded attempt."))
         def change_example():
             st.session_state.pop(selected_key, None)
             st.session_state.pop(f'graph_example_{fingerprint}', None)

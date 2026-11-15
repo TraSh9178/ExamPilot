@@ -10,7 +10,8 @@
 [data-testid="stMain"] .st-key-dashboard_actions [data-testid="stIconMaterial"] { font-size: 1.2rem !important; color: inherit !important; }
 [data-testid="stMain"] .st-key-dashboard_actions button:hover { background: var(--paper-select) !important; border-color: var(--ep-action) !important; }
 /* Results: compact vertical metrics, one central primary action, next step on the right. */
-[data-testid="stMain"] .st-key-result_review_action button { min-height: 4rem; font-size: 1.1rem; }
+[data-testid="stMain"] .st-key-result_review_action { margin-block: var(--ep-space-4); }
+[data-testid="stMain"] .st-key-result_review_action button { min-height: 4rem; min-width: min(22rem, 100%); font-size: 1.1rem; }
 [data-testid="stMain"] .st-key-result_review_action button p { font-size: 1.1rem; font-weight: 600; }
 [data-testid="stMain"] .st-key-flight_next_topic h3 { font-size: var(--ep-type-section); }
 [data-testid="stMain"] .st-key-practice_result_overview [data-testid="stMetric"] { border: 0; background: transparent; min-height: 0; padding: .6rem .8rem; }
@@ -39,7 +40,16 @@
 /* One fixed landscape behind both navigation and content; no replacement on collapse. */
 [data-testid="stAppViewContainer"] { background: var(--ep-surface-page); background-image: var(--paper-landscape-left), var(--paper-landscape-right); background-repeat: no-repeat; background-position: left bottom, right bottom; background-size: 228px auto, 354px auto; background-attachment: fixed; }
 [data-testid="stAppViewContainer"] [data-testid="stMain"] { background-image: none !important; }
-[data-testid="stAppViewContainer"] section[data-testid="stSidebar"] { background: transparent; }
+[data-testid="stAppViewContainer"] section[data-testid="stSidebar"] {
+  background: var(--ep-surface-page); height: fit-content !important;
+  max-height: 100dvh; align-self: flex-start; border-bottom: 1px solid var(--ep-border);
+  border-bottom-right-radius: var(--ep-radius-panel);
+}
+[data-testid="stSidebarContent"] { min-height: 0 !important; height: auto !important; max-height: 100dvh; }
+[data-testid="stSidebarUserContent"],
+[data-testid="stSidebarUserContent"] > div,
+[data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] { flex: 0 0 auto !important; }
+[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_accessibility) { flex: 0 0 auto; background: transparent; position: static; box-shadow: none; }
 .st-key-sidebar_accessibility::before { display: none; }
 @media (max-width: 760px) {
   [data-testid="stAppViewContainer"] section[data-testid="stSidebar"] { background: var(--ep-surface-page); }
@@ -50,9 +60,18 @@
 }
 @media (min-width: 1000px) {
   [data-testid="stMain"] .st-key-practice_result_overview > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(1) { flex: 1 1 12rem !important; }
-  [data-testid="stMain"] .st-key-practice_result_overview > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) { flex: 1.2 1 14rem !important; }
-  [data-testid="stMain"] .st-key-practice_result_overview > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) { flex: 1.6 1 18rem !important; }
+  [data-testid="stMain"] .st-key-practice_result_overview > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) { flex: 1.6 1 18rem !important; }
 }
+/* Help belongs to its title, once per module. It never creates another row. */
+[class*="st-key-help_heading_"] { flex-wrap: nowrap !important; align-items: flex-end !important; gap: var(--ep-space-2) !important; }
+[class*="st-key-help_heading_"] > [data-testid="stElementContainer"] { flex: 1 1 0 !important; min-width: 0; }
+[class*="st-key-help_heading_"] > [data-testid="stLayoutWrapper"] { flex: 0 0 auto !important; width: auto !important; padding-bottom: .35rem; }
+[class*="st-key-help_heading_"] [data-testid="stHeading"] h1,
+[class*="st-key-help_heading_"] [data-testid="stHeading"] h3 { margin-bottom: 0; }
+[class*="st-key-help_heading_"] .quiet-help-row { min-height: 0; }
+.quiet-help-text { white-space: normal; max-height: min(26rem, 70dvh); overflow-y: auto; }
+/* A top-of-page heading needs its popover below, inside the visible page. */
+[class*="st-key-help_heading_"]:has(h1) .quiet-help-text { bottom: auto; top: calc(100% + .5rem); }
 @media (max-width: 999px) {
   [data-testid="stMain"] .st-key-practice_result_overview > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] { flex: 1 1 100% !important; width: 100% !important; min-width: 0 !important; }
 }

@@ -5,7 +5,7 @@ Each experiment is worked through one step at a time in the left column:
 step. Nothing here adds an exam attempt, a score or a mastery change, and
 nothing leaves the session.
 """
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 import html
 
 import streamlit as st
@@ -229,10 +229,9 @@ def explanation(topic, practice_action=None):
     question, formula, answer = EXPLANATIONS[topic]
     shown = st.session_state.get(f'lab_{topic}_answer_shown', False)
     with st.container(key=f'lab_{topic}_explain'):
-        st.markdown(f"##### {tr(question)}")
+        help_heading(tr(question), tr('Only you see this. Write it first, then compare.'), level='subheader')
         st.text_area(tr('Your explanation'), key=f'lab_{topic}_explanation',
                      on_change=keep_value, args=(f'lab_{topic}_explanation',))
-        help_tip(tr('Only you see this. Write it first, then compare.'))
         st.button(tr('Hide answer') if shown else tr('Show answer'), key=f'lab_{topic}_show_answer',
                   width='content', on_click=_set_answer_shown, args=(topic, not shown))
         if shown:

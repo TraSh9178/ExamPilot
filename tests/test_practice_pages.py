@@ -218,7 +218,7 @@ def test_result_screen_has_no_tabs_and_a_review_answers_button_under_the_score()
     assert not app.tabs and not app.get("tab_container")
     keys = block_keys(app)
     order = [keys.index(key) for key in (
-        "practice_result_overview", "result_review_action", "flight_next_topic",
+        "practice_result_overview", "flight_next_topic", "result_review_action",
         "practice_mistake_review",
     )]
     assert order == sorted(order)

@@ -1,5 +1,5 @@
 """Learning Radar: where students of the built-in demo courses get stuck."""
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 from services.i18n import tr
 
 import streamlit as st
@@ -15,8 +15,7 @@ MAX_PILL_TOPICS = 8
 
 apply_app_styles()
 
-st.title(tr("Learning Radar"))
-help_tip(tr("See where students get stuck, and mark the topics that stop you."))
+help_heading(tr("Learning Radar"), tr("See where students get stuck, and mark the topics that stop you."), level='title')
 
 course = st.session_state.get("current_course")
 

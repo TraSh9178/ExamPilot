@@ -1,5 +1,5 @@
 """Practice-time controls and post-session reflection; grades remain unchanged."""
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 
 from services.i18n import tr
 import time
@@ -104,10 +104,9 @@ def checklist(active):
     rows = before_submit(active['questions'],
         {q.id:st.session_state.get(f'answer_{sid}_{q.id}') for q in active['questions']},
         {q.id:st.session_state.get(f'confidence_{sid}_{q.id}') for q in active['questions']})
-    st.subheader(tr('Review before submit'))
+    help_heading(tr('Review before submit'), tr('Go back to the questions to change these answers, or submit them as they are.'))
     if rows:
         st.dataframe([{tr(key): ', '.join(tr(flag.strip()) for flag in value.split(',')) if key == 'Check' else value for key, value in row.items()} for row in rows], hide_index=True, width='stretch')
-        help_tip(tr('Go back to the questions to change these answers, or submit them as they are.'))
     else:
         st.caption(tr('No unanswered, unsure or guessed answers to review.'))
 
@@ -169,7 +168,7 @@ def launch_priority(course, priorities):
 
 
 def render_priorities(course, priorities):
-    st.markdown(tr('**Smart review list**'))
+    help_heading(tr('Smart review list'), tr('Priority uses incorrect/unanswered responses, confidence, hints and relative tracked time. It is a transparent practice suggestion, not a diagnosis.'))
     if priorities:
         st.caption(tr('1 question could benefit from another look.') if len(priorities) == 1
                    else tr(f"{len(priorities)} questions could benefit from another look."))
@@ -178,8 +177,7 @@ def render_priorities(course, priorities):
         st.dataframe([{tr('Rank'):i,tr('Topic'):names.get(r['topic_id'],tr('Topic')),
                        tr('Question'):r['question'],tr('Why review'):', '.join(tr(reason) for reason in r['reasons'])}
                       for i,r in enumerate(priorities,1)],hide_index=True,width='stretch')
-        help_tip(tr('Priority uses incorrect/unanswered responses, confidence, hints and relative tracked time. It is a transparent practice suggestion, not a diagnosis.'))
-        st.button(tr('Practise review priorities'), key=f'priorities_{course.course_id}',
+        st.button(tr('Practise review priorities'), key=f'priorities_{course.course_id}', type='primary',
             on_click=launch_priority, args=(course, priorities))
         if error := st.session_state.pop('priority_launch_error', None):
             st.info(tr(error))
@@ -234,10 +232,13 @@ def reflection_controls(course, session, question, review, confirmed, practice_k
     sid=session.session_id
     rows=deepcopy(session_insights(course,sid))
     saved=ResponseInsight.model_validate(rows.get(question.id,{}))
-    st.subheader(tr('Reflect and explain your answer'))
-    help_tip(tr('Write your reasoning in your own words. This reflection is after feedback and never changes your score.'))
-    # A form sends nothing until it is submitted, so text typed here is gone once the page turns.
-    help_tip(tr('Save before you go to another question: text that is not saved is not kept.'))
+    ai_available = generation_available()
+    help_heading(tr('Reflect and explain your answer'), '\n\n'.join([
+        tr('Write your reasoning in your own words. This reflection is after feedback and never changes your score.'),
+        tr('Save before you go to another question: text that is not saved is not kept.'),
+        tr('AI checking sends this explanation and question to the configured Claude service. Its feedback may be wrong; verify it against your material.') if ai_available
+        else tr('AI checking is not configured. You can still write and save your explanation.'),
+    ]))
     with st.form(f'reflection_{sid}_{question.id}'):
         reason=saved.mistake_reason
         if not review['is_correct']:
@@ -249,11 +250,7 @@ def reflection_controls(course, session, question, review, confirmed, practice_k
             key=f'explain_{sid}_{question.id}')
         with st.container(horizontal=True, horizontal_alignment='right', key=f'reflection_actions_{sid}_{question.id}'):
             save=st.form_submit_button(tr('Save reflection'), type='primary')
-            ai=st.form_submit_button(tr('Check explanation with AI'),disabled=not generation_available())
-    if not generation_available():
-        help_tip(tr('AI checking is not configured. You can still write and save your explanation.'))
-    else:
-        help_tip(tr('AI checking sends this explanation and question to the configured Claude service. Its feedback may be wrong; verify it against your material.'))
+            ai=st.form_submit_button(tr('Check explanation with AI'),disabled=not ai_available)
     if save or ai:
         row=saved.model_copy(update={'mistake_reason':reason,'explanation':text})
         if text != saved.checked_explanation:
@@ -279,7 +276,7 @@ def reflection_controls(course, session, question, review, confirmed, practice_k
         st.write(saved.feedback.reasoning)
         st.write(saved.feedback.next_step)
     if not review['is_correct']:
-        st.button(tr('Try a different structure'), key=f'transfer_{sid}_{question.id}',
+        st.button(tr('Try a different structure'), key=f'transfer_{sid}_{question.id}', type='primary',
             on_click=transfer_once, args=(course, question, session, confirmed, practice_key))
         if error := st.session_state.pop('transfer_launch_error', None):
             st.info(tr(error))
@@ -316,9 +313,8 @@ def render_history_insights(course, history, mode, example=False):
     if total_seconds:
         title=f"{tr('Example')} · {tr('Time by topic')}" if example else tr('Time by topic')
         with st.container(border=True,key='progress_time'):
-            st.subheader(title)
+            help_heading(title, tr('Totals across recorded sessions in this mode; missing time is not treated as zero.'))
             render_bar_chart(title,time_rows(total_seconds,names,tr('Topic'),tr),kind='time')
-            help_tip(tr('Totals across recorded sessions in this mode; missing time is not treated as zero.'))
     if example: return
     qs=[value[0] for value in latest.values()]
     attempts=[value[1] for value in latest.values()]

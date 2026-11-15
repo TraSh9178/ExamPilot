@@ -23,6 +23,7 @@ _TRANSLATIONS = {
     "Transfer practice": "变式练习",
     "Same topic · Different structure": "同一知识点 · 不同题型",
     "Students stuck": "卡住人数",
+    "Smart review list": "智能复习清单",
     "Help": "帮助",
     "Step-by-step explanation": "分步骤讲解",
     "Worked example": "分步例题",

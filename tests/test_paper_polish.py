@@ -50,7 +50,7 @@ def test_route_is_valid_svg_with_a_winding_path_and_bounded_flight(index, previo
     import math
     plane = next(node for node in svg if node.attrib.get('class') == 'route-plane-moving')
     fraction = max(0, min(index/max(1,total-1),1))
-    assert plane.attrib['transform'] == f'translate({20+560*fraction:.2f} {48+22*math.sin(4*math.pi*fraction):.2f})'
+    assert plane.attrib['transform'].startswith(f'translate({20+560*fraction:.2f} {48+22*math.sin(4*math.pi*fraction):.2f}) rotate(')
     style = next(node.text for node in svg if node.tag == 'style')
     assert '@keyframes route-flight-' in style and '100%' in style
 

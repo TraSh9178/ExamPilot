@@ -466,7 +466,7 @@ def test_review_list_on_progress_is_unchanged():
     assert len(ranked) == 1 and list(ranked[0].columns) == ["Rank", "Topic", "Question", "Why review"]
     assert list(ranked[0]["Rank"]) == list(range(1, len(ranked[0]) + 1))
     assert any(text.startswith("Priority uses incorrect/unanswered responses") for text in tooltip_texts(app))
-    assert "**Smart review list**" in [m.value for m in app.markdown]
+    assert "Smart review list" in [m.value for m in app.subheader]
     assert app.button(key=f"priorities_{COURSE_ID}").label == "Practise review priorities"
     # Starting practice from it is covered in tests/test_progress_charts.py.
 

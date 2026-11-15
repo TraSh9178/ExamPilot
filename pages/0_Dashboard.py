@@ -1,4 +1,4 @@
-from services.ui_help import help_tip
+from services.ui_help import help_heading
 from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
@@ -44,8 +44,7 @@ def load_demo_package(filename: str, expected_course_id: str) -> StudyPackage:
 
 apply_app_styles()
 
-st.title(tr("Your study space"))
-help_tip(tr("Start with one question, or open a course you already study."))
+help_heading(tr("Your study space"), tr("Start with one question, or open a course you already study."), level='title')
 
 initialize_courses(st.session_state)
 
@@ -257,7 +256,14 @@ with st.container(key="dashboard_actions"):
 
 if st.session_state.show_course_setup:
     with st.container(border=True, key="dashboard_course_setup"):
-        st.subheader(tr("Create a course"))
+        help_heading(tr("Create a course"), "\n\n".join([
+            tr("Only the extracted text is saved with your course, not the original file."),
+            tr("PDF, PPTX, TXT, PNG or JPG/JPEG · up to 5 MiB per file · "
+               "up to 50,000 characters of extracted text."),
+            tr("Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text; "
+               "reading text from images may not always be available. "
+               "Scanned PDFs, PPTX slide notes and DOCX files are not supported."),
+        ]))
         st.caption(tr("1 · Name your course"))
         st.text_input(
             tr("Course name"),
@@ -266,7 +272,6 @@ if st.session_state.show_course_setup:
         )
 
         st.caption(tr("2 · Upload materials and extract text"))
-        help_tip(tr("Only the extracted text is saved with your course, not the original file."))
         uploaded_file = st.file_uploader(
             tr("Upload course materials"),
             type=["pdf", "pptx", "txt", "png", "jpg", "jpeg"],
@@ -274,16 +279,6 @@ if st.session_state.show_course_setup:
             key="setup_course_file",
             max_upload_size=5,
         )
-
-        help_tip(
-            tr("PDF, PPTX, TXT, PNG or JPG/JPEG · up to 5 MiB per file · "
-            "up to 50,000 characters of extracted text.")
-        )
-        help_tip(tr(
-            "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text; "
-            "reading text from images may not always be available. "
-            "Scanned PDFs, PPTX slide notes and DOCX files are not supported."
-        ))
 
         file_bytes = (
             uploaded_file.getvalue()
