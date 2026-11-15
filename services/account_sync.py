@@ -29,6 +29,7 @@ RESTORE_FAILED_MESSAGE = (
     "Couldn't restore from your account. Your work on this device is unchanged."
 )
 NOTHING_SAVED_MESSAGE = "Nothing saved for this course yet."
+RESTORE_FIRST_MESSAGE = "Restore this course from your account first, then save."
 _COURSE_NOT_FOUND = "Course was not found."
 
 
@@ -392,10 +393,14 @@ def render_save_restore_controls(course: StudyPackage) -> None:
         with st.spinner(tr("Saving…")):
             outcome = save_course_with_history(session_state, course)
         # Show a fixed text; the raw reason from the database stays internal.
-        state["course_messages"][message_key] = SyncOutcome(
-            outcome.success,
-            "Saved to your account." if outcome.success else SAVE_FAILED_MESSAGE,
-        )
+        if outcome.success:
+            message = "Saved to your account."
+        elif state.get("listing_failed") or course.course_id in state.get("failed_course_ids", set()):
+            # Saving stays blocked until a restore works; retrying Save cannot help.
+            message = RESTORE_FIRST_MESSAGE
+        else:
+            message = SAVE_FAILED_MESSAGE
+        state["course_messages"][message_key] = SyncOutcome(outcome.success, message)
     elif restore_clicked:
         with st.spinner(tr("Restoring…")):
             outcome = restore_course(session_state, course.course_id)

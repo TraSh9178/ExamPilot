@@ -183,7 +183,8 @@ def test_panel_lists_top_three_most_flagged_first_with_counts(monkeypatch):
         ("Practice now", _practice_key("radar-course", "t4")),
         ("Practice now", _practice_key("radar-course", "t1")),
     ]
-    assert radar.calls["top_hard_topics"] == [3]
+    # The page takes the whole ranking and cuts it to three after ordering it for display.
+    assert radar.calls["top_hard_topics"] == [4]
     assert radar.calls["get_course_radar"] == ["radar-course"]
     assert EMPTY_CAPTION not in _captions(panel)
 

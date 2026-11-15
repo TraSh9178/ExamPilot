@@ -440,3 +440,26 @@ def test_practice_interface_strings_have_chinese_entries(relative):
             ):
                 missing.append(text)
     assert missing == []
+
+
+def test_worksheet_index_stays_in_range_after_a_late_click():
+    app, _ = start_app()
+    active = dict(app.session_state["active_practice_insights"])
+    last = len(active["questions"]) - 1
+    active["worksheet_index"] = last
+    app.session_state["active_practice_insights"] = active
+    app.run()
+
+    # A click that arrives after Next was disabled must not leave the range.
+    app.button(key="worksheet_next_s").click().run()
+    assert not app.exception
+    assert app.session_state["active_practice_insights"]["worksheet_index"] == last
+
+    active = dict(app.session_state["active_practice_insights"])
+    active["worksheet_index"] = 0
+    app.session_state["active_practice_insights"] = active
+    app.run()
+    app.button(key="worksheet_previous_s").click().run()
+    assert not app.exception
+    assert app.session_state["active_practice_insights"]["worksheet_index"] == 0
+    assert badges(app) == ["Q01"]

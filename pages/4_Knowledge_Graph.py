@@ -53,7 +53,7 @@ if course.course_id == "calculus-i-demo" and not course.relationships:
             demo_path.read_text(encoding="utf-8")
         )
     except (OSError, ValueError) as error:
-        st.error(tr(f"Could not update the Calculus demo course: {error}"))
+        st.error(tr("Couldn't load the Calculus demo course. Try again later."))
         st.stop()
 
     topic_ids = {topic.id for topic in course.topics}
@@ -67,7 +67,8 @@ if course.course_id == "calculus-i-demo" and not course.relationships:
 
 with st.container(key="graph_course_heading"):
     st.subheader(course.course_name)
-    st.caption(tr(f"{len(course.topics)} knowledge points"))
+    topic_count = len(course.topics)
+    st.caption(tr(f"{topic_count} knowledge point" if topic_count == 1 else f"{topic_count} knowledge points"))
 
 if not course.topics:
     st.info(tr("This course has no topics yet."))
@@ -140,7 +141,7 @@ try:
         questions=list(questions_by_id.values()),
     )
 except ValueError as error:
-    st.error(tr(f"Could not calculate mastery: {error}"))
+    st.error(tr("Couldn't calculate your progress from this practice history."))
     st.stop()
 
 # Learning Radar (demo courses only). Zooming and selecting topics rerun the

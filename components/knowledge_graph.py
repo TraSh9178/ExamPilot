@@ -441,6 +441,26 @@ def render_topic_radar(
         st.info(tr(hint))
 
 
+def radar_display_order(
+    topics: Sequence[learning_radar.TopicRadar], topic_ids: Sequence[str]
+) -> list[learning_radar.TopicRadar]:
+    """Order flagged topics for display without revealing hidden counts.
+
+    Topics with a visible count come first, highest first. Topics whose count
+    is hidden by the privacy rule follow in course order, so their position
+    says nothing about how many students flagged them.
+    """
+    position = {topic_id: index for index, topic_id in enumerate(topic_ids)}
+    return sorted(
+        (topic for topic in topics if topic.topic_id in position),
+        key=lambda topic: (
+            topic.display_count is None,
+            -(topic.display_count or 0),
+            position[topic.topic_id],
+        ),
+    )
+
+
 def render_radar_panel(
     radar: learning_radar.CourseRadar,
     ranked_topics: list[learning_radar.TopicRadar],
@@ -467,8 +487,8 @@ def render_radar_panel(
         )
     flagged = [
         topic_radar
-        for topic_radar in ranked_topics
-        if _has_flags(topic_radar) and topic_radar.topic_id in topic_names
+        for topic_radar in radar_display_order(ranked_topics, list(topic_names))
+        if _has_flags(topic_radar)
     ]
     if flagged:
         lines = []

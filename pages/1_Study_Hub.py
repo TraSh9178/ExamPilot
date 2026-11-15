@@ -1,7 +1,7 @@
 from services.i18n import tr
 import streamlit as st
 
-from components.knowledge_graph import load_course_radar, radar_count_text
+from components.knowledge_graph import load_course_radar, radar_count_text, radar_display_order
 from models.schemas import StudyPackage
 from services import learning_radar
 from services.account_sync import (
@@ -35,6 +35,7 @@ with st.container(key="study_plan_overview"):
 # Keep scope confirmation separate for each course.
 scope_key = f"scope_selection_{course.course_id}"
 confirmed_key = f"confirmed_scope_{course.course_id}"
+save_failed_notice_key = f"study_save_failed_notice_{course.course_id}"
 # Hydrate widgets on first entry, before their frontend defaults can clear
 # the separately saved confirmation. Subsequent edits still require confirmation.
 initialised_key = f"scope_initialised_{course.course_id}"
@@ -63,12 +64,16 @@ def render_most_flagged_topics(course, confirmed_key: str) -> None:
         user.user_id if user is not None else None,
     )
     topic_names = {topic.id: topic.name for topic in course.topics}
+    # Ranked for display first, then cut to three, so neither the order nor the
+    # cut reveals a count hidden by the privacy rule.
     most_flagged = [
         topic_radar
-        for topic_radar in learning_radar.top_hard_topics(radar, limit=3)
-        if topic_radar.topic_id in topic_names
-        and topic_radar.real_count + topic_radar.sample_count > 0
-    ]
+        for topic_radar in radar_display_order(
+            learning_radar.top_hard_topics(radar, limit=max(3, len(radar.topics))),
+            list(topic_names),
+        )
+        if topic_radar.real_count + topic_radar.sample_count > 0
+    ][:3]
 
     with st.container(border=True, key="study_radar_panel"):
         st.subheader(tr("Most flagged topics · Top 3"))
@@ -139,8 +144,14 @@ with st.container(border=True, key="study_scope_panel"):
             st.error(tr("The selection contains an invalid topic."))
         else:
             st.session_state[confirmed_key] = selected_topic_ids.copy()
-            save_course_to_account(st.session_state, course)
+            sync_outcome = save_course_to_account(st.session_state, course)
+            if sync_outcome is not None and not sync_outcome.success:
+                # Shown after the rerun below, which would wipe it now.
+                st.session_state[save_failed_notice_key] = True
             st.rerun()
+
+if st.session_state.pop(save_failed_notice_key, False):
+    st.warning(tr(SAVE_FAILED_MESSAGE))
 
 # A changed selection requires confirmation again.
 if st.session_state.get(confirmed_key) != selected_topic_ids:
@@ -222,7 +233,8 @@ if confirmed_topic_ids:
                             st.session_state, updated_course
                         )
                         if sync_outcome is not None and not sync_outcome.success:
-                            st.warning(tr(SAVE_FAILED_MESSAGE))
+                            # Shown after the rerun below, which would wipe it now.
+                            st.session_state[save_failed_notice_key] = True
 
                         # Previous practice used the old question set.
                         st.session_state.pop(
@@ -244,7 +256,7 @@ if confirmed_topic_ids:
     if available_count:
         active = st.session_state.get(f"active_practice_{course.course_id}")
         start_label = "Continue practice" if active and "result" not in active else "Start practice"
-        if st.button(start_label, type="primary"):
+        if st.button(tr(start_label), type="primary"):
             if not active or "result" in active:
                 stage_practice(st.session_state, course)
             else:

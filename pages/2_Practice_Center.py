@@ -247,7 +247,7 @@ if active_practice is not None:
 
     if not submitted:
         hydrate_widgets(st.session_state, active_practice, force=st.session_state.pop(f"rehydrate_practice_{course.course_id}", False))
-        question_index = min(active_practice.get("worksheet_index", 0), len(questions) - 1)
+        question_index = max(0, min(active_practice.get("worksheet_index", 0), len(questions) - 1))
         selected_question = questions[question_index]
         answered = sum(
             st.session_state.get(f"answer_{session.session_id}_{question.id}") is not None
@@ -356,7 +356,8 @@ if active_practice is not None:
                                 movement = 1
 
             if movement:
-                new_index = question_index + movement
+                # A click can still arrive after the button was disabled; stay in range.
+                new_index = max(0, min(len(questions) - 1, question_index + movement))
                 active_practice["worksheet_index"] = new_index
                 timer = active_practice.get("focus_timer", {})
                 if timer.get("since") is not None:

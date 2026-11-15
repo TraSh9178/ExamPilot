@@ -728,3 +728,33 @@ def test_dashboard_save_failure_warning_survives_the_rerun(store, monkeypatch):
     # Shown once: the next run no longer repeats it.
     app.run()
     assert account_sync.SAVE_FAILED_MESSAGE not in [w.value for w in app.warning]
+
+
+def test_study_hub_save_says_restore_first_when_a_failed_restore_blocks_saving(store):
+    course = make_course()
+    app = study_hub_app(course)
+    app.run()
+    state = app.session_state[account_sync.STATE_KEY]
+    state["failed_course_ids"].add(course.course_id)
+    app.session_state[account_sync.STATE_KEY] = state
+
+    app.button(key="database_save_course-1").click().run()
+
+    assert not app.exception
+    assert [e.value for e in app.error] == [account_sync.RESTORE_FIRST_MESSAGE]
+
+
+def test_study_hub_keeps_the_failed_save_warning_after_confirming_the_scope(store):
+    course = make_course()
+    app = study_hub_app(course)
+    app.run()
+    store.fail.add("save_course")
+
+    app.button_group(key=f"scope_selection_{course.course_id}").set_value([course.topics[0].id]).run()
+    next(b for b in app.button if b.label == "Confirm exam scope").click().run()
+
+    assert not app.exception
+    assert account_sync.SAVE_FAILED_MESSAGE in [w.value for w in app.warning]
+    # Shown once: the next run no longer repeats it.
+    app.run()
+    assert account_sync.SAVE_FAILED_MESSAGE not in [w.value for w in app.warning]

@@ -391,6 +391,9 @@ _TRANSLATIONS = {
     "No approved review questions are in the confirmed scope. Review questions or confirm your scope in Study Plan first.": "已确认范围中没有可用的复习题。请先到学习计划审核题目或确认范围。",
     "Review topic is outside the confirmed scope.": "复习知识点不在已确认范围内。",
     "No missed questions in this confirmed topic scope.": "已确认范围中没有错题。",
+    # paper UI: review fixes
+    "Couldn't load the Calculus demo course. Try again later.": "无法加载微积分演示课程，请稍后再试。",
+    "Restore this course from your account first, then save.": "请先从账户恢复此课程，然后再保存。",
 }
 
 _TRANSLATIONS.update(
@@ -493,7 +496,7 @@ _DYNAMIC = [
     (r"^🔥 (\d+) stuck$", r"🔥 \1 人遇到困难"),
     (r"^Applied (\d+) suggested connections?\.$", r"已应用 \1 条建议的关联。"),
     (r"^Many students are stuck here\. Reviewing (.*) first may help\.$", r"许多学生在这里遇到困难；先复习\1可能有帮助。"),
-    (r"^(\d+) knowledge points$", r"\1 个知识点"),
+    (r"^(\d+) knowledge points?$", r"\1 个知识点"),
     (r"^Select (.+)$", r"选择\1"),
     (r"^Source pages: (.+)$", r"来源页：\1"),
     (r"^Option ([A-D])$", r"选项 \1"),

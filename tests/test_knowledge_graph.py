@@ -1927,3 +1927,35 @@ def test_failed_account_save_shows_no_database_reason(monkeypatch):
         "Use Save on the Study Plan page to retry."
     ]
     assert not any(reason in item.value for item in app.warning)
+
+
+def test_mastery_failure_shows_a_generic_message_without_raw_identifiers(monkeypatch):
+    RadarFake(monkeypatch, [], enabled=False)
+
+    def broken(**_):
+        raise ValueError("Attempt references unknown question ID: secret-q-17")
+
+    monkeypatch.setattr("services.mastery_engine.calculate_topic_stats", broken)
+
+    app = _graph_page(_other_course())
+
+    assert [item.value for item in app.error] == [
+        "Couldn't calculate your progress from this practice history."
+    ]
+    assert not any("secret-q-17" in value for value in _markdown(app) + _captions(app))
+
+
+def test_radar_ranking_does_not_reveal_hidden_counts():
+    topics = [
+        _topic("a", real=1, display=None),
+        _topic("b", real=2, display=None),
+        _topic("c", real=4),
+        _topic("d", real=1, sample=6),
+        _topic("zz", real=9),
+    ]
+
+    ordered = knowledge_graph.radar_display_order(list(reversed(topics)), ["a", "b", "c", "d"])
+
+    # Visible counts first, highest first. Hidden ones follow in course order,
+    # even though "b" has more real flags than "a". Unknown topics are dropped.
+    assert [topic.topic_id for topic in ordered] == ["d", "c", "a", "b"]

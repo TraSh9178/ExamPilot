@@ -232,3 +232,16 @@ def test_glossary_has_course_terms_and_two_modes_work_together() -> None:
                                {SIMPLIFY_KEY: True, BILINGUAL_KEY: True})
     assert display.simplified is True
     assert "需求" in display.question
+
+
+def test_cached_accessibility_data_is_read_only_at_every_level():
+    from services import accessibility
+
+    data = accessibility._read_mapping("simplified_econ101.json")
+    wording = next(iter(data["questions"].values()))
+
+    with pytest.raises(TypeError):
+        wording["question"] = "changed"
+    with pytest.raises(TypeError):
+        data["questions"]["new"] = {}
+    assert isinstance(wording["options"], tuple)
