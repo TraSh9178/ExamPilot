@@ -6,7 +6,7 @@ import streamlit as st
 
 from services.auth_service import login_user, register_user
 from services.auth_session import start_authenticated_session
-from services.i18n import LANGUAGE_KEY, tr, render_language_control
+from services.i18n import tr, render_language_control
 from services.ui_style import BRAND_LOGO, apply_app_styles, illustration_data_uri
 
 

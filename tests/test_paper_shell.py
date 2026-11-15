@@ -116,7 +116,7 @@ def test_learning_radar_is_left_out_until_its_page_file_exists(monkeypatch):
 def test_sidebar_titles_follow_the_interface_language(monkeypatch):
     calls = record_calls(monkeypatch, "navigation")
     app = signed_in_app(APP_PATH).run()
-    next(item for item in app.sidebar.toggle if item.key == "a11y_bilingual_zh").set_value(True).run()
+    next(item for item in app.sidebar.toggle if item.key == "_ui_chinese_toggle").set_value(True).run()
 
     assert not app.exception
     (pages,), _ = calls[-1]
@@ -171,7 +171,7 @@ def test_sidebar_footer_holds_account_status_and_accessibility():
     assert order[0] == "account_sidebar"
     assert app.sidebar.button(key="logout_button").label == "Log out"
     assert [item.label for item in app.sidebar.expander] == ["Accessibility settings"]
-    assert [item.key for item in app.sidebar.toggle] == ["a11y_simplify", "a11y_bilingual_zh"]
+    assert [item.key for item in app.sidebar.toggle] == ["a11y_simplify", "_ui_chinese_toggle"]
 
 
 def test_injected_styles_include_paper_shell_and_landscape_illustrations():

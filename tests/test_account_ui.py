@@ -102,10 +102,10 @@ def test_accessibility_settings_sit_in_the_sidebar_under_the_account():
 
     assert not app.exception
     assert [item.label for item in app.sidebar.expander] == ["Accessibility settings"]
-    assert [item.key for item in app.sidebar.toggle] == ["a11y_simplify", "a11y_bilingual_zh"]
+    assert [item.key for item in app.sidebar.toggle] == ["a11y_simplify", "_ui_chinese_toggle"]
     assert not app.main.get("toggle")
 
-    next(item for item in app.sidebar.toggle if item.key == "a11y_bilingual_zh").set_value(True).run()
+    next(item for item in app.sidebar.toggle if item.key == "_ui_chinese_toggle").set_value(True).run()
 
     assert not app.exception
     assert [item.label for item in app.sidebar.expander] == ["无障碍设置"]
