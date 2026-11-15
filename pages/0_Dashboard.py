@@ -405,10 +405,10 @@ else:
                     if not is_demo and st.session_state.get(
                         f"pending_course_removal_{course.course_id}", False
                     ):
-                        st.warning(
+                        st.warning(tr(
                             f"Delete {course.course_name}? Its materials and practice "
                             "progress will be removed from this session."
-                        )
+                        ))
                         confirmation_columns = st.columns(2)
                         with confirmation_columns[0]:
                             cancel_removal = st.button(

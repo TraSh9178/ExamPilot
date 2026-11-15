@@ -339,6 +339,9 @@ _TRANSLATIONS = {
     "Learning DNA couldn't read this practice history.": "学习画像无法读取这段练习历史。",
     "Couldn't calculate your progress from this practice history.": "无法根据这段练习历史计算学习进度。",
     "Couldn't find your weak topics from this practice history.": "无法根据这段练习历史找出薄弱知识点。",
+    # paper UI: fixes
+    "Open Study Plan": "打开学习计划", "Continue practice": "继续练习",
+    "Calculus I · Limits": "微积分 I · 极限",
 }
 
 _TRANSLATIONS.update(
@@ -488,6 +491,8 @@ _DYNAMIC = [
     (r"^(\d+) new questions? needs? your check$", r"有 \1 道新题需要你检查"),
     (r"^(\d+) cards · (.*)$", r"\1 张卡片 · \2"),
     (r"^An error occurred while .+\. Try again later\.$", r"处理请求时出错，请稍后重试。"),
+    # paper UI: fixes
+    (r"^Delete (.+)\? Its materials and practice progress will be removed from this session\.$", r"删除“\1”？课程资料和练习进度将从本次会话中移除。"),
 ]
 
 
