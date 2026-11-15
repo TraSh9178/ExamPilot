@@ -8,8 +8,10 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from collections.abc import Mapping
+from types import MappingProxyType
 
 from models.schemas import Question
 from services.i18n import tr
@@ -39,13 +41,20 @@ def render_accessibility_controls() -> None:
     st.caption(tr("Interface language only; uploaded material and AI-generated answers retain their original language."))
 
 
-def _read_mapping(filename: str) -> dict:
-    path = _DATA_DIR / filename
+def _read_mapping(filename: str) -> Mapping:
+    # Keyed by the full path, so a different data directory is never served
+    # from the cache.
+    return _load_mapping(_DATA_DIR / filename)
+
+
+@lru_cache(maxsize=None)
+def _load_mapping(path: Path) -> Mapping:
+    """Parse a data file once; callers get a read-only view of the cached dict."""
     if not path.is_file():
-        return {}
+        return MappingProxyType({})
     with path.open("r", encoding="utf-8") as source:
         data = json.load(source)
-    return data if isinstance(data, dict) else {}
+    return MappingProxyType(data if isinstance(data, dict) else {})
 
 
 def annotate_terms(text: str, glossary: dict[str, str]) -> str:
