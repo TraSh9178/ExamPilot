@@ -14,7 +14,7 @@ from collections.abc import Mapping
 from types import MappingProxyType
 
 from models.schemas import Question
-from services.i18n import tr
+from services.i18n import tr, render_language_control
 
 
 SIMPLIFY_KEY = "a11y_simplify"
@@ -37,7 +37,7 @@ def render_accessibility_controls() -> None:
 
     st.subheader(tr("Accessibility"))
     st.toggle(tr("Simplified English"), key=SIMPLIFY_KEY)
-    st.toggle("中文界面 / Chinese interface", key=BILINGUAL_KEY)
+    render_language_control()
     st.caption(tr("Interface language only; uploaded material and AI-generated answers retain their original language."))
 
 

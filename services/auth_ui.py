@@ -6,7 +6,7 @@ import streamlit as st
 
 from services.auth_service import login_user, register_user
 from services.auth_session import start_authenticated_session
-from services.i18n import LANGUAGE_KEY, tr
+from services.i18n import LANGUAGE_KEY, tr, render_language_control
 from services.ui_style import BRAND_LOGO, apply_app_styles, illustration_data_uri
 
 
@@ -15,7 +15,7 @@ def render_auth_page() -> None:
     # No sidebar exists before sign-in, so the full logo sits in the app header.
     st.logo(str(BRAND_LOGO), size="large")
     with st.container(key="auth_language"):
-        st.toggle("中文界面 / Chinese interface", key=LANGUAGE_KEY)
+        render_language_control()
 
     # One centred column: headline, campus watercolour, then the account card.
     with st.container(key="flight_auth_intro"):
