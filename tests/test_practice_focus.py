@@ -576,6 +576,24 @@ def test_pending_entry_from_another_page_opens_the_setup_screen(topic_id, notice
     assert draft["_draft_widgets"]["answer_s_q0"] == 1
 
 
+def test_a_request_for_all_confirmed_topics_opens_on_mock_exam_even_during_topic_practice():
+    # "Start practice" on Study Plan or Progress asks for practice across the confirmed
+    # topics. The open session's own mode (Topic Practice here) must not take its place.
+    app = practice_app(active={"settings": {
+        "mode": "topic", "topic_id": "t", "requested_count": 3, "confirmed_topic_ids": ["t"],
+    }})
+    app.session_state["practice_entry_insights"] = {"topic_id": None}
+    app.run()
+    assert not app.exception
+    assert [info.value for info in app.info] == ["New practice for your confirmed topics."]
+    mode = app.radio(key="practice_mode_insights")
+    assert mode.value == "Mock Exam" and mode.proto.set_value
+    # The count still comes from the open session.
+    assert app.number_input(key="practice_count_insights").value == 3
+    app.button(key="practice_start_insights").click().run()
+    assert app.session_state["active_practice_insights"]["session"].mode == "mock"
+
+
 def test_resuming_lands_on_the_saved_question_with_the_review_step_closed(monkeypatch):
     monkeypatch.setattr(st, "switch_page", lambda page: None)  # Practice history then opens Practice
     app = practice_app()
@@ -850,3 +868,22 @@ def test_the_browser_is_told_the_answer_when_a_question_comes_back_on_screen(mod
     app.run()
     assert app.radio(key="answer_s_q0").value == 2
     assert app.button_group(key="confidence_s_q0").value == "unsure"
+
+
+@pytest.mark.parametrize("mode", ["topic", "mock"])
+def test_the_browser_is_told_the_answer_on_the_first_page_turn_after_resuming(mode):
+    # A resumed session arrives with every saved answer written to session state in one
+    # run. The question the student turns to next was not drawn in that run, so its
+    # widgets have to be told their values again when they are.
+    app = practice_app(mode, active={
+        "worksheet_index": 1,
+        "_draft_widgets": {"answer_s_q0": 2, "confidence_s_q0": "unsure", "answer_s_q1": 1},
+    }, extra={"rehydrate_practice_insights": True})
+    assert not app.exception
+    shown = app.radio(key="answer_s_q1")
+    assert shown.value == 1 and shown.proto.set_value
+    previous_question(app)
+    answer = app.radio(key="answer_s_q0")
+    confidence = app.button_group(key="confidence_s_q0")
+    assert answer.value == 2 and answer.proto.set_value
+    assert confidence.value == "unsure" and confidence.proto.set_value

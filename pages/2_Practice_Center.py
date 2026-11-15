@@ -127,10 +127,17 @@ def opening_choice(course_id, confirmed_topic_ids, active, pending_entry):
     choice = {"mode": "mock", "topic_id": confirmed_topic_ids[0], "count": DEFAULT_COUNT}
     settings = (active or {}).get("settings") or {}
     staged_topic = (pending_entry or {}).get("topic_id")
+    if staged_topic:
+        staged = {"mode": "topic", "topic_id": staged_topic}
+    elif pending_entry is not None:
+        # "New practice for your confirmed topics": across the whole scope, so a mock exam.
+        staged = {"mode": "mock"}
+    else:
+        staged = {}
     sources = (  # lowest preference first; later ones win
         st.session_state.get(choice_key(course_id)) or {},
         {"mode": settings.get("mode"), "topic_id": settings.get("topic_id"), "count": settings.get("requested_count")},
-        {"mode": "topic", "topic_id": staged_topic} if staged_topic else {},
+        staged,
     )
     for source in sources:
         if source.get("mode") in ("mock", "topic"):

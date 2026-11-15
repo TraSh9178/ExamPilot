@@ -352,6 +352,9 @@ def test_reflection_is_shown_directly_and_saves_as_before():
     assert "Reflect and explain your answer" in subheaders(app)
     assert ("Write your reasoning in your own words. This reflection is after feedback and never changes your score."
             in [caption.value for caption in app.caption])
+    # Text typed into the form is only sent when it is saved, so the page says so before a page turn loses it.
+    assert ("Save before you go to another question: text that is not saved is not kept."
+            in [caption.value for caption in app.caption])
     app.button_group(key="reason_s_q1").set_value("misread")
     app.text_area(key="explain_s_q1").set_value("I read B as A.")
     next(b for b in app.button if b.label == "Save reflection").click().run()

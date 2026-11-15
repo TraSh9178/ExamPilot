@@ -589,6 +589,7 @@ _TRANSLATIONS.update({
 
 # practice pages
 _TRANSLATIONS.update({
+    "Save before you go to another question: text that is not saved is not kept.": "换到别的题之前请先保存：没有保存的文字不会保留。",
     "Back to Practice": "返回练习",
     "Back to result": "返回成绩",
     "Unfinished sessions": "未完成的场次",

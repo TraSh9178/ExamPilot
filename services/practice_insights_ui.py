@@ -235,6 +235,8 @@ def reflection_controls(course, session, question, review, confirmed, practice_k
     saved=ResponseInsight.model_validate(rows.get(question.id,{}))
     st.subheader(tr('Reflect and explain your answer'))
     st.caption(tr('Write your reasoning in your own words. This reflection is after feedback and never changes your score.'))
+    # A form sends nothing until it is submitted, so text typed here is gone once the page turns.
+    st.caption(tr('Save before you go to another question: text that is not saved is not kept.'))
     with st.form(f'reflection_{sid}_{question.id}'):
         reason=saved.mistake_reason
         if not review['is_correct']:
