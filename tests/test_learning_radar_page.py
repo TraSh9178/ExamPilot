@@ -219,3 +219,62 @@ def test_page_in_chinese(monkeypatch, signed_in):
     assert app.title[0].value == "学习雷达"
     assert "各知识点卡住的学生人数" in _captions(app)
     assert app.session_state["current_course"].course_id == ECON_ID
+
+
+def test_new_login_opens_the_most_recent_saved_flag(monkeypatch):
+    radar = RadarFake(
+        monkeypatch,
+        [_topic("price_controls", real=4), _topic("elasticity", real=3)],
+        user_flags={"price_controls": "calculation", "elasticity": "wording"},
+    )
+
+    app = _page(_econ_course())
+
+    assert not app.exception
+    assert app.button_group(key=f"learning_radar_topic_{ECON_ID}").value == "price_controls"
+    assert "You marked this topic." in _markdown(app)
+    assert any("Calculation errors" in caption for caption in _captions(app))
+    assert radar.calls["get_user_flags"] == [(TEST_USER.user_id, ECON_ID)]
+
+
+@pytest.mark.parametrize("exam_scope", [None, ["supply_demand"]])
+def test_radar_uses_the_picked_topic_for_practice_without_changing_scope(monkeypatch, exam_scope):
+    RadarFake(monkeypatch, [_topic("elasticity", real=4)])
+    app = signed_in_app(ROOT / "app.py").run()
+    app.session_state["current_course"] = _econ_course()
+    scope_key = f"confirmed_scope_{ECON_ID}"
+    if exam_scope is not None:
+        app.session_state[scope_key] = list(exam_scope)
+
+    app.switch_page("pages/7_Learning_Radar.py").run()
+    app.button_group(key=f"learning_radar_topic_{ECON_ID}").set_value("elasticity").run()
+    app.button(key=f"learning_radar_practice_{ECON_ID}_elasticity").click().run()
+
+    assert not app.exception
+    assert app.title[0].value == "Practice"
+    assert "Price Elasticity of Demand" in [heading.value for heading in app.subheader]
+    assert not any(radio.label == "Practice mode" for radio in app.radio)
+    app.button(key=f"practice_start_{ECON_ID}").click().run()
+
+    assert not app.exception
+    session = app.session_state[f"active_practice_{ECON_ID}"]
+    assert session["session"].mode == "topic"
+    assert {q.topic_id for q in session["questions"]} == {"elasticity"}
+    assert (app.session_state[scope_key] if scope_key in app.session_state else None) == exam_scope
+
+    app.switch_page("pages/7_Learning_Radar.py").run()
+    assert not app.exception
+    assert app.button_group(key=f"learning_radar_topic_{ECON_ID}").value == "elasticity"
+
+
+def test_topic_without_questions_stays_on_radar_with_explanation(monkeypatch):
+    RadarFake(monkeypatch, [_topic("elasticity", real=4)])
+    app = _page(_econ_course().model_copy(update={"questions": []}))
+    app.button_group(key=f"learning_radar_topic_{ECON_ID}").set_value("elasticity").run()
+    app.button(key=f"learning_radar_practice_{ECON_ID}_elasticity").click().run()
+
+    assert not app.exception
+    assert [notice.value for notice in app.info] == [
+        "There are no approved practice questions for this topic yet."
+    ]
+    assert f"practice_entry_{ECON_ID}" not in app.session_state

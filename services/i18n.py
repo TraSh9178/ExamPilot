@@ -302,6 +302,7 @@ _TRANSLATIONS = {
     "For f(x) = x³ − 5x, shrink h and compare the secant with the tangent at x₀.": "对 f(x) = x³ − 5x，缩小 h 并比较 x₀ 处的割线与切线。",
     "Secant slope": "割线斜率", "Derivative f′(x₀)": "导数 f′(x₀)",
     "As h approaches 0, the secant slope approaches f′(x₀) = 3x₀² − 5.": "h 趋于 0 时，割线斜率趋于 f′(x₀) = 3x₀² − 5。",
+    "There are no approved practice questions for this topic yet.": "这个知识点暂时没有已审核的练习题。",
     "Practice this topic": "练习这个知识点", "Open the Calculus I Demo course on the Dashboard to practise this topic.": "先在主页打开 Calculus I Demo 课程，再练习这个知识点。",
     "Confirm this topic in Study Plan first.": "请先在学习计划中确认这个知识点。",
     "Review course knowledge cards here or download a UTF-8 TSV file for Anki text import. AnkiWeb sync is not supported; Anki Desktop import has not been verified.": "在此查看课程知识卡片，或下载 UTF-8 TSV 文件并导入 Anki。暂不支持 AnkiWeb 同步；Anki 桌面版导入尚未验证。",

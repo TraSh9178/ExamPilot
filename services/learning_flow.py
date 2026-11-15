@@ -1,6 +1,8 @@
 """Explicit cross-page intents; switching tools must not discard unfinished work."""
 from copy import deepcopy
 
+from services.question_editor import available_questions
+
 
 
 def stage_practice(state, course, topic_id=None):
@@ -11,6 +13,19 @@ def stage_practice(state, course, topic_id=None):
         state[f'practice_mode_{course.course_id}']='Topic Practice'
         state[f'practice_topic_{course.course_id}']=topic_id
     state[f'practice_entry_{course.course_id}']={'topic_id':topic_id}
+
+
+def stage_topic_practice(state, course, topic_id):
+    """Prepare practice for an explicitly chosen topic, even outside the exam scope."""
+    if topic_id not in {topic.id for topic in course.topics} or not any(
+        question.topic_id == topic_id for question in available_questions(course)
+    ):
+        return False
+    if topic_id in (state.get(f"confirmed_scope_{course.course_id}") or []):
+        stage_practice(state, course, topic_id)
+    else:
+        state[f"practice_entry_{course.course_id}"] = {"topic_id": topic_id, "focused": True}
+    return True
 
 
 def install_practice(state, course_id, practice):

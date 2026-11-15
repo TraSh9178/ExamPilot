@@ -163,25 +163,38 @@ EXPLAIN_STEP = {"calc_limits": "lab_limits_step", "calc_derivatives": "lab_deriv
 
 
 @pytest.mark.parametrize("topic", ["calc_limits", "calc_derivatives"])
-@pytest.mark.parametrize("filename", [None, "sample_course.json", "calculus_i_demo.json"])
-def test_practice_button_explains_missing_course_or_scope(monkeypatch, topic, filename):
+@pytest.mark.parametrize("filename", [None, "sample_course.json"])
+def test_practice_button_explains_missing_course(monkeypatch, topic, filename):
     import streamlit as st
 
-    links = []
-    monkeypatch.setattr(st, "page_link", lambda page, **kwargs: links.append(page))
+    destinations = []
+    monkeypatch.setattr(st, "switch_page", lambda page: destinations.append(page))
     app = AppTest.from_file(str(PAGE_PATH))
     app.session_state["current_course"] = load_course(filename) if filename else None
     app.session_state[EXPLAIN_STEP[topic]] = 3  # the practice button sits in step 3
     app.run().button(key=f"concept_lab_practice_{topic}").click().run()
     assert not app.exception
-    expected = (
-        "Confirm this topic in Study Plan first."
-        if filename == "calculus_i_demo.json"
-        else "Open the Calculus I Demo course on the Dashboard to practise this topic."
-    )
-    assert expected in [item.value for item in app.info]
-    assert bool(links) == (filename == "calculus_i_demo.json")
+    assert "Open the Calculus I Demo course on the Dashboard to practise this topic." in [
+        item.value for item in app.info
+    ]
+    assert not destinations
     assert "practice_mode_calculus-i-demo" not in app.session_state
+
+
+@pytest.mark.parametrize("topic", ["calc_limits", "calc_derivatives"])
+def test_lab_can_practise_its_topic_without_an_exam_scope(topic):
+    from tests.auth_helpers import signed_in_app
+
+    app = signed_in_app(PAGE_PATH.parents[1] / "app.py").run()
+    app.session_state["current_course"] = load_course()
+    app.session_state[EXPLAIN_STEP[topic]] = 3
+    app.switch_page("pages/6_Concept_Lab.py").run()
+    app.button(key=f"concept_lab_practice_{topic}").click().run()
+
+    assert not app.exception
+    assert app.title[0].value == "Practice"
+    assert app.session_state["practice_entry_calculus-i-demo"]["topic_id"] == topic
+    assert "confirmed_scope_calculus-i-demo" not in app.session_state
 
 
 @pytest.mark.parametrize("topic", ["calc_limits", "calc_derivatives"])

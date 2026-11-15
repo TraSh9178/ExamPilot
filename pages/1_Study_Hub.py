@@ -3,6 +3,7 @@ import streamlit as st
 
 from components.knowledge_graph import load_course_radar, radar_count_text, radar_display_order
 from components.page_links import open_page_button
+from components.topic_practice_link import open_topic_practice
 from models.schemas import StudyPackage
 from services import learning_radar
 from services.account_sync import SAVE_FAILED_MESSAGE, save_course_to_account
@@ -71,7 +72,7 @@ def keep_scope_selection(course_id: str) -> None:
         }
 
 
-def render_most_flagged_topics(course, confirmed_key: str) -> None:
+def render_most_flagged_topics(course) -> None:
     """Show a demo course's three most flagged topics with a practice shortcut.
 
     The radar comes from the session cache shared with the Knowledge Map, so
@@ -111,15 +112,7 @@ def render_most_flagged_topics(course, confirmed_key: str) -> None:
                 tr("Practice now"),
                 key=f"study_radar_practice_{course.course_id}_{topic_id}",
             ):
-                # Topic Practice only offers topics from the confirmed scope.
-                if topic_id in (st.session_state.get(confirmed_key) or []):
-                    stage_practice(st.session_state, course, topic_id)
-                    st.switch_page("pages/2_Practice_Center.py")
-                else:
-                    st.info(
-                        tr(f"Confirm {topic_name} in your exam scope above, "
-                        "then select Practice now again.")
-                    )
+                open_topic_practice(course, topic_id)
         if radar.has_sample:
             st.caption(tr("Includes sample data"))
 
@@ -297,7 +290,7 @@ else:
 
 # Learning Radar is only available for the built-in demo courses.
 if learning_radar.radar_enabled(course.course_id):
-    render_most_flagged_topics(course, confirmed_key)
+    render_most_flagged_topics(course)
 
 # Question review, backups and source material are course maintenance, not a
 # study step: a small button on the right opens them on a page of their own.
