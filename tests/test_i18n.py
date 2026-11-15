@@ -42,7 +42,7 @@ def test_chinese_progress_keeps_original_course_data() -> None:
         ("1_Study_Hub.py", "学习计划"),
         ("2_Practice_Center.py", "练习"),
         ("4_Knowledge_Graph.py", "知识图谱"),
-        ("5_Export_Anki.py", "导出到 Anki"),
+        ("5_Export_Anki.py", "复习卡片"),
         ("6_Concept_Lab.py", "概念实验室"),
     ],
 )
