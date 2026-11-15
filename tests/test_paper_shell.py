@@ -158,20 +158,70 @@ def test_top_header_row_is_gone_and_breadcrumb_stays():
     assert "Calculus I Demo  /  Home" in [caption.value for caption in app.main.caption]
 
 
-def test_sidebar_footer_holds_account_status_and_accessibility():
+def find_block(node, key: str) -> Block | None:
+    """Return the first keyed container below node whose key is `key`."""
+    for child in node.children.values():
+        if isinstance(child, Block):
+            if child.proto is not None and getattr(child.proto, "id", "").endswith(f"-{key}"):
+                return child
+            found = find_block(child, key)
+            if found is not None:
+                return found
+    return None
+
+
+def test_sidebar_holds_account_and_status_then_accessibility_last():
     app = signed_in_app(APP_PATH).run()
 
     assert not app.exception
-    footer = [block for block in block_ids(app.sidebar) if block.endswith("-sidebar_footer")]
-    assert footer
+    sidebar_keys = ("sidebar_footer", "account_sidebar", "flight_sync_status", "sidebar_accessibility")
     order = [
         block.rsplit("-", 1)[-1] for block in block_ids(app.sidebar)
-        if block.endswith(("-account_sidebar", "-flight_sync_status"))
+        if block.endswith(tuple(f"-{key}" for key in sidebar_keys))
     ]
-    assert order[0] == "account_sidebar"
-    assert app.sidebar.button(key="logout_button").label == "Log out"
+    # Account and save status share the footer; accessibility is its own block after it.
+    assert order == list(sidebar_keys)
+    footer = find_block(app.sidebar, "sidebar_footer")
+    accessibility = find_block(app.sidebar, "sidebar_accessibility")
+    assert footer.button(key="logout_button").label == "Log out"
+    assert not footer.expander
+    assert find_block(footer, "sidebar_accessibility") is None
+    assert [item.label for item in accessibility.expander] == ["Accessibility settings"]
+    assert [item.key for item in accessibility.toggle] == ["a11y_simplify", "_ui_chinese_toggle"]
     assert [item.label for item in app.sidebar.expander] == ["Accessibility settings"]
-    assert [item.key for item in app.sidebar.toggle] == ["a11y_simplify", "_ui_chinese_toggle"]
+
+
+def css_rule(stylesheet: str, selector: str) -> str:
+    """Return the declarations of the first top-level rule with this exact selector."""
+    match = re.search(rf"(?m)^{re.escape(selector)} \{{\n(.*?)\n\}}", stylesheet, re.DOTALL)
+    assert match, f"no rule for {selector}"
+    return match.group(1)
+
+
+def test_accessibility_settings_rest_on_the_bottom_edge_below_the_sidebar_watercolour():
+    shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
+    wrapper = '[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]'
+
+    # The account block grows into the free height, which pushes the settings down.
+    assert "flex: 1 0 auto;" in css_rule(shell, f"{wrapper}:has(> .st-key-sidebar_footer)")
+    closed = css_rule(shell, f"{wrapper}:has(> .st-key-sidebar_accessibility)")
+    # Opaque, so nothing shows through the open panel; not sticky while closed,
+    # so on a short window it never covers the Log out button.
+    assert "background-color: var(--paper-bg);" in closed
+    assert "position:" not in closed
+    opened = css_rule(shell, f"{wrapper}:has(> .st-key-sidebar_accessibility details[open])")
+    assert "position: sticky;" in opened
+    assert "bottom: 0;" in opened
+
+    # The watercolour is drawn in the free space above the pinned block, not
+    # behind the whole sidebar, so it can never sit under a control.
+    painting = css_rule(shell, ".st-key-sidebar_footer::after")
+    assert "var(--paper-landscape-left" in painting
+    assert "flex: 1 0 0px;" in painting
+    assert "background-position: left bottom;" in painting
+    assert "clamp(0px," in painting
+    assert "var(--paper-landscape-left" not in css_rule(shell, 'section[data-testid="stSidebar"]')
+    assert "padding-bottom: 0;" in css_rule(shell, '[data-testid="stSidebarUserContent"]')
 
 
 def test_injected_styles_include_paper_shell_and_landscape_illustrations():

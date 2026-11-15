@@ -117,13 +117,16 @@ if st.session_state.get("_learning_page_path") != navigation.url_path:
         st.session_state.pop(f"scope_initialised_{selected_course.course_id}", None)
     st.session_state["_learning_page_path"] = navigation.url_path
 
-# Account, save status and accessibility settle at the bottom of the sidebar.
-with st.sidebar, st.container(key="sidebar_footer"):
-    render_account_controls(account_page)
-    with st.container(key="flight_sync_status"):
-        render_sidebar_status()
-    with st.expander(tr("Accessibility settings")):
-        render_accessibility_controls()
+# Account and save status follow the page list; accessibility settings stay
+# pinned to the very bottom of the sidebar, below the watercolour.
+with st.sidebar:
+    with st.container(key="sidebar_footer"):
+        render_account_controls(account_page)
+        with st.container(key="flight_sync_status"):
+            render_sidebar_status()
+    with st.container(key="sidebar_accessibility"):
+        with st.expander(tr("Accessibility settings")):
+            render_accessibility_controls()
 
 if selected_course := st.session_state.get("current_course"):
     with st.container(key="flight_course_context"):

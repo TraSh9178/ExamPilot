@@ -180,10 +180,42 @@ a[data-testid="stSidebarNavLink"]:focus-visible {
   outline-offset: 1px;
 }
 
-/* ---- Sidebar footer: account, save status, accessibility ------------------ */
+/* ---- Sidebar footer: account and save status ------------------------------ */
 .st-key-sidebar_footer {
   border-top: 1px solid var(--paper-line);
   background-color: rgb(254 247 239 / .9);
+}
+
+/* The account block takes whatever height the page list leaves free, so the
+   accessibility settings below it rest on the bottom edge of the sidebar. */
+[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_footer) {
+  flex: 1 0 auto;
+}
+
+/* ---- Accessibility settings: last, on the bottom edge of the sidebar ------ */
+[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_accessibility) {
+  flex: 0 0 auto;
+  padding: .5rem 0 1rem;
+  background-color: var(--paper-bg);
+}
+
+/* While open, the panel sticks to the bottom edge, so it opens upwards over
+   the account block instead of off the screen. Closed, it is simply the last
+   item and never covers the controls above it. The paper-coloured shadow
+   fades whatever it covers along its top edge. */
+[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_accessibility details[open]) {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  box-shadow: 0 -.75rem .75rem -.25rem var(--paper-bg);
+}
+
+/* A very short window cannot hold the open panel; let it scroll with the list. */
+@media (max-height: 520px) {
+  [data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_accessibility details[open]) {
+    position: static;
+    box-shadow: none;
+  }
 }
 
 .st-key-account_sidebar [data-testid="stPageLink"] a {
@@ -480,13 +512,26 @@ label[data-baseweb="radio"]:focus-within {
 }
 
 /* ---- Watercolour margins --------------------------------------------------- */
-/* Painted as backgrounds, so they sit behind every control and never take
-   clicks; stMain is the scroll box, so its background stays in place. */
-section[data-testid="stSidebar"] {
+/* Painted as backgrounds, so they never take clicks; stMain is the scroll box,
+   so its background stays in place. */
+
+/* Sidebar: the hills fill the free space between the account block and the
+   accessibility settings, and bleed off the left edge of the sidebar. The
+   picture is drawn whole or not at all: it shrinks with the space it has and
+   disappears below 6rem, so it never sits behind a control. */
+.st-key-sidebar_footer::after {
+  content: "";
+  flex: 1 0 0px;
+  align-self: stretch;
+  min-height: 0;
+  /* Out to the sidebar edge, and down over the gap above the pinned block:
+     the foot of the hills is feathered, so it can sit close to the control. */
+  margin: 0 0 -.75rem -1.25rem;
   background-image: var(--paper-landscape-left, none);
   background-repeat: no-repeat;
   background-position: left bottom;
-  background-size: 228px auto;
+  background-size: auto clamp(0px, calc((100% - 6rem) * 9999), min(100%, 196px));
+  pointer-events: none;
 }
 
 [data-testid="stMain"] {
@@ -496,15 +541,9 @@ section[data-testid="stSidebar"] {
   background-size: 354px auto;
 }
 
-/* Leave the lower hills clear below the account block on tall screens. */
+/* The pinned accessibility block brings its own bottom spacing. */
 [data-testid="stSidebarUserContent"] {
-  padding-bottom: 8.5rem;
-}
-
-@media (max-height: 760px) {
-  [data-testid="stSidebarUserContent"] {
-    padding-bottom: 2rem;
-  }
+  padding-bottom: 0;
 }
 
 /* Home: foliage in the corner of the "Try one question" card. */
@@ -520,13 +559,9 @@ section[data-testid="stSidebar"] {
 }
 
 @media (max-width: 759.98px) {
-  section[data-testid="stSidebar"],
+  .st-key-sidebar_footer::after,
   [data-testid="stMain"] {
     background-image: none;
-  }
-
-  [data-testid="stSidebarUserContent"] {
-    padding-bottom: 1.25rem;
   }
 
   [data-testid="stMain"] .st-key-dashboard_demo_start {
