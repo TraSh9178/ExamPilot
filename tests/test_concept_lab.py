@@ -98,9 +98,8 @@ def test_limits_page_loads_without_a_selected_course():
 
     assert not app.exception
     assert "Concept Lab" in [title.value for title in app.title]
-    assert "f(2) is undefined, but f(x) gets as close to 4 as we like." in [
-        item.value for item in app.info
-    ]
+    assert any("Both sides approach 4" in item.value for item in app.markdown)
+    assert not next(e for e in app.expander if "missing point" in e.label).proto.expanded
 
 
 def load_course(filename="calculus_i_demo.json"):
