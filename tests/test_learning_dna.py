@@ -223,4 +223,15 @@ def test_dashboard_entry_navigates_to_learning_dna_in_registered_app():
     app.button(key='learning_dna_open').click().run()
     assert not app.exception
     assert app.title[0].value=='Progress'
-    assert 'Learning DNA' in [s.value for s in app.subheader]
+    # The section the student asked for is the first one under the figures.
+    sections=[s.value for s in app.subheader if s.value!=course.course_name]
+    assert sections[0]=='Learning DNA'
+    # The request holds for this visit, the answers page included, and ends on any other page.
+    app.switch_page('pages/12_Learning_Evidence.py').run()
+    assert app.session_state['progress_tab_test-dna']=='Learning DNA'
+    app.switch_page('pages/3_Performance.py').run()
+    assert [s.value for s in app.subheader if s.value!=course.course_name][0]=='Learning DNA'
+    app.switch_page('pages/1_Study_Hub.py').run()
+    assert 'progress_tab_test-dna' not in app.session_state
+    app.switch_page('pages/3_Performance.py').run()
+    assert [s.value for s in app.subheader if s.value!=course.course_name][0]=='Mastery by topic'

@@ -511,7 +511,25 @@ def test_course_without_history_shows_the_message_and_empty_charts_only():
     assert "Example" not in texts and "progress-example-banner" not in texts
 
 
-@pytest.mark.parametrize("stale", ["Learning DNA", "Practice details", "Overview", "Not a tab", 3])
+def test_learning_dna_comes_first_when_the_student_asked_for_it():
+    # "View Learning DNA" on Home records the request; Progress then leads with that section.
+    course, history = chart_course_and_history()
+    plain = progress_app(course, history, mode="Topic Practice")
+    asked = progress_app(course, history, mode="Topic Practice",
+                         extra={f"progress_tab_{COURSE_ID}": "Learning DNA"})
+    assert not asked.exception
+    default_order = [s.value for s in plain.subheader]
+    asked_order = [s.value for s in asked.subheader]
+    assert default_order.index("Mastery by topic") < default_order.index("Learning DNA")
+    assert asked_order.index("Learning DNA") < asked_order.index("Mastery by topic")
+    assert asked_order.index("Mastery by topic") < asked_order.index("Accuracy by session")
+    # Same content, only the order differs.
+    assert sorted(asked_order) == sorted(default_order)
+    for kind in ("mastery", "sessions", "dna", "time"):
+        assert charts(asked, kind) == charts(plain, kind)
+
+
+@pytest.mark.parametrize("stale", ["Practice details", "Overview", "Not a tab", 3])
 def test_stale_progress_tab_value_changes_nothing(stale):
     course, history = chart_course_and_history()
 

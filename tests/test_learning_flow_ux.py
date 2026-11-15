@@ -128,11 +128,13 @@ def test_progress_shows_every_section_on_one_page_without_tabs():
     headings=[s.value for s in app.subheader]
     assert headings[1:]==['Example · Mastery by topic','Example · Accuracy by session',
                           'Example · Learning DNA','Example · Time by topic']
-    # The Dashboard still records which part to open; it no longer selects anything.
+    # The Dashboard records which part the student asked for; that section then comes first.
     app.session_state['progress_tab_calculus-i-demo']='Learning DNA'
     app.run()
     assert not app.exception
-    assert not app.tabs and [s.value for s in app.subheader]==headings
+    assert not app.tabs
+    assert [s.value for s in app.subheader][1:]==['Example · Learning DNA','Example · Mastery by topic',
+                          'Example · Accuracy by session','Example · Time by topic']
 
 
 def test_dashboard_prioritizes_course_over_secondary_features():

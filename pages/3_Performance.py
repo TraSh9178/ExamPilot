@@ -130,31 +130,39 @@ stats_by_topic = {
     if item.mode == mode
 }
 
-with st.container(border=True, key="progress_mastery"):
-    st.subheader(heading("Mastery by topic"))
-    render_bar_chart(
-        heading("Mastery by topic"),
-        mastery_rows(report_course.topics, stats_by_topic, tr),
-        kind="mastery",
-        empty_text="This course has no topics yet.",
-    )
-    st.caption(tr("Mastery uses each distinct question’s latest answer. Total accuracy still includes every graded attempt."))
+# "View Learning DNA" on Home opens this page for that section, so it comes
+# first on that visit (app.py forgets the request when the student moves on).
+dna_first = st.session_state.get(f"progress_tab_{course.course_id}") == "Learning DNA"
+first_block, second_block = st.container(), st.container()
+charts_block, dna_block = (second_block, first_block) if dna_first else (first_block, second_block)
 
-with st.container(border=True, key="progress_sessions"):
-    st.subheader(heading("Accuracy by session"))
-    render_session_chart(
-        session_points(
-            history[sid] for sid in ordered_ids if history[sid]["session"].mode == mode
-        ),
-        title=heading("Accuracy by session"),
-        empty_text="No graded sessions in this mode yet.",
-    )
-    st.caption(tr("Each dot is one graded session, oldest on the left."))
+with charts_block:
+    with st.container(border=True, key="progress_mastery"):
+        st.subheader(heading("Mastery by topic"))
+        render_bar_chart(
+            heading("Mastery by topic"),
+            mastery_rows(report_course.topics, stats_by_topic, tr),
+            kind="mastery",
+            empty_text="This course has no topics yet.",
+        )
+        st.caption(tr("Mastery uses each distinct question’s latest answer. Total accuracy still includes every graded attempt."))
 
-render_learning_dna(
-    report_course, attempts, [history[sid]["session"] for sid in ordered_ids],
-    list(questions_by_id.values()), mode, example=example is not None,
-)
+    with st.container(border=True, key="progress_sessions"):
+        st.subheader(heading("Accuracy by session"))
+        render_session_chart(
+            session_points(
+                history[sid] for sid in ordered_ids if history[sid]["session"].mode == mode
+            ),
+            title=heading("Accuracy by session"),
+            empty_text="No graded sessions in this mode yet.",
+        )
+        st.caption(tr("Each dot is one graded session, oldest on the left."))
+
+with dna_block:
+    render_learning_dna(
+        report_course, attempts, [history[sid]["session"] for sid in ordered_ids],
+        list(questions_by_id.values()), mode, example=example is not None,
+    )
 render_history_insights(report_course, history, mode, example=example is not None)
 
 st.caption(

@@ -125,6 +125,10 @@ if st.session_state.get("_learning_page_path") != navigation.url_path:
             )
     if selected_course is not None:
         st.session_state.pop(f"scope_initialised_{selected_course.course_id}", None)
+        # "View Learning DNA" on Home puts that section first on Progress for one
+        # visit; the answers page belongs to that visit, any other page ends it.
+        if navigation.url_path not in ("Performance", "Learning_Evidence"):
+            st.session_state.pop(f"progress_tab_{selected_course.course_id}", None)
     st.session_state["_learning_page_path"] = navigation.url_path
 
 # Save status follows the page list; accessibility settings stay at the very
