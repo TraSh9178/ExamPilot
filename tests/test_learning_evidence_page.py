@@ -226,6 +226,8 @@ def test_registered_app_opens_the_answers_with_the_mode_and_topic_and_comes_back
     app.button(key="learning_evidence_back").click().run()
     assert not app.exception
     assert app.title[0].value == "Progress"
+    # The way back keeps the mode too: Progress does not fall back to Mock Exam.
+    assert app.radio(key=f"performance_mode_{COURSE_ID}").value == "Topic Practice"
 
 
 def test_registered_app_opens_another_topic_and_the_mode_can_change_there():

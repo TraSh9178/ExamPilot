@@ -12,10 +12,14 @@ from services.ui_style import apply_app_styles
 
 apply_app_styles()
 
-back_button(tr("Back to Progress"), "pages/3_Performance.py", key="learning_evidence_back")
-st.title(tr("Answers behind Learning DNA"))
-
 course = st.session_state.get("current_course")
+
+# Progress uses the same mode key, so the way back keeps the mode chosen here.
+back_button(
+    tr("Back to Progress"), "pages/3_Performance.py", key="learning_evidence_back",
+    keep=(f"performance_mode_{course.course_id}",) if course is not None else (),
+)
+st.title(tr("Answers behind Learning DNA"))
 
 if course is None:
     st.info(tr("Load a course from the dashboard first."))
