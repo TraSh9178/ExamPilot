@@ -227,7 +227,8 @@ def render_topic_details(
 
     with st.container(key="knowledge_topic_summary"):
         st.subheader(tr("Summary"))
-        st.write(details["summary"])
+        from services.math_text import write_summary
+        write_summary(details["summary"])
 
     if course is not None:
         if st.button(tr("Detailed explanation & examples"), key="topic_details_open", icon=":material/open_in_new:"):
@@ -523,11 +524,20 @@ def render_radar_panel(
                     for code in learning_radar.REASON_LABELS
                     if item.reasons.get(code, 0) > 0
                 ) if reasons is not None else ""
+                count_label = tr(radar_count_text(item))
+                count = item.display_count
+                badge = (f'<b>{count}</b><span>{html.escape(tr("Students stuck"))}</span>'
+                         if isinstance(count, int) and not isinstance(count, bool)
+                         else html.escape(count_label))
+                chips = ''.join('<span class="radar-reason-chip">' + html.escape(part) + '</span>'
+                                for part in detail.split(' · ') if part)
                 rows.append(
-                    '<li class="radar-ranked-row"><strong>'
-                    + html.escape(f"{index}. {topic_names[item.topic_id]}")
-                    + '</strong><span>' + html.escape(tr(radar_count_text(item)))
-                    + '</span><small>' + html.escape(detail) + '</small></li>'
+                    '<li class="radar-ranked-row">'
+                    + f'<span class="radar-rank-badge" aria-hidden="true">{index}</span>'
+                    + '<strong class="radar-rank-title">' + html.escape(topic_names[item.topic_id]) + '</strong>'
+                    + '<span class="radar-flag-total" aria-label="' + html.escape(count_label, quote=True)
+                    + '">' + badge + '</span>'
+                    + '<div class="radar-reason-chips">' + chips + '</div></li>'
                 )
             st.html('<div class="radar-ranking-scroll" tabindex="0" role="region" aria-label="'
                     + html.escape(tr("Most flagged topics"), quote=True)

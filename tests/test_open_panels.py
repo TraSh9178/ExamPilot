@@ -5,6 +5,7 @@ The Knowledge Map's Learning Radar panel is gone: a small right-edge button
 opens the Learning Radar page, which has the chart, ranking and stuck buttons.
 The Concept Lab's steps are tested in tests/test_concept_lab_steps.py.
 """
+from tests.tooltip_helpers import supporting_texts, tooltip_texts
 
 import re
 from pathlib import Path
@@ -175,13 +176,13 @@ def _open_setup(chinese: bool = False, document: dict | None = None) -> AppTest:
     return _home(chinese, **state)
 
 
-def test_home_supported_materials_is_a_visible_caption_of_two_sentences():
+def test_home_supported_materials_remains_available_in_tooltips():
     app = _open_setup()
 
     assert not app.exception
     assert "Supported materials" not in _expander_labels(app)
     setup = _block(app, "dashboard_course_setup")
-    captions = [item.value for item in setup.caption]
+    captions = supporting_texts(setup)
     assert SUPPORTED_MATERIALS in captions
     # Right under the formats line, where the expander was.
     formats = captions.index(
@@ -221,7 +222,7 @@ def test_home_open_panels_have_no_english_in_chinese():
     app = _open_setup(chinese=True)
 
     assert not app.exception
-    captions = [item.value for item in _block(app, "dashboard_course_setup").caption]
+    captions = supporting_texts(_block(app, "dashboard_course_setup"))
     assert SUPPORTED_MATERIALS_ZH in captions
     assert SUPPORTED_MATERIALS not in captions
     assert len(re.findall(r"。", SUPPORTED_MATERIALS_ZH)) == 2

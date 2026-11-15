@@ -36,7 +36,7 @@ def test_demo_update_appends_drafts_preserving_old_questions_metadata_and_scope(
     assert old==before
     assert updated.learning_state['confirmed_scope']==old.learning_state['confirmed_scope']
     assert updated.learning_state['session_order']==['old']
-    assert set(updated.learning_state['question_reviews'].values())=={'pending'}
+    assert updated.learning_state['question_reviews'] == {q.id: current.learning_state['question_reviews'][q.id] for q in updated.questions[old_count:]}
     assert demo_update(updated)==(updated,0)
 
 

@@ -1,0 +1,58 @@
+/* The Home page inherits exactly the same action palette and shape as study pages. */
+[data-testid="stMain"] .st-key-dashboard_actions div.st-key-create_course_button { width: fit-content !important; }
+[data-testid="stMain"] .st-key-dashboard_actions button {
+  min-height: var(--ep-control-height) !important; border-radius: var(--ep-radius-pill) !important;
+  border: 1px solid var(--ep-border) !important; background: var(--paper-badge) !important;
+  color: var(--ep-text-primary) !important; padding: .55rem 1.1rem !important;
+  box-shadow: none; justify-content: center !important;
+}
+[data-testid="stMain"] .st-key-dashboard_actions button p { font-size: var(--ep-type-body) !important; font-weight: 500 !important; }
+[data-testid="stMain"] .st-key-dashboard_actions [data-testid="stIconMaterial"] { font-size: 1.2rem !important; color: inherit !important; }
+[data-testid="stMain"] .st-key-dashboard_actions button:hover { background: var(--paper-select) !important; border-color: var(--ep-action) !important; }
+/* Results: compact vertical metrics, one central primary action, next step on the right. */
+[data-testid="stMain"] .st-key-result_review_action button { min-height: 4rem; font-size: 1.1rem; }
+[data-testid="stMain"] .st-key-result_review_action button p { font-size: 1.1rem; font-weight: 600; }
+[data-testid="stMain"] .st-key-flight_next_topic h3 { font-size: var(--ep-type-section); }
+[data-testid="stMain"] .st-key-practice_result_overview [data-testid="stMetric"] { border: 0; background: transparent; min-height: 0; padding: .6rem .8rem; }
+[data-testid="stMain"] .st-key-practice_result_overview [data-testid="stMetricValue"] { font-size: 1.8rem; }
+[data-testid="stMain"] .st-key-result_score,
+[data-testid="stMain"] .st-key-result_accuracy { background: var(--ep-surface-panel); }
+/* Rankings: number, topic, difficulty reasons and student count have separate roles. */
+.radar-ranking-scroll { border-radius: var(--ep-radius-panel); padding-inline: .25rem; }
+.radar-ranking-scroll ol { display: grid; gap: .5rem; }
+.radar-ranking-scroll .radar-ranked-row {
+  display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto;
+  grid-template-areas: 'rank topic total' 'rank reasons total';
+  gap: .35rem .75rem; align-content: center; align-items: center;
+  border: 1px solid var(--ep-border); border-radius: var(--ep-radius-control);
+  background: var(--ep-surface-panel); padding: .75rem 1rem; height: 7.5rem;
+}
+.radar-rank-badge { grid-area: rank; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--ep-surface-subtle); color: var(--ep-text-primary); font-weight: 700; }
+.radar-rank-title { grid-area: topic; font-size: 1rem; line-height: 1.4; }
+.radar-flag-total { grid-area: total; display: grid; place-items: center; min-width: 5rem; padding: .35rem .6rem; border-radius: var(--ep-radius-control); background: var(--ep-surface-subtle); color: var(--ep-text-primary); }
+.radar-flag-total b { font-size: 1.4rem; font-weight: 650; line-height: 1.2; }
+.radar-flag-total span { font-size: .7rem; }
+.radar-reason-chips { grid-area: reasons; display: flex; flex-wrap: wrap; gap: .3rem; }
+.radar-reason-chips .radar-reason-chip { display: inline-block; font-size: .75rem; line-height: 1.4; border: 1px solid var(--ep-border); border-radius: var(--ep-radius-pill); padding: .2rem .5rem; color: var(--ep-text-secondary); background: var(--ep-surface-panel); }
+/* Five cards plus four gaps, preserving the requested five visible entries. */
+.radar-ranking-scroll { max-height: 39.5rem; }
+/* One fixed landscape behind both navigation and content; no replacement on collapse. */
+[data-testid="stAppViewContainer"] { background: var(--ep-surface-page); background-image: var(--paper-landscape-left), var(--paper-landscape-right); background-repeat: no-repeat; background-position: left bottom, right bottom; background-size: 228px auto, 354px auto; background-attachment: fixed; }
+[data-testid="stAppViewContainer"] [data-testid="stMain"] { background-image: none !important; }
+[data-testid="stAppViewContainer"] section[data-testid="stSidebar"] { background: transparent; }
+.st-key-sidebar_accessibility::before { display: none; }
+@media (max-width: 760px) {
+  [data-testid="stAppViewContainer"] section[data-testid="stSidebar"] { background: var(--ep-surface-page); }
+  .radar-ranking-scroll .radar-ranked-row { grid-template-columns: 1.5rem minmax(0,1fr) 3.5rem; gap: .3rem .5rem; padding: .5rem; }
+  .radar-rank-badge { width: 1.5rem; height: 1.5rem; }
+  .radar-flag-total { min-width: 0; padding: .25rem; }
+  .radar-reason-chips .radar-reason-chip { font-size: .7rem; }
+}
+@media (min-width: 1000px) {
+  [data-testid="stMain"] .st-key-practice_result_overview > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(1) { flex: 1 1 12rem !important; }
+  [data-testid="stMain"] .st-key-practice_result_overview > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) { flex: 1.2 1 14rem !important; }
+  [data-testid="stMain"] .st-key-practice_result_overview > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) { flex: 1.6 1 18rem !important; }
+}
+@media (max-width: 999px) {
+  [data-testid="stMain"] .st-key-practice_result_overview > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] { flex: 1 1 100% !important; width: 100% !important; min-width: 0 !important; }
+}

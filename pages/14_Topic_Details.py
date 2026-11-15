@@ -20,6 +20,7 @@ if topic is None:
 st.session_state[f"graph_pending_focus_{course.course_id}"] = topic.id
 with st.container(border=True, key="topic_detail_overview"):
     st.subheader(topic.name)
-    st.write(topic.summary)
+    from services.math_text import write_summary
+    write_summary(topic.summary)
 with st.container(border=True, key="topic_detail_lesson"):
     render_topic_explanation(course, topic.id)

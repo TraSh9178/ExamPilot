@@ -1,3 +1,4 @@
+from tests.tooltip_helpers import supporting_texts, tooltip_texts
 from copy import deepcopy
 from pathlib import Path
 
@@ -74,7 +75,7 @@ def test_smart_review_list_is_on_the_page_not_behind_an_expander():
     for expander in app.expander:
         assert not any('Why review' in f.value.columns for f in expander.dataframe)
     # The note on how the order is decided stays, as a line of text under the list.
-    assert any(c.value.startswith('Priority uses incorrect/unanswered responses') for c in app.caption)
+    assert any(text.startswith('Priority uses incorrect/unanswered responses') for text in tooltip_texts(app))
     assert app.button(key='priorities_insights').label=='Practise review priorities'
 
 

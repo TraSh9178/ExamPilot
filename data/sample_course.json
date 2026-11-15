@@ -517,7 +517,7 @@
   ],
   "learning_state": {
     "question_reviews": {
-      "q004": "pending",
+      "q004": "approved",
       "q005": "pending",
       "q006": "pending",
       "q007": "pending",
@@ -526,7 +526,7 @@
       "q010": "pending",
       "q011": "pending",
       "q012": "pending",
-      "q013": "pending",
+      "q013": "approved",
       "q014": "pending",
       "q015": "pending",
       "q016": "pending",
@@ -535,7 +535,7 @@
       "q019": "pending",
       "q020": "pending",
       "q021": "pending",
-      "q022": "pending",
+      "q022": "approved",
       "q023": "pending",
       "q024": "pending",
       "q025": "pending",

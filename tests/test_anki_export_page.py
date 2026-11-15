@@ -30,7 +30,7 @@ def _python_basics_course() -> StudyPackage:
     path = ROOT / "data" / "demo_python_basics.json"
     course = StudyPackage.model_validate_json(path.read_text(encoding="utf-8"))
     # These export/mastery fixtures exercise the nine originally available cards.
-    return course.model_copy(update={"questions": available_questions(course), "learning_state": {}})
+    return course.model_copy(update={"questions": course.questions[:9], "learning_state": {}})
 
 
 def _app_with_course(course: StudyPackage | None = None, chinese: bool = False) -> AppTest:

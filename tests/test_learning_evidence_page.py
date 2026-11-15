@@ -4,6 +4,7 @@ Also covers the two cleanups that came with it: the review list on Progress is
 drawn by render_priorities again, and the practice result shows its time by
 topic as bars.
 """
+from tests.tooltip_helpers import supporting_texts, tooltip_texts
 
 import ast
 import re
@@ -464,7 +465,7 @@ def test_review_list_on_progress_is_unchanged():
     ranked = [frame.value for frame in app.dataframe if "Why review" in frame.value.columns]
     assert len(ranked) == 1 and list(ranked[0].columns) == ["Rank", "Topic", "Question", "Why review"]
     assert list(ranked[0]["Rank"]) == list(range(1, len(ranked[0]) + 1))
-    assert any(c.value.startswith("Priority uses incorrect/unanswered responses") for c in app.caption)
+    assert any(text.startswith("Priority uses incorrect/unanswered responses") for text in tooltip_texts(app))
     assert "**Smart review list**" in [m.value for m in app.markdown]
     assert app.button(key=f"priorities_{COURSE_ID}").label == "Practise review priorities"
     # Starting practice from it is covered in tests/test_progress_charts.py.

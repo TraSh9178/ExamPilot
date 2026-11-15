@@ -445,6 +445,8 @@ def render_question_screen(course, active, topic_names):
                     )
 
         with st.container(key="flight_worksheet"):
+            if active.get("transfer_from"):
+                st.badge(tr("Transfer practice") + " · " + tr("Same topic · Different structure"))
             # One row above the question: counter · flight path · session clock (wraps on phones).
             with st.container(key="flight_practice_progress", horizontal=True, vertical_alignment="center"):
                 with st.container(key="flight_progress_count", width="content"):
@@ -634,40 +636,31 @@ def render_result_screen(course, active_practice, confirmed_topic_ids, topic_nam
     st.subheader(tr("Your result"))
     if st.session_state.get(f"course_stage_{course.course_id}") == "questions_generated":
         st.caption(tr("AI-generated questions: verify the answer and explanation against your material."))
-    with st.container(key="practice_result_overview"):
-        score_columns = st.columns(2)
-        with score_columns[0].container(border=True):
-            st.metric(
-                tr("Score"),
-                f"{result['correct_count']} / {result['total_count']}",
-            )
-        with score_columns[1].container(border=True):
-            st.metric(tr("Accuracy"), f"{result['accuracy']:.2f}%")
-
-    # Each question's answer, explanation and reflection: on a page of their own.
-    open_page_button(
-        tr("Review answers"), ANSWER_REVIEW_PAGE, key="open_answer_review",
-        icon=":material/fact_check:", align="right",
-    )
-
-    # Next steps, shown directly.
-    missed_ids = {
-        attempt.question_id for attempt in result["attempts"] if not attempt.is_correct
-    }
+    missed_ids = {attempt.question_id for attempt in result["attempts"] if not attempt.is_correct}
     next_question = next((q for q in questions if q.id in missed_ids), questions[0])
-    with st.container(border=True, key="flight_next_topic"):
-        st.caption(tr("Take the next step"))
-        st.markdown(f"**{escape(topic_names.get(next_question.topic_id, tr('Topic')))}**")
-        if next_question.topic_id in topic_names and st.button(
-            tr("Open this topic in Knowledge Map"), key=f"flight_map_{session.session_id}",
-            icon=":material/hub:",
-        ):
-            st.session_state[f"graph_pending_focus_{course.course_id}"] = next_question.topic_id
-            st.switch_page("pages/4_Knowledge_Graph.py")
-        if course.course_id == "calculus-i-demo" and next_question.topic_id in {"calc_limits", "calc_derivatives"}:
-            if st.button(tr("Explore this topic in Concept Lab"), key=f"flight_lab_{session.session_id}"):
-                open_lab(st.session_state, course.course_id, next_question.topic_id)
-                st.switch_page("pages/6_Concept_Lab.py")
+    with st.container(key="practice_result_overview"):
+        stats, review_action, next_step = st.columns([1, 1.2, 1.6], gap="large", vertical_alignment="center")
+        with stats:
+            with st.container(border=True, key="result_score"):
+                st.metric(tr("Score"), f"{result['correct_count']} / {result['total_count']}")
+            with st.container(border=True, key="result_accuracy"):
+                st.metric(tr("Accuracy"), f"{result['accuracy']:.2f}%")
+        with review_action, st.container(key="result_review_action"):
+            if st.button(tr("Review answers"), key="open_answer_review", icon=":material/fact_check:",
+                         type="primary", width="stretch"):
+                st.switch_page(ANSWER_REVIEW_PAGE)
+        with next_step, st.container(border=True, key="flight_next_topic"):
+            st.subheader(tr("Take the next step"))
+            st.markdown(f"**{escape(topic_names.get(next_question.topic_id, tr('Topic')))}**")
+            if next_question.topic_id in topic_names and st.button(
+                tr("Open this topic in Knowledge Map"), key=f"flight_map_{session.session_id}", icon=":material/hub:",
+            ):
+                st.session_state[f"graph_pending_focus_{course.course_id}"] = next_question.topic_id
+                st.switch_page("pages/4_Knowledge_Graph.py")
+            if course.course_id == "calculus-i-demo" and next_question.topic_id in {"calc_limits", "calc_derivatives"}:
+                if st.button(tr("Explore this topic in Concept Lab"), key=f"flight_lab_{session.session_id}"):
+                    open_lab(st.session_state, course.course_id, next_question.topic_id)
+                    st.switch_page("pages/6_Concept_Lab.py")
     guided_review_available = render_guided_review(course, session, questions, result)
     result_overview(course, session, questions, result)
 
