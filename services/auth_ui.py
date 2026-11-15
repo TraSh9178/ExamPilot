@@ -20,8 +20,7 @@ def render_auth_page() -> None:
         )
         st.toggle("中文界面 / Chinese interface", key=LANGUAGE_KEY)
 
-    intro, forms = st.columns([1.1, 1], gap="large")
-    with intro, st.container(key="flight_auth_intro"):
+    with st.container(key="flight_auth_intro"):
         st.title(tr("Make your next study session count."))
         st.write(tr("Try one practice question after signing in, then follow the next step from your result."))
         art_path = Path(__file__).resolve().parents[1] / "assets" / "campus-illustration.svg"
@@ -29,11 +28,11 @@ def render_auth_page() -> None:
         st.markdown(
             f'<img src="data:image/svg+xml;base64,{campus_art}" '
             'alt="Illustration of a university campus" '
-            'style="width:100%;max-height:340px;object-fit:contain;margin-top:1rem;">',
+            'style="width:100%;max-height:190px;object-fit:contain;margin-top:1rem;">',
             unsafe_allow_html=True,
         )
 
-    with forms, st.container(border=True, key="auth_forms"):
+    with st.container(border=True, key="auth_forms"):
         st.header(tr("Welcome to ExamPilot"))
         st.caption(tr("Log in or create an account to start studying."))
         login_tab, register_tab = st.tabs([tr("Log in"), tr("Create account")])
