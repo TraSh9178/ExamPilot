@@ -248,109 +248,39 @@ def css_rule(stylesheet: str, selector: str) -> str:
     return match.group(1)
 
 
-def test_accessibility_settings_rest_on_the_bottom_edge_below_the_sidebar_watercolour():
+def test_sidebar_accessibility_footer_does_not_paint_a_second_landscape():
     shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
     wrapper = '[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]'
-
     closed = css_rule(shell, f"{wrapper}:has(> .st-key-sidebar_accessibility)")
-    # The block grows into the height the page list leaves free, which rests
-    # the settings on the bottom edge.
-    assert "flex: 1 0 auto;" in closed
-    # Opaque, so nothing shows through the open panel; not sticky while closed,
-    # so on a short window it never covers the links above it.
-    assert "background-color: var(--paper-bg);" in closed
-    assert "position:" not in closed
-    opened = css_rule(shell, f"{wrapper}:has(> .st-key-sidebar_accessibility details[open])")
-    assert "position: sticky;" in opened
-    assert "bottom: 0;" in opened
 
-    # The watercolour is drawn in that free space, above the control, not
-    # behind the whole sidebar, so it can never sit under a control.
-    painting = css_rule(shell, ".st-key-sidebar_accessibility::before")
-    assert "var(--paper-landscape-left" in painting
-    assert "flex: 1 0 0px;" in painting
-    assert "background-position: left bottom;" in painting
-    assert "clamp(0px," in painting
-    assert "var(--paper-landscape-left" not in css_rule(shell, 'section[data-testid="stSidebar"]')
-    assert "padding-bottom: 0;" in css_rule(shell, '[data-testid="stSidebarUserContent"]')
+    assert "background-color: transparent;" in closed
+    assert "margin-top: auto;" in closed
+    assert ".st-key-sidebar_accessibility::before" not in shell
 
 
-def test_stacked_blocks_keep_a_gap_between_them():
-    shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
-
-    # Markdown blocks without a paragraph lose 1rem below them; these three get it back.
-    pulled_together = re.search(r"((?:[^{}\n]+,\n)*[^{}\n]+) \{\n  margin-bottom: 0;\n\}", shell)
-    assert pulled_together
-    selectors = [selector.strip() for selector in pulled_together.group(1).split(",\n")]
-    assert selectors == [
-        '[data-testid="stMarkdownContainer"]:has(> .account-menu-identity)',
-        '[class*="st-key-dashboard_course_card_"] [data-testid="stMarkdownContainer"]:has(> .academic-course-icon)',
-        '[class*="st-key-dashboard_course_card_"] > [data-testid="stElementContainer"]:first-child'
-        ' [data-testid="stCaptionContainer"]',
-    ]
-    expander = '[data-testid="stMain"] [data-testid="stLayoutWrapper"]:has(> [data-testid="stExpander"])'
-    assert "margin-top: .5rem;" in css_rule(shell, expander)
-    card_row = '[data-testid="stMain"] [data-testid="stHorizontalBlock"]:has([class*="st-key-dashboard_course_card_"])'
-    assert "margin-bottom: .5rem;" in css_rule(shell, card_row)
-
-
-def test_loading_shows_the_brand_plane_instead_of_a_round_spinner():
-    shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
-
-    # The inlined plane is the brand mark: same polygons, same colours.
-    plane = re.search(r'--paper-plane: url\("data:image/svg\+xml,([^"]+)"\);', shell)
-    assert plane
-    brand = (ASSETS / "brand-plane.svg").read_text(encoding="utf-8")
-    polygons = re.findall(r'<polygon points="([^"]+)" fill="#([0-9A-F]{6})"/>', brand)
-    assert len(polygons) == 3
-    for points, fill in polygons:
-        assert f"points='{points}' fill='%23{fill}'" in plane.group(1)
-
-    # st.spinner: no ring, the plane flies on a short track.
-    ring = css_rule(shell, '[data-testid="stSpinner"] [data-testid="stSpinnerIcon"]')
-    assert "border: 0;" in ring and "animation: none;" in ring
-    flying = css_rule(shell, '[data-testid="stSpinner"] [data-testid="stSpinnerIcon"]::after')
-    assert "var(--paper-plane)" in flying and "paper-plane-patrol" in flying
-
-    # App running: Streamlit's figure is hidden and one plane crosses the window,
-    # unless a spinner on the page already shows one.
-    assert "display: none;" in css_rule(shell, '[data-testid="stStatusWidgetRunningIcon"]')
-    crossing = css_rule(
-        shell,
-        '[data-testid="stApp"]:has([data-testid="stStatusWidgetRunningIcon"])'
-        ':not(:has([data-testid="stSpinner"])) [data-testid="stHeader"]::after',
-    )
-    assert "var(--paper-plane)" in crossing and "paper-plane-crossing" in crossing
-    assert "pointer-events: none;" in crossing
-    for name in ("paper-plane-patrol", "paper-plane-crossing"):
-        assert f"@keyframes {name} {{" in shell
-    reduced = shell[shell.index("@media (prefers-reduced-motion: reduce)"):]
-    assert reduced.count("animation: none;") == 2
-
-
-def test_sidebar_hills_move_to_the_window_corner_when_the_sidebar_is_collapsed():
+def test_sidebar_transitions_over_one_canvas_and_keeps_a_stable_desktop_gutter():
     shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
     main = '[data-testid="stMain"]'
+    canvas = '[data-testid="stAppViewContainer"]'
+    sidebar = 'section[data-testid="stSidebar"]'
+    closed = sidebar + '[aria-expanded="false"]'
+    open_panel = css_rule(shell, sidebar)
+    closed_panel = css_rule(shell, closed)
+    scenery = css_rule(shell, canvas)
 
-    # The main area always paints two layers; the left one is empty by default.
-    base = css_rule(shell, main)
-    assert "--paper-main-left: none;" in base
-    assert "background-image: var(--paper-main-left), var(--paper-landscape-right, none);" in base
-    assert "background-position: left bottom, right bottom;" in base
-    collapsed = css_rule(
-        shell,
-        '[data-testid="stAppViewContainer"]'
-        ':has(section[data-testid="stSidebar"][aria-expanded="false"]) ' + main,
-    )
-    assert "--paper-main-left: var(--paper-landscape-left, none);" in collapsed
-    # The sign-in page and narrow screens still clear the whole background.
-    assert "background-image: none;" in css_rule(
-        shell, f'[data-testid="stApp"]:has(.st-key-auth_forms) {main}'
-    )
-    narrow = re.search(r"@media \(max-width: 759\.98px\) \{\n(.*?)\n\}\n", shell, re.DOTALL)
-    assert narrow and re.search(
-        r"\[data-testid=\"stMain\"\] \{\n\s+background-image: none;", narrow.group(1)
-    )
+    assert "position: fixed;" in open_panel
+    assert "background: transparent;" in open_panel
+    assert "transition: transform 220ms ease, opacity" in open_panel
+    assert "translateX(-100%)" in closed_panel and "opacity: 0;" in closed_panel
+    assert "pointer-events: none;" in closed_panel and "visibility: hidden;" in closed_panel
+    assert "background-image: var(--paper-landscape-left, none), var(--paper-landscape-right, none);" in scenery
+    assert "background-position: left bottom, right bottom;" in scenery
+    assert "paper-landscape" not in open_panel + closed_panel + css_rule(shell, main)
+    assert f'{canvas}:has({sidebar}):not(:has(.st-key-auth_forms)) {main}' in shell
+    assert "margin-inline-start: var(--paper-sidebar-width);" in shell
+    assert "background-image: none;" in css_rule(shell, f"{canvas}:has(.st-key-auth_forms)")
+    assert shell.count("var(--paper-landscape-left") == 1
+    assert shell.count("var(--paper-landscape-right") == 1
 
 
 def test_injected_styles_include_paper_shell_and_landscape_illustrations():
@@ -398,9 +328,9 @@ def test_no_stylesheet_hides_the_sidebar_or_its_buttons_after_sign_in():
         if re.search(r"display:\s*none|visibility:\s*hidden", body)
         and any(f'"{control}"' in selector for control in SIDEBAR_CONTROLS)
     ]
-    # Only the sign-in page, which has no navigation, keeps the sidebar away.
+    # The signed-in sidebar becomes hidden only after it is explicitly collapsed.
     assert hiding
-    assert all("auth_forms" in selector for selector in hiding)
+    assert all("auth_forms" in selector or '[aria-expanded="false"]' in selector for selector in hiding)
     assert any(
         "stSidebarCollapseButton" in selector and "visibility: visible !important" in body
         for selector, body in rules

@@ -358,6 +358,7 @@ _TRANSLATIONS = {
     "Learning Radar is available for the built-in demo courses.": "学习雷达仅适用于内置演示课程。",
     "**Most flagged topics**": "**被标记最多的知识点**",
     "Where are you stuck?": "你卡在哪个知识点？",
+    "All flagged topics and reasons": "查看全部标记和原因",
     "Pick a topic": "选择知识点",
     "Pick a topic above to mark it.": "在上方选择一个知识点进行标记。",
     "Students stuck per topic": "各知识点卡住的学生人数",

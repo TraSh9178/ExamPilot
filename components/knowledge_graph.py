@@ -470,11 +470,13 @@ def render_radar_panel(
     focus_topic_id: str | None = None,
     chart_key: str = "learning_radar_panel_chart",
     title: str = "**Learning Radar**",
+    preview_limit: int | None = None,
 ) -> None:
     """List the course's flagged topics in the order given (most flagged first).
 
     With ``course`` the spider chart is drawn above the list, highlighting
-    ``focus_topic_id`` when one is given.
+    ``focus_topic_id`` when one is given. ``preview_limit`` folds the full
+    reason breakdown into an expander below a short ranking.
     """
     st.markdown(tr(title))
     st.caption(tr("Topics where students marked \"I'm stuck here\", most flagged first."))
@@ -490,25 +492,38 @@ def render_radar_panel(
         for topic_radar in radar_display_order(ranked_topics, list(topic_names))
         if _has_flags(topic_radar)
     ]
-    if flagged:
-        lines = []
-        for index, topic_radar in enumerate(flagged, start=1):
-            marker = f"{index}. "
-            lines.append(
-                f"{marker}**{topic_names[topic_radar.topic_id]}** — "
-                f"{tr(radar_count_text(topic_radar))}"
-            )
-            breakdown = radar_reason_breakdown(topic_radar)
-            if breakdown is not None:
-                # Indent to the item's content so it renders as a nested bullet.
-                parts = [
-                    f"{tr(learning_radar.REASON_LABELS[code])} {topic_radar.reasons[code]}"
-                    for code in learning_radar.REASON_LABELS
-                    if topic_radar.reasons.get(code, 0) > 0
-                ]
-                lines.append(f"{' ' * len(marker)}- {' · '.join(parts)}")
-        st.markdown("\n".join(lines))
-    else:
+    if not flagged:
         st.caption(tr("No topics have been flagged yet."))
+    elif preview_limit is None:
+        st.markdown(_radar_ranking_markdown(flagged, topic_names, include_reasons=True))
+    else:
+        st.markdown(_radar_ranking_markdown(flagged[:preview_limit], topic_names, include_reasons=False))
+        if len(flagged) > preview_limit or any(radar_reason_breakdown(item) for item in flagged):
+            with st.expander(tr("All flagged topics and reasons")):
+                st.markdown(_radar_ranking_markdown(flagged, topic_names, include_reasons=True))
     if radar.has_sample:
         st.caption(tr("Includes sample data"))
+
+
+def _radar_ranking_markdown(
+    topics: Sequence[learning_radar.TopicRadar],
+    topic_names: dict[str, str],
+    *,
+    include_reasons: bool,
+) -> str:
+    lines = []
+    for index, topic_radar in enumerate(topics, start=1):
+        marker = f"{index}. "
+        lines.append(
+            f"{marker}**{topic_names[topic_radar.topic_id]}** — "
+            f"{tr(radar_count_text(topic_radar))}"
+        )
+        breakdown = radar_reason_breakdown(topic_radar) if include_reasons else None
+        if breakdown is not None:
+            parts = [
+                f"{tr(learning_radar.REASON_LABELS[code])} {topic_radar.reasons[code]}"
+                for code in learning_radar.REASON_LABELS
+                if topic_radar.reasons.get(code, 0) > 0
+            ]
+            lines.append(f"{' ' * len(marker)}- {' · '.join(parts)}")
+    return "\n".join(lines)

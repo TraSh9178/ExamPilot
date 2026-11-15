@@ -169,6 +169,13 @@ def test_large_course_uses_a_dropdown_and_up_to_eight_axes(monkeypatch):
     (svg,) = _svgs(app)
     assert svg.count('class="radar-spoke"') == 8
 
+    preview = next(item for item in _markdown(app) if item.startswith("1. **"))
+    assert len(preview.splitlines()) == 4
+    details = next(panel for panel in app.expander if panel.label == "All flagged topics and reasons")
+    assert not details.proto.expanded
+    full_ranking = next(item.value for item in details.markdown if item.value.startswith("1. **"))
+    assert "10. **" in full_ranking
+
     picker.set_value("calc_chain_rule").run()
 
     assert not app.exception

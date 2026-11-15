@@ -91,3 +91,42 @@
     outline: 3px solid var(--accent-blue, #5D81A1);
     outline-offset: 2px;
 }
+
+
+/* Keep the first action and chart together. Ranking details expand on demand. */
+.st-key-learning_radar_mark_panel,
+.st-key-learning_radar_chart_panel,
+.st-key-learning_radar_ranking_panel {
+    background: var(--paper-card, #FFFCF7);
+    border-color: var(--paper-line, #EEE7DF);
+    padding: .9rem clamp(.8rem, 2vw, 1.25rem);
+}
+
+.st-key-learning_radar_mark_panel {
+    border-left: 3px solid var(--accent-rust, #B5622E);
+}
+
+[data-testid="stMain"] .st-key-learning_radar_mark_panel h3 {
+    margin-top: 0;
+    font-size: 1.4rem;
+}
+
+.st-key-learning_radar_ranking_panel ol {
+    margin-top: 0;
+    padding-inline-start: 1.45rem;
+}
+
+.st-key-learning_radar_ranking_panel li + li {
+    margin-top: .42rem;
+}
+
+@media (max-width: 1120px) {
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-learning_radar_chart_panel) {
+        flex-direction: column;
+    }
+
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-learning_radar_chart_panel) > [data-testid="stColumn"] {
+        width: 100% !important;
+        flex: 0 0 auto !important;
+    }
+}

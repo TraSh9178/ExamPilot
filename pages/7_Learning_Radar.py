@@ -36,13 +36,48 @@ radar, _ = load_course_radar(st.session_state, course.course_id, user_id)
 topic_names = {topic.id: topic.name for topic in course.topics}
 
 picker_key = f"learning_radar_topic_{course.course_id}"
-# The picker sits below the chart; its last choice is highlighted above.
-picked = st.session_state.get(picker_key)
-if picked not in topic_names:
-    picked = None
-
-chart_column, ranking_column = st.columns([1.15, 1], gap="large")
+chart_column, ranking_column = st.columns([1.15, 1], gap="medium")
 with chart_column:
+    with st.container(border=True, key="learning_radar_mark_panel"):
+        st.subheader(tr("Where are you stuck?"))
+        if len(topic_names) <= MAX_PILL_TOPICS:
+            picked = st.pills(
+                tr("Pick a topic"),
+                options=list(topic_names),
+                format_func=lambda topic_id: topic_names[topic_id],
+                key=picker_key,
+                label_visibility="collapsed",
+            )
+        else:
+            picked = st.selectbox(
+                tr("Pick a topic"),
+                options=list(topic_names),
+                index=None,
+                format_func=lambda topic_id: topic_names[topic_id],
+                placeholder=tr("Pick a topic"),
+                key=picker_key,
+                label_visibility="collapsed",
+            )
+
+        if picked is None:
+            st.caption(tr("Pick a topic above to mark it."))
+        else:
+            render_stuck_buttons(
+                st.session_state,
+                course.course_id,
+                picked,
+                user_id,
+                key=f"learning_radar_stuck_{course.course_id}_{picked}",
+            )
+            if st.button(
+                tr("Open this topic in Knowledge Map"),
+                key=f"learning_radar_map_{course.course_id}_{picked}",
+                icon=":material/hub:",
+            ):
+                # The Knowledge Map moves this into its topic picker on load.
+                st.session_state[f"graph_pending_focus_{course.course_id}"] = picked
+                st.switch_page("pages/4_Knowledge_Graph.py")
+
     with st.container(border=True, key="learning_radar_chart_panel"):
         render_course_radar_chart(
             course,
@@ -51,6 +86,7 @@ with chart_column:
             limit=8,
             key="learning_radar_page_chart",
         )
+
 with ranking_column:
     with st.container(border=True, key="learning_radar_ranking_panel"):
         render_radar_panel(
@@ -58,44 +94,5 @@ with ranking_column:
             learning_radar.top_hard_topics(radar, limit=len(course.topics)),
             topic_names,
             title="**Most flagged topics**",
+            preview_limit=4,
         )
-
-with st.container(border=True, key="learning_radar_mark_panel"):
-    st.subheader(tr("Where are you stuck?"))
-    if len(topic_names) <= MAX_PILL_TOPICS:
-        picked = st.pills(
-            tr("Pick a topic"),
-            options=list(topic_names),
-            format_func=lambda topic_id: topic_names[topic_id],
-            key=picker_key,
-            label_visibility="collapsed",
-        )
-    else:
-        picked = st.selectbox(
-            tr("Pick a topic"),
-            options=list(topic_names),
-            index=None,
-            format_func=lambda topic_id: topic_names[topic_id],
-            placeholder=tr("Pick a topic"),
-            key=picker_key,
-            label_visibility="collapsed",
-        )
-
-    if picked is None:
-        st.caption(tr("Pick a topic above to mark it."))
-    else:
-        render_stuck_buttons(
-            st.session_state,
-            course.course_id,
-            picked,
-            user_id,
-            key=f"learning_radar_stuck_{course.course_id}_{picked}",
-        )
-        if st.button(
-            tr("Open this topic in Knowledge Map"),
-            key=f"learning_radar_map_{course.course_id}_{picked}",
-            icon=":material/hub:",
-        ):
-            # The Knowledge Map moves this into its topic picker on load.
-            st.session_state[f"graph_pending_focus_{course.course_id}"] = picked
-            st.switch_page("pages/4_Knowledge_Graph.py")
