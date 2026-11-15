@@ -83,15 +83,16 @@ def test_account_page_displays_canonical_read_only_identity():
     assert "clears when you log out" in " ".join(caption.value for caption in app.caption)
 
 
-def test_dashboard_sidebar_identifies_the_signed_in_account_and_links_to_account():
+def test_dashboard_header_identifies_the_signed_in_account_and_links_to_account():
     app = signed_in_app(APP_PATH).run()
 
     assert not app.exception
-    sidebar_text = " ".join(item.value for item in app.sidebar.markdown)
-    assert TEST_USER.username in sidebar_text
-    assert "SIGNED IN AS" in sidebar_text
-    assert any(link.proto.label == "My account" for link in app.sidebar.get("page_link"))
-    assert app.sidebar.button(key="logout_button").label == "Log out"
+    header_text = " ".join(item.value for item in app.markdown)
+    assert TEST_USER.username in header_text
+    assert "SIGNED IN AS" in header_text
+    assert any(link.proto.label == "My account" for link in app.get("page_link"))
+    assert app.button(key="logout_button").label == "Log out"
+    assert not app.sidebar.get("page_link")
 
 
 @pytest.mark.parametrize("logout_location", ["sidebar", "account_page"])

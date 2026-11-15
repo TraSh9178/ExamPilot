@@ -193,3 +193,28 @@ def test_explicit_new_practice_replaces_old_result_only_after_start(monkeypatch)
     assert app.session_state['active_practice_calculus-i-demo']['session'].question_ids==['calc_q002']
     assert 'result' not in app.session_state['active_practice_calculus-i-demo']
     assert app.session_state['practice_history_calculus-i-demo']==history
+
+
+def test_practice_result_opens_the_same_topic_in_concept_lab():
+    from services.exam_engine import create_exam, grade_exam
+
+    course = calculus()
+    topic_id = "calc_limits"
+    active = create_exam(
+        package=course, mode="topic", requested_count=1,
+        confirmed_topic_ids=[topic_id], topic_id=topic_id,
+    )
+    session, questions = active["session"], active["questions"]
+    active["result"] = grade_exam(session, questions, {questions[0].id: None})
+
+    app = signed_in_app(ROOT / "app.py").run()
+    assert {"Home", "Practice"} <= {link.proto.label for link in app.get("page_link")}
+    app.session_state["current_course"] = course
+    app.session_state[f"confirmed_scope_{course.course_id}"] = [topic_id]
+    app.session_state[f"active_practice_{course.course_id}"] = active
+    app.switch_page("pages/2_Practice_Center.py").run()
+    app.button(key=f"flight_lab_{session.session_id}").click().run()
+
+    assert not app.exception
+    assert app.session_state[f"concept_lab_topic_{course.course_id}"] == topic_id
+    assert app.session_state[f"active_practice_{course.course_id}"]["session"] == session

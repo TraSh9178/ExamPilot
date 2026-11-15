@@ -54,11 +54,11 @@ def _remove_avatar(owner_id: str) -> None:
         st.session_state["account_avatar_notice"] = result
 
 
-def render_account_sidebar(account_page) -> None:
+def render_account_controls(account_page) -> None:
     user = current_user(st.session_state)
     if user is None:
         return
-    with st.sidebar, st.container(key="account_sidebar"):
+    with st.container(key="account_sidebar"):
         st.markdown(
             '<div class="account-sidebar-identity">'
             f'{_avatar_html(user.username)}'

@@ -15,7 +15,7 @@ from services.practice_insights_ui import (
     result_overview, reflection_controls,
 )
 from services.practice_insights import session_insights
-from services.learning_flow import install_practice, resume_draft, remember_widget, hydrate_widgets
+from services.learning_flow import install_practice, resume_draft, remember_widget, hydrate_widgets, open_lab
 from services.ui_style import apply_app_styles
 
 def practice_label(records, sid, *, unfinished=False):
@@ -223,6 +223,13 @@ if active_practice is not None:
     if not submitted:
         st.subheader(tr("Questions"))
         hydrate_widgets(st.session_state, active_practice, force=st.session_state.pop(f"rehydrate_practice_{course.course_id}", False))
+        with st.container(key="flight_practice_progress"):
+            answered = sum(
+                st.session_state.get(f"answer_{session.session_id}_{question.id}") is not None
+                for question in questions
+            )
+            st.progress(answered / len(questions))
+            st.caption(tr("Answered") + f" · {answered} / {len(questions)}")
         start_focus_controls(active_practice)
 
         for question_number, question in enumerate(questions, start=1):
@@ -292,6 +299,23 @@ if active_practice is not None:
 
         summary_tab, answers_tab = st.tabs([tr("Summary & next steps"), tr("Review answers")])
         with summary_tab:
+            missed_ids = {
+                attempt.question_id for attempt in result["attempts"] if not attempt.is_correct
+            }
+            next_question = next((q for q in questions if q.id in missed_ids), questions[0])
+            with st.container(border=True, key="flight_next_topic"):
+                st.caption(tr("Take the next step"))
+                st.markdown(f"**{escape(topic_names.get(next_question.topic_id, next_question.topic_id))}**")
+                if next_question.topic_id in topic_names and st.button(
+                    tr("Open this topic in Knowledge Map"), key=f"flight_map_{session.session_id}",
+                    icon=":material/hub:",
+                ):
+                    st.session_state[f"graph_pending_focus_{course.course_id}"] = next_question.topic_id
+                    st.switch_page("pages/4_Knowledge_Graph.py")
+                if course.course_id == "calculus-i-demo" and next_question.topic_id in {"calc_limits", "calc_derivatives"}:
+                    if st.button(tr("Explore this topic in Concept Lab"), key=f"flight_lab_{session.session_id}"):
+                        open_lab(st.session_state, course.course_id, next_question.topic_id)
+                        st.switch_page("pages/6_Concept_Lab.py")
             guided_review_available = render_guided_review(course, session, questions, result)
             result_overview(course, session, questions, result)
 

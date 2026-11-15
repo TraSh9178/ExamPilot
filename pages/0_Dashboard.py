@@ -44,7 +44,7 @@ def load_demo_package(filename: str, expected_course_id: str) -> StudyPackage:
 apply_app_styles()
 
 st.title(tr("Your study space"))
-st.caption(tr("Choose a course or continue your next study session."))
+st.caption(tr("Start with one question, or open a course you already study."))
 
 initialize_courses(st.session_state)
 
@@ -56,18 +56,6 @@ sync_demo_catalog(st.session_state)
 # Keep the course setup panel open across page reruns.
 if "show_course_setup" not in st.session_state:
     st.session_state.show_course_setup = False
-
-with st.container(key="dashboard_actions"):
-    if st.button(
-        tr("Close setup") if st.session_state.show_course_setup else tr("Create course"),
-        icon=(":material/close:" if st.session_state.show_course_setup
-              else ":material/add_circle_outline:"),
-        key="create_course_button",
-        type="secondary",
-        use_container_width=True,
-    ):
-        st.session_state.show_course_setup = not st.session_state.show_course_setup
-        st.rerun()
 
 selected_course = st.session_state.get("current_course")
 if selected_course is None:
@@ -91,20 +79,40 @@ if selected_course is not None:
         st.subheader(selected_course.course_name)
         active = st.session_state.get(f"active_practice_{selected_course.course_id}")
         confirmed = st.session_state.get(f"confirmed_scope_{selected_course.course_id}")
-        main_action = "Continue practice" if active and "result" not in active else "Start practice" if confirmed else "Open Study Plan"
+        has_result = active is not None and "result" in active
+        has_mistakes = has_result and active["result"].get("correct_count", 0) < active["result"].get("total_count", 0)
+        main_action = (
+            "Review your last practice" if has_mistakes
+            else "Continue practice" if active and not has_result
+            else "Start practice" if confirmed else "Open Study Plan"
+        )
         if st.button(tr(main_action), type="primary", key="dashboard_continue_learning", width="stretch"):
             if confirmed:
-                if not active or "result" in active:
+                if has_mistakes:
+                    st.session_state.pop(f"practice_entry_{selected_course.course_id}", None)
+                elif not active or "result" in active:
                     stage_practice(st.session_state, selected_course)
                 else:
                     st.session_state.pop(f"practice_entry_{selected_course.course_id}", None)
                 st.switch_page("pages/2_Practice_Center.py")
             else:
                 st.switch_page("pages/1_Study_Hub.py")
-        if active and "result" in active:
+        if has_result and not has_mistakes:
             if st.button(tr("View latest result"), key="dashboard_latest_result"):
                 st.session_state.pop(f"practice_entry_{selected_course.course_id}", None)
                 st.switch_page("pages/2_Practice_Center.py")
+
+with st.container(key="dashboard_actions"):
+    if st.button(
+        tr("Close setup") if st.session_state.show_course_setup else tr("Create course"),
+        icon=(":material/close:" if st.session_state.show_course_setup
+              else ":material/add_circle_outline:"),
+        key="create_course_button",
+        type="secondary",
+        use_container_width=True,
+    ):
+        st.session_state.show_course_setup = not st.session_state.show_course_setup
+        st.rerun()
 
 with st.container(key="dashboard_learning_dna"):
     if st.button(
