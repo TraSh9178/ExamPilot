@@ -158,12 +158,12 @@ class FakeRadarChart:
     def __init__(self, monkeypatch):
         self.charts, self.stuck = [], []
         module = ModuleType("components.radar_chart")
-        module.render_course_radar_chart = self.render_course_radar_chart
+        module.render_radar_figure = self.render_radar_figure
         module.render_stuck_buttons = self.render_stuck_buttons
         monkeypatch.setitem(sys.modules, "components.radar_chart", module)
         monkeypatch.setattr(components, "radar_chart", module, raising=False)
 
-    def render_course_radar_chart(self, course, radar, *, focus_topic_id=None, limit=6, key):
+    def render_radar_figure(self, course, radar, *, focus_topic_id=None, limit=6, key):
         self.charts.append((course, radar, focus_topic_id, key))
         st.markdown("fake spider chart")
 

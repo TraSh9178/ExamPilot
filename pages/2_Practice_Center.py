@@ -371,7 +371,8 @@ if active_practice is not None:
                     st.subheader(tr("Learning Radar"))
                     radar, _ = load_course_radar(st.session_state, course.course_id, user.user_id if user else None)
                     if radar_chart is not None:
-                        radar_chart.render_course_radar_chart(
+                        # Chart only: the count below already says when sample data is included.
+                        radar_chart.render_radar_figure(
                             course, radar, focus_topic_id=selected_question.topic_id, key="practice_radar",
                         )
                     render_topic_radar(radar.topics.get(selected_question.topic_id))
