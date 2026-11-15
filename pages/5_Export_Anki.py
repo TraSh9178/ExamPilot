@@ -27,9 +27,11 @@ apply_app_styles()
 st.title("Export to Anki")
 st.caption(
     "Review course knowledge cards here or download a UTF-8 TSV file "
-    "for Anki text import. "
-    "AnkiWeb sync is not supported; Anki Desktop import has not been verified."
+    "for Anki text import."
 )
+
+with st.expander("Import instructions and limitations"):
+    st.write("Download the TSV, then use Anki Desktop → File → Import and map Front, Back and Tags. AnkiWeb sync is not supported; Anki Desktop import has not been verified.")
 
 course = st.session_state.get("current_course")
 

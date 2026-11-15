@@ -12,6 +12,7 @@ from services.question_editor import available_questions, review_question, statu
 from services.course_state import save_course
 from services.ai_service import generate_questions, generation_available
 from services.ui_style import apply_app_styles
+from services.learning_flow import stage_practice
 
 apply_app_styles()
 
@@ -46,15 +47,6 @@ if scope_key not in st.session_state:
     st.session_state[scope_key] = list(
         st.session_state.get(confirmed_key, [])
     )
-
-def update_topic_selection(topic_id: str, checkbox_key: str) -> None:
-    selected = list(st.session_state[scope_key])
-    if st.session_state[checkbox_key] and topic_id not in selected:
-        selected.append(topic_id)
-    elif not st.session_state[checkbox_key] and topic_id in selected:
-        selected.remove(topic_id)
-    st.session_state[scope_key] = selected
-
 
 def render_most_flagged_topics(course, confirmed_key: str) -> None:
     """Show a demo course's three most flagged topics with a practice shortcut.
@@ -94,10 +86,7 @@ def render_most_flagged_topics(course, confirmed_key: str) -> None:
             ):
                 # Topic Practice only offers topics from the confirmed scope.
                 if topic_id in (st.session_state.get(confirmed_key) or []):
-                    st.session_state[f"practice_mode_{course.course_id}"] = (
-                        "Topic Practice"
-                    )
-                    st.session_state[f"practice_topic_{course.course_id}"] = topic_id
+                    stage_practice(st.session_state, course, topic_id)
                     st.switch_page("pages/2_Practice_Center.py")
                 else:
                     st.info(
@@ -113,28 +102,12 @@ def render_most_flagged_topics(course, confirmed_key: str) -> None:
 if not course.topics:
     st.info("This course has no topics yet.")
 else:
-    for topic in course.topics:
-        with st.container(border=True, key=f"study_topic_{topic.id}"):
-            topic_columns = st.columns(
-                [0.16, 4],
-                vertical_alignment="top",
-            )
-            checkbox_key = f"topic_selected_{course.course_id}_{topic.id}"
-            st.session_state[checkbox_key] = topic.id in st.session_state[scope_key]
-            with topic_columns[0]:
-                st.checkbox(
-                    f"Select {topic.name}",
-                    key=checkbox_key,
-                    label_visibility="collapsed",
-                    on_change=update_topic_selection,
-                    args=(topic.id, checkbox_key),
-                )
-            with topic_columns[1]:
-                st.markdown(f"### {topic.name}")
-                st.write(topic.summary)
-                if topic.source_pages:
-                    pages = ", ".join(str(page) for page in topic.source_pages)
-                    st.caption(f"Source pages: {pages}")
+    with st.expander("Topic summaries"):
+        for topic in course.topics:
+            st.markdown(f"**{topic.name}**")
+            st.write(topic.summary)
+            if topic.source_pages:
+                st.caption("Source pages: " + ", ".join(map(str, topic.source_pages)))
 
 with st.container(border=True, key="study_scope_panel"):
     st.subheader("Choose your exam scope")
@@ -273,7 +246,13 @@ if confirmed_topic_ids:
     )
 
     if available_count:
-        if st.button("Start practice", type="primary"):
+        active = st.session_state.get(f"active_practice_{course.course_id}")
+        start_label = "Continue practice" if active and "result" not in active else "Start practice"
+        if st.button(start_label, type="primary"):
+            if not active or "result" in active:
+                stage_practice(st.session_state, course)
+            else:
+                st.session_state.pop(f"practice_entry_{course.course_id}", None)
             st.switch_page("pages/2_Practice_Center.py")
     elif any(status_for(course, q.id) == "pending" for q in course.questions):
         st.info("Review and approve your generated questions below before starting practice.")
@@ -291,7 +270,12 @@ else:
 if learning_radar.radar_enabled(course.course_id):
     render_most_flagged_topics(course, confirmed_key)
 
-with st.expander("Review and edit questions", expanded=any(status_for(course, q.id) == "pending" for q in course.questions)):
+pending_count = sum(status_for(course, q.id) == "pending" for q in course.questions)
+if pending_count:
+    st.caption(f"{pending_count} questions await review before they can be practised.")
+    if st.button("Review pending questions", key=f"open_question_review_{course.course_id}"):
+        st.session_state[f"question_review_open_{course.course_id}"] = True
+with st.expander("Review and edit questions", expanded=st.session_state.get(f"question_review_open_{course.course_id}", False)):
     editable = sorted([q for q in course.questions if status_for(course, q.id) != "superseded"], key=lambda q: status_for(course, q.id) != "pending")
     if editable:
         by_id = {q.id: q for q in editable}

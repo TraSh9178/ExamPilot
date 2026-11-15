@@ -1,4 +1,3 @@
-import base64
 from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
@@ -17,6 +16,7 @@ from services.document_service import extract_document
 from services.ai_service import generate_topics, generation_available
 from services.course_icons import course_icon_svg
 from services.demo_updates import demo_update
+from services.learning_flow import stage_practice
 from services.ui_style import apply_app_styles
 
 DEMO_COURSES = (
@@ -41,24 +41,8 @@ def load_demo_package(filename: str, expected_course_id: str) -> StudyPackage:
 
 apply_app_styles()
 
-campus_art = base64.b64encode(
-    (
-        Path(__file__).resolve().parents[1]
-        / "assets"
-        / "campus-illustration.svg"
-    ).read_bytes()
-).decode("ascii")
-
-st.markdown(
-    f"""
-    <section class="exam-hero exam-hero-compact" style="--campus-art: url('data:image/svg+xml;base64,{campus_art}')">
-        <p class="exam-eyebrow">YOUR STUDY SPACE</p>
-        <h1>Your next study session<br><span>starts here.</span></h1>
-        <p>Turn course materials into focused exam practice.</p>
-    </section>
-    """,
-    unsafe_allow_html=True,
-)
+st.title("Your study space")
+st.caption("Choose a course or continue your next study session.")
 
 initialize_courses(st.session_state)
 
@@ -111,22 +95,39 @@ with st.container(key="dashboard_actions"):
         st.session_state.show_course_setup = not st.session_state.show_course_setup
         st.rerun()
 
-with st.container(border=True, key="dashboard_learning_dna"):
-    st.subheader("Learning DNA")
-    st.write("Compare computation and conceptual understanding using your practice evidence.")
-    selected_course = st.session_state.get("current_course")
-    if selected_course is None:
-        st.caption("Open a course below, then view its Learning DNA in Progress.")
-    else:
-        st.caption(f"Current course: {selected_course.course_name}")
+selected_course = st.session_state.get("current_course")
+if selected_course is not None:
+    with st.container(border=True, key="dashboard_continue"):
+        st.caption("CONTINUE LEARNING")
+        st.subheader(selected_course.course_name)
+        active = st.session_state.get(f"active_practice_{selected_course.course_id}")
+        confirmed = st.session_state.get(f"confirmed_scope_{selected_course.course_id}")
+        main_action = "Continue practice" if active and "result" not in active else "Start practice" if confirmed else "Open Study Plan"
+        if st.button(main_action, type="primary", key="dashboard_continue_learning", width="stretch"):
+            if confirmed:
+                if not active or "result" in active:
+                    stage_practice(st.session_state, selected_course)
+                else:
+                    st.session_state.pop(f"practice_entry_{selected_course.course_id}", None)
+                st.switch_page("pages/2_Practice_Center.py")
+            else:
+                st.switch_page("pages/1_Study_Hub.py")
+        if active and "result" in active:
+            if st.button("View latest result", key="dashboard_latest_result"):
+                st.session_state.pop(f"practice_entry_{selected_course.course_id}", None)
+                st.switch_page("pages/2_Practice_Center.py")
+
+with st.container(key="dashboard_learning_dna"):
     if st.button(
         "View Learning DNA", icon=":material/insights:",
         key="learning_dna_open", disabled=selected_course is None,
-        width="stretch",
     ):
+        st.session_state[f"progress_tab_{selected_course.course_id}"] = "Learning DNA"
         st.switch_page("pages/3_Performance.py")
 
-overview = st.container(key="dashboard_overview")
+overview_details = st.expander("Study totals")
+with overview_details:
+    overview = st.container(key="dashboard_overview")
 
 with st.container(key="dashboard_courses_header"):
     st.subheader("My courses")
