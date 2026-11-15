@@ -10,7 +10,7 @@ from services.account_sync import (
 from services.auth_session import current_user
 
 from services.auth_ui import render_auth_page
-from services.account_ui import render_account_page, render_account_controls
+from services.account_ui import render_account_menu, render_account_page
 from services.accessibility import render_accessibility_controls
 from services.ui_style import BRAND_LOGO, BRAND_PLANE, apply_app_styles
 from services.tutor_assistant_ui import clear_tutor_browser_state, render_tutor_assistant
@@ -117,16 +117,18 @@ if st.session_state.get("_learning_page_path") != navigation.url_path:
         st.session_state.pop(f"scope_initialised_{selected_course.course_id}", None)
     st.session_state["_learning_page_path"] = navigation.url_path
 
-# Account and save status follow the page list; accessibility settings stay
-# pinned to the very bottom of the sidebar, below the watercolour.
+# Save status follows the page list; accessibility settings stay at the very
+# bottom of the sidebar, below the watercolour.
 with st.sidebar:
     with st.container(key="sidebar_footer"):
-        render_account_controls(account_page)
         with st.container(key="flight_sync_status"):
             render_sidebar_status()
     with st.container(key="sidebar_accessibility"):
         with st.expander(tr("Accessibility settings")):
             render_accessibility_controls()
+
+# Account: a round avatar in the top-right corner of every page.
+render_account_menu(account_page)
 
 if selected_course := st.session_state.get("current_course"):
     with st.container(key="flight_course_context"):

@@ -54,35 +54,53 @@ def _remove_avatar(owner_id: str) -> None:
         st.session_state["account_avatar_notice"] = result
 
 
-def render_account_controls(account_page) -> None:
+def _avatar_button_style() -> str:
+    """CSS that paints an uploaded avatar onto the round account button."""
+    avatar = get_account_avatar(st.session_state)
+    if not avatar:
+        return ""
+    encoded = base64.b64encode(avatar).decode("ascii")
+    return (
+        '<style>.st-key-account_menu [data-testid="stPopover"] button {'
+        f'background-image: url("data:image/png;base64,{encoded}"); color: transparent;'
+        "}</style>"
+    )
+
+
+def render_account_menu(account_page) -> None:
+    """Round avatar in the top-right corner; its menu opens only when clicked."""
     user = current_user(st.session_state)
     if user is None:
         return
-    with st.container(key="account_sidebar"):
-        st.markdown(
-            '<div class="account-sidebar-identity">'
-            f'{_avatar_html(user.username)}'
-            '<div class="account-sidebar-copy">'
-            f'<span class="account-sidebar-label">{tr("SIGNED IN AS")}</span>'
-            f'<strong>{escape(user.username)}</strong>'
-            '</div></div>',
-            unsafe_allow_html=True,
-        )
-        st.page_link(
-            account_page, label=tr("My account"), icon=":material/account_circle:",
-            use_container_width=True,
-        )
-        discard_confirmed = True
-        if has_unresolved_conflicts(st.session_state):
-            discard_confirmed = st.checkbox(
-                tr("Discard conflicting local records on log out"),
-                key="confirm_discard_logout_button",
+    with st.container(key="account_menu"):
+        avatar_style = _avatar_button_style()
+        if avatar_style:
+            st.markdown(avatar_style, unsafe_allow_html=True)
+        # The button shows the initial (or the uploaded picture, painted by CSS).
+        # No hover tooltip: it would sit on top of the open menu.
+        with st.popover(user.username[:1].upper()):
+            st.markdown(
+                '<div class="account-menu-identity">'
+                f'<span class="account-sidebar-label">{tr("SIGNED IN AS")}</span>'
+                f'<strong>{escape(user.username)}</strong>'
+                '</div>',
+                unsafe_allow_html=True,
             )
-        st.button(
-            tr("Log out"), key="logout_button", icon=":material/logout:",
-            disabled=not discard_confirmed, on_click=logout_session, args=(st.session_state,),
-            use_container_width=True,
-        )
+            st.page_link(
+                account_page, label=tr("My account"), icon=":material/account_circle:",
+                use_container_width=True,
+            )
+            discard_confirmed = True
+            if has_unresolved_conflicts(st.session_state):
+                discard_confirmed = st.checkbox(
+                    tr("Discard conflicting local records on log out"),
+                    key="confirm_discard_logout_button",
+                )
+            st.button(
+                tr("Log out"), key="logout_button", icon=":material/logout:",
+                disabled=not discard_confirmed, on_click=logout_session, args=(st.session_state,),
+                use_container_width=True,
+            )
 
 
 def render_account_page() -> None:

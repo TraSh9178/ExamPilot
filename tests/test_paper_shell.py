@@ -151,7 +151,9 @@ def test_top_header_row_is_gone_and_breadcrumb_stays():
     assert not app.exception
     main_ids = block_ids(app.main)
     assert not any(block.endswith("-flight_header") for block in main_ids)
-    assert "popover" not in block_types(app.main)
+    # No navigation menus: the only popover left is the account avatar's.
+    assert block_types(app.main).count("popover") == 1
+    assert block_types(find_block(app.main, "account_menu")) == ["popover"]
     assert not [box for box in app.main.selectbox if (box.key or "").startswith("flight_review")]
     assert not [link for link in app.main.get("page_link") if link.proto.label in {"Home", "Practice"}]
     assert any(block.endswith("-flight_course_context") for block in main_ids)
@@ -170,7 +172,7 @@ def find_block(node, key: str) -> Block | None:
     return None
 
 
-def test_sidebar_holds_account_and_status_then_accessibility_last():
+def test_sidebar_holds_save_status_then_accessibility_last_and_no_account_block():
     app = signed_in_app(APP_PATH).run()
 
     assert not app.exception
@@ -179,16 +181,55 @@ def test_sidebar_holds_account_and_status_then_accessibility_last():
         block.rsplit("-", 1)[-1] for block in block_ids(app.sidebar)
         if block.endswith(tuple(f"-{key}" for key in sidebar_keys))
     ]
-    # Account and save status share the footer; accessibility is its own block after it.
-    assert order == list(sidebar_keys)
+    # Save status sits in the footer; accessibility is its own block after it.
+    assert order == ["sidebar_footer", "flight_sync_status", "sidebar_accessibility"]
     footer = find_block(app.sidebar, "sidebar_footer")
     accessibility = find_block(app.sidebar, "sidebar_accessibility")
-    assert footer.button(key="logout_button").label == "Log out"
     assert not footer.expander
-    assert find_block(footer, "sidebar_accessibility") is None
     assert [item.label for item in accessibility.expander] == ["Accessibility settings"]
     assert [item.key for item in accessibility.toggle] == ["a11y_simplify", "_ui_chinese_toggle"]
     assert [item.label for item in app.sidebar.expander] == ["Accessibility settings"]
+    # The account moved to the avatar menu; nothing of it is left in the sidebar.
+    assert not app.sidebar.get("page_link")
+    assert not [button for button in app.sidebar.button if button.key == "logout_button"]
+    assert not any("SIGNED IN AS" in item.value for item in app.sidebar.markdown)
+
+
+def test_account_actions_stay_inside_the_avatar_popover():
+    from tests.auth_helpers import TEST_USER
+
+    app = signed_in_app(APP_PATH).run()
+
+    assert not app.exception
+    menu = find_block(app.main, "account_menu")
+    (popover,) = [child for child in menu.children.values() if isinstance(child, Block)]
+    # The avatar button shows only the initial; the two actions are inside its menu.
+    assert popover.type == "popover"
+    assert popover.proto.popover.label == TEST_USER.username[:1].upper()
+    assert [link.proto.label for link in popover.get("page_link")] == ["My account"]
+    assert popover.button(key="logout_button").label == "Log out"
+    assert not popover.get("checkbox")
+    # Nowhere else on the page.
+    assert [link.proto.label for link in app.main.get("page_link")].count("My account") == 1
+    assert [button.key for button in app.main.button].count("logout_button") == 1
+
+
+def test_account_avatar_is_a_round_button_fixed_in_the_top_right_corner():
+    shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
+
+    corner = css_rule(shell, ".st-key-account_menu")
+    assert "position: fixed;" in corner
+    assert "top: .5rem;" in corner
+    assert "right: 7.5rem;" in corner
+    button = css_rule(shell, '.st-key-account_menu [data-testid="stPopover"] button')
+    assert "border-radius: 50%;" in button
+    assert "width: 2.75rem;" in button and "height: 2.75rem;" in button
+    # Both rows of the menu start from the left edge.
+    rows = (
+        '[data-testid="stPopoverBody"]:has(.account-menu-identity)'
+        ' :is([data-testid="stPageLink"] a, .st-key-logout_button button)'
+    )
+    assert "justify-content: flex-start;" in css_rule(shell, rows)
 
 
 def css_rule(stylesheet: str, selector: str) -> str:
@@ -202,20 +243,21 @@ def test_accessibility_settings_rest_on_the_bottom_edge_below_the_sidebar_waterc
     shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
     wrapper = '[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]'
 
-    # The account block grows into the free height, which pushes the settings down.
-    assert "flex: 1 0 auto;" in css_rule(shell, f"{wrapper}:has(> .st-key-sidebar_footer)")
     closed = css_rule(shell, f"{wrapper}:has(> .st-key-sidebar_accessibility)")
+    # The block grows into the height the page list leaves free, which rests
+    # the settings on the bottom edge.
+    assert "flex: 1 0 auto;" in closed
     # Opaque, so nothing shows through the open panel; not sticky while closed,
-    # so on a short window it never covers the Log out button.
+    # so on a short window it never covers the links above it.
     assert "background-color: var(--paper-bg);" in closed
     assert "position:" not in closed
     opened = css_rule(shell, f"{wrapper}:has(> .st-key-sidebar_accessibility details[open])")
     assert "position: sticky;" in opened
     assert "bottom: 0;" in opened
 
-    # The watercolour is drawn in the free space above the pinned block, not
+    # The watercolour is drawn in that free space, above the control, not
     # behind the whole sidebar, so it can never sit under a control.
-    painting = css_rule(shell, ".st-key-sidebar_footer::after")
+    painting = css_rule(shell, ".st-key-sidebar_accessibility::before")
     assert "var(--paper-landscape-left" in painting
     assert "flex: 1 0 0px;" in painting
     assert "background-position: left bottom;" in painting
@@ -232,7 +274,7 @@ def test_stacked_blocks_keep_a_gap_between_them():
     assert pulled_together
     selectors = [selector.strip() for selector in pulled_together.group(1).split(",\n")]
     assert selectors == [
-        '.st-key-account_sidebar [data-testid="stMarkdownContainer"]:has(> .account-sidebar-identity)',
+        '[data-testid="stMarkdownContainer"]:has(> .account-menu-identity)',
         '[class*="st-key-dashboard_course_card_"] [data-testid="stMarkdownContainer"]:has(> .academic-course-icon)',
         '[class*="st-key-dashboard_course_card_"] > [data-testid="stElementContainer"]:first-child'
         ' [data-testid="stCaptionContainer"]',

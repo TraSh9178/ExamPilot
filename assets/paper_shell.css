@@ -180,28 +180,28 @@ a[data-testid="stSidebarNavLink"]:focus-visible {
   outline-offset: 1px;
 }
 
-/* ---- Sidebar footer: account and save status ------------------------------ */
+/* ---- Sidebar footer: save status ------------------------------------------ */
+/* Empty unless there is something to say (a failed save or restore), so it
+   draws no line of its own: the page list above already ends with one. */
 .st-key-sidebar_footer {
-  border-top: 1px solid var(--paper-line);
+  padding-top: 0;
+  border-top: 0;
   background-color: rgb(254 247 239 / .9);
 }
 
-/* The account block takes whatever height the page list leaves free, so the
-   accessibility settings below it rest on the bottom edge of the sidebar. */
-[data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_footer) {
-  flex: 1 0 auto;
-}
-
 /* ---- Accessibility settings: last, on the bottom edge of the sidebar ------ */
+/* The block takes whatever height the page list leaves free. Its ::before
+   (the watercolour, under "Watercolour margins") fills that space, which
+   rests the control itself on the bottom edge. */
 [data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_accessibility) {
-  flex: 0 0 auto;
+  flex: 1 0 auto;
   padding: .5rem 0 1rem;
   background-color: var(--paper-bg);
 }
 
 /* While open, the panel sticks to the bottom edge, so it opens upwards over
-   the account block instead of off the screen. Closed, it is simply the last
-   item and never covers the controls above it. The paper-coloured shadow
+   the page list instead of off the screen. Closed, it is simply the last
+   item and never covers the links above it. The paper-coloured shadow
    fades whatever it covers along its top edge. */
 [data-testid="stSidebarUserContent"] [data-testid="stLayoutWrapper"]:has(> .st-key-sidebar_accessibility details[open]) {
   position: sticky;
@@ -218,21 +218,90 @@ a[data-testid="stSidebarNavLink"]:focus-visible {
   }
 }
 
-.st-key-account_sidebar [data-testid="stPageLink"] a {
-  border-radius: 999px;
+/* ---- Account: a round avatar in the top-right corner ---------------------- */
+/* Fixed in Streamlit's header strip, left of its own toolbar. My account and
+   Log out live in the menu and are not on screen until the avatar is clicked. */
+.st-key-account_menu {
+  position: fixed;
+  top: .5rem;
+  right: 7.5rem;
+  z-index: 999991;
+  width: auto;
+}
+
+.st-key-account_menu [data-testid="stPopover"] button {
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 2px solid var(--paper-line);
+  border-radius: 50%;
+  background: var(--paper-select) center / cover no-repeat;
   color: var(--ink);
+}
+
+.st-key-account_menu [data-testid="stPopover"] button p {
+  font-size: 1.2rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+/* No chevron: the avatar itself is the control, with its letter centred. */
+.st-key-account_menu [data-testid="stPopover"] button > div > div:has([data-testid="stIconMaterial"]) {
+  display: none;
+}
+
+.st-key-account_menu [data-testid="stPopover"] button > div {
+  justify-content: center;
+  width: 100%;
+}
+
+.st-key-account_menu [data-testid="stPopover"] button:hover {
+  border-color: var(--accent-blue);
+}
+
+.st-key-account_menu [data-testid="stPopover"] button:focus-visible {
+  outline: 3px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+/* The menu: who is signed in, then two left-aligned rows of the same shape. */
+.account-menu-identity {
+  display: flex;
+  flex-direction: column;
+  padding: .1rem .25rem .2rem;
 }
 
 .account-sidebar-label {
   color: var(--exam-muted);
 }
 
+[data-testid="stPopoverBody"]:has(.account-menu-identity) :is([data-testid="stPageLink"] a, .st-key-logout_button button) {
+  justify-content: flex-start;
+  min-height: 2.75rem;
+  padding: .35rem .9rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--paper-badge);
+  color: var(--ink);
+  text-align: left;
+}
+
+[data-testid="stPopoverBody"]:has(.account-menu-identity) .st-key-logout_button button > div {
+  justify-content: flex-start;
+}
+
+[data-testid="stPopoverBody"]:has(.account-menu-identity) :is([data-testid="stPageLink"] a, .st-key-logout_button button):hover {
+  background: var(--paper-select);
+}
+
 /* ---- Breathing room between stacked blocks -------------------------------- */
 /* st.markdown and st.caption pull the next element up by 1rem to cancel a
    paragraph's bottom margin. These three hold no such paragraph, so the pull
-   left the control below touching them: the signed-in row above My account,
+   left the control below touching them: the signed-in line above My account,
    and the badge and icon above Open course on a course card. */
-.st-key-account_sidebar [data-testid="stMarkdownContainer"]:has(> .account-sidebar-identity),
+[data-testid="stMarkdownContainer"]:has(> .account-menu-identity),
 [class*="st-key-dashboard_course_card_"] [data-testid="stMarkdownContainer"]:has(> .academic-course-icon),
 [class*="st-key-dashboard_course_card_"] > [data-testid="stElementContainer"]:first-child [data-testid="stCaptionContainer"] {
   margin-bottom: 0;
@@ -541,18 +610,18 @@ label[data-baseweb="radio"]:focus-within {
 /* Painted as backgrounds, so they never take clicks; stMain is the scroll box,
    so its background stays in place. */
 
-/* Sidebar: the hills fill the free space between the account block and the
+/* Sidebar: the hills fill the free space between the page list and the
    accessibility settings, and bleed off the left edge of the sidebar. The
    picture is drawn whole or not at all: it shrinks with the space it has and
    disappears below 6rem, so it never sits behind a control. */
-.st-key-sidebar_footer::after {
+.st-key-sidebar_accessibility::before {
   content: "";
   flex: 1 0 0px;
   align-self: stretch;
   min-height: 0;
-  /* Out to the sidebar edge, and down over the gap above the pinned block:
-     the foot of the hills is feathered, so it can sit close to the control. */
-  margin: 0 0 -.75rem -1.25rem;
+  /* Out to the sidebar edge, and a little into the gap above the control:
+     the foot of the hills is feathered, so it can sit close to it. */
+  margin: 0 0 -.25rem -1.25rem;
   background-image: var(--paper-landscape-left, none);
   background-repeat: no-repeat;
   background-position: left bottom;
@@ -577,8 +646,8 @@ label[data-baseweb="radio"]:focus-within {
 }
 
 /* ...and on a window too short for the open sidebar to hold them: below
-   872px its free space is under the 6rem the picture needs. */
-@media (max-height: 871.98px) {
+   705px its free space is under the 6rem the picture needs. */
+@media (max-height: 704.98px) {
   [data-testid="stMain"] {
     --paper-main-left: var(--paper-landscape-left, none);
   }
@@ -602,7 +671,7 @@ label[data-baseweb="radio"]:focus-within {
 }
 
 @media (max-width: 759.98px) {
-  .st-key-sidebar_footer::after,
+  .st-key-sidebar_accessibility::before,
   [data-testid="stMain"] {
     background-image: none;
   }
