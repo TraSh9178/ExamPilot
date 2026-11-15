@@ -152,9 +152,10 @@ def prediction(topic):
     Once a prediction has been checked, "Next: explore" leads on to step 2.
     """
     prompt, choices = PREDICTIONS[topic]
-    selected = st.radio(tr(prompt), choices, index=None, format_func={choice: tr(choice) for choice in choices}.get, horizontal=True,
+    selected = st.radio(tr(prompt), choices, index=None, format_func={choice: tr(choice) for choice in choices}.get, horizontal=False,
                         key=f'lab_{topic}_prediction', on_change=keep_value, args=(f'lab_{topic}_prediction',))
-    if st.button(tr('Check my prediction'), key=f'lab_{topic}_check'):
+    if st.button(tr('Check my prediction'), key=f'lab_{topic}_check',
+                 type='primary', width='stretch'):
         st.session_state[f'lab_{topic}_checked'] = selected
     checked = st.session_state.get(f'lab_{topic}_checked')
     if checked is not None and checked == selected:
