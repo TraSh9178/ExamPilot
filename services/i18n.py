@@ -20,6 +20,15 @@ def render_language_control() -> None:
 
 
 _TRANSLATIONS = {
+    'Ask about this explanation': '针对这段解析提问',
+    'Ask what you did not understand. This conversation stays in this session and does not change your score.': '哪里不理解就直接问。对话仅保留在当前会话，不影响成绩。',
+    'What part is unclear?': '哪里没理解？',
+    'For example: why is option B incorrect?': '例如：为什么 B 选项不对？',
+    'Ask AI': '向 AI 提问',
+    'Enter a question first.': '请先输入问题。',
+    'Your question is too long for this explanation. Please shorten it.': '问题过长，请简化后重试。',
+    'AI is unavailable right now. Your score and explanation are unchanged.': 'AI 暂时不可用；成绩和原解析均不受影响。',
+
     'Detailed explanation & examples': '详细讲解与例题',
     'Go beyond the summary: understand the idea, then work through an example.': '不止看概述：先理解思路，再通过例题掌握用法。',
     'Explain step by step': '分步骤讲解',
