@@ -59,15 +59,35 @@ def session_insights(course, sid):
     return course.learning_state.get('practice_insights', {}).get(sid, {})
 
 
+def session_seconds(active):
+    """Running time of the whole session; older state starts from its per-question totals."""
+    if 'session_seconds' in active:
+        return active['session_seconds']
+    return min(1_000_000.0, sum(active.get('focus_seconds', {}).values()))
+
+
+def clock_text(seconds):
+    """Whole seconds as mm:ss, or h:mm:ss from one hour."""
+    hours, rest = divmod(int(max(0, seconds)), 3600)
+    minutes, secs = divmod(rest, 60)
+    return f'{hours}:{minutes:02}:{secs:02}' if hours else f'{minutes:02}:{secs:02}'
+
+
 def settle_focus(active, now):
-    """Count selected-question wall time, capped between interactions (not attention)."""
+    """Count selected-question wall time, capped between interactions (not attention).
+
+    The session clock gets the same gap uncapped, so it shows all running time.
+    """
     timer = active.get('focus_timer')
     if timer is None or timer.get('since') is None:
         return
-    elapsed = max(0.0, min(120.0, now - timer['since']))
+    gap = now - timer['since']
+    session = session_seconds(active)  # before this gap reaches the per-question totals
+    elapsed = max(0.0, min(120.0, gap))
     totals = active.setdefault('focus_seconds', {})
     qid = timer['question_id']
     totals[qid] = min(1_000_000.0, totals.get(qid, 0.0) + elapsed)
+    active['session_seconds'] = min(1_000_000.0, session + max(0.0, gap))
     timer['since'] = now
 
 

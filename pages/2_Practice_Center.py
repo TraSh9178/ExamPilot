@@ -265,25 +265,31 @@ if active_practice is not None:
             margin = None
             visible_questions = list(enumerate(questions, start=1))
         with paper, st.container(key="flight_worksheet"):
-            with st.container(key="flight_practice_progress"):
-                st.caption(tr("Question") + f" {question_index + 1:02} / {len(questions):02}" if margin is not None else tr("Questions"))
-                if margin is not None:
-                    stops = min(len(questions), 12)
-                    current_stop = question_index * (stops - 1) // max(1, len(questions) - 1)
-                    markers = "".join(
-                        '<span class="flight-waypoint is-current">✈</span>' if step == current_stop
-                        else '<span class="flight-waypoint"></span>'
-                        for step in range(stops)
-                    )
-                    st.markdown(
-                        f'<div class="flight-waypoints" aria-hidden="true">{markers}</div>',
-                        unsafe_allow_html=True,
-                    )
-                else:
-                    st.progress(answered / len(questions))
-                st.caption(tr("Answered") + f" · {answered} / {len(questions)}")
-            with st.expander(tr("Focus controls")):
-                start_focus_controls(active_practice)
+            # One row above the question: counter · progress · session clock (wraps on phones).
+            with st.container(key="flight_practice_progress", horizontal=True, vertical_alignment="center"):
+                with st.container(key="flight_progress_count", width="content"):
+                    st.caption(tr("Question") + f" {question_index + 1:02} / {len(questions):02}" if margin is not None else tr("Questions"))
+                    st.caption(tr("Answered") + f" · {answered} / {len(questions)}")
+                with st.container(key="flight_progress_track"):
+                    if margin is not None:
+                        stops = min(len(questions), 12)
+                        current_stop = question_index * (stops - 1) // max(1, len(questions) - 1)
+                        markers = "".join(
+                            '<span class="flight-waypoint is-current">✈</span>' if step == current_stop
+                            else '<span class="flight-waypoint"></span>'
+                            for step in range(stops)
+                        )
+                        st.markdown(
+                            f'<div class="flight-waypoints" aria-hidden="true">{markers}</div>',
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        st.progress(answered / len(questions))
+                with st.container(
+                    key="flight_progress_clock", horizontal=True, width="content", vertical_alignment="center",
+                    gap="xsmall",
+                ):
+                    start_focus_controls(active_practice)
 
             paging = margin is not None and len(questions) > 1
             movement = 0

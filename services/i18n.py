@@ -505,6 +505,14 @@ _TRANSLATIONS.update({
     "Show answer": "看答案", "Show question": "看题目", "Start over": "从头再来",
 })
 
+# practice clock
+_TRANSLATIONS.update({
+    "Session": "本次用时",
+    "Pause": "暂停",
+    "Resume": "继续",
+    "Pause when you take a break.": "休息时可以暂停。",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
@@ -581,6 +589,8 @@ _DYNAMIC = [
     (r"^Card (\d+) of (\d+) · (.+)$", r"第 \1 / \2 张 · \3"),
     (r"^Card (\d+) of (\d+)$", r"第 \1 / \2 张"),
     (r"^Last time you chose ([A-D])\.$", r"上次你选了 \1。"),
+    # practice clock
+    (r"^Session time (.+)$", r"本次用时 \1"),
 ]
 
 
