@@ -525,11 +525,6 @@ _TRANSLATIONS.update({
     "Back to Flashcards": "返回复习卡片",
 })
 
-# open panels
-_TRANSLATIONS.update({
-    "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text. Image text extraction requires Tesseract with English language support; scanned PDF OCR, PPTX slide notes and DOCX are not supported.": "使用 UTF-8 TXT、文字型 PDF/PPTX 或清晰的英文图片。图片文字提取需要支持英文的 Tesseract；暂不支持扫描 PDF 的 OCR、PPTX 备注或 DOCX。",
-    "#### Learning Radar": "#### 学习雷达",
-})
 
 # progress charts
 _TRANSLATIONS.update({
@@ -580,6 +575,7 @@ _TRANSLATIONS.update({
 
 # concept lab steps; home materials note
 _TRANSLATIONS.update({
+    "A corner at x = 0": "x = 0 处的尖点",
     "Use UTF-8 TXT, text-based PDF or PPTX, or clear images of English text; reading text from images may not always be available. Scanned PDFs, PPTX slide notes and DOCX files are not supported.": "使用 UTF-8 TXT、文字型 PDF/PPTX 或清晰的英文图片；图片中的文字有时可能无法读取。暂不支持扫描版 PDF、PPTX 备注或 DOCX 文件。",
     "Steps": "步骤", "Predict": "预测", "Explore": "探索", "Explain": "解释",
     "Back": "返回", "Next: explore": "下一步：探索", "Next: explain": "下一步：解释",

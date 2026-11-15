@@ -195,9 +195,9 @@ def explore_navigation(topic):
 
 # ---- Step 3: explain ---------------------------------------------------------------
 
-def _toggle_answer(topic):
-    key = f'lab_{topic}_answer_shown'
-    st.session_state[key] = not st.session_state.get(key, False)
+def _set_answer_shown(topic, shown):
+    """Show or hide the answer; a double click asks for the same thing twice."""
+    st.session_state[f'lab_{topic}_answer_shown'] = shown
 
 
 def _set_self_check(topic, choice):
@@ -231,7 +231,7 @@ def explanation(topic):
                      on_change=keep_value, args=(f'lab_{topic}_explanation',))
         st.caption(tr('Only you see this. Write it first, then compare.'))
         st.button(tr('Hide answer') if shown else tr('Show answer'), key=f'lab_{topic}_show_answer',
-                  width='content', on_click=_toggle_answer, args=(topic,))
+                  width='content', on_click=_set_answer_shown, args=(topic, not shown))
         if shown:
             if formula is not None:
                 st.latex(formula)

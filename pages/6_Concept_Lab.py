@@ -263,7 +263,11 @@ with derivatives_tab:
 
 
 with corner_tab:
-    st.subheader(tr("Continuous does not always mean differentiable"))
+    # The full title answers the step-1 question, so it waits until the student has predicted.
+    st.subheader(
+        tr("Continuous does not always mean differentiable") if current_step("corner") > 1
+        else tr("A corner at x = 0")
+    )
     st.latex(r"f(x)=|x|,\quad x_0=0")
     controls, visual = st.columns([1, 1.7], gap="large")
     with controls:

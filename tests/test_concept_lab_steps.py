@@ -532,6 +532,39 @@ def test_controls_are_told_their_starting_value_when_step_two_first_appears(topi
 def test_corner_conclusion_waits_until_the_student_has_predicted():
     # The line answers the step-1 question, so step 1 must not show it.
     line = "The two slopes disagree: no derivative at 0."
-    assert line not in [info.value for info in _lab().info]
+    title = "Continuous does not always mean differentiable"
+    first = _lab()
+    assert line not in [info.value for info in first.info]
+    # The tab's full title says the same thing, so step 1 shows a neutral one.
+    assert title not in [s.value for s in first.subheader]
+    assert "A corner at x = 0" in [s.value for s in first.subheader]
     for step in (2, 3):
-        assert line in [info.value for info in _lab(lab_corner_step=step).info]
+        later = _lab(lab_corner_step=step)
+        assert line in [info.value for info in later.info]
+        assert title in [s.value for s in later.subheader]
+
+
+def _same_click_twice(topic):
+    import streamlit as st
+    from services.concept_lab_ui import _set_answer_shown
+
+    _set_answer_shown(topic, True)
+    _set_answer_shown(topic, True)
+    st.write(str(st.session_state[f"lab_{topic}_answer_shown"]))
+
+
+@pytest.mark.parametrize("topic", TOPICS)
+def test_a_double_click_on_show_answer_leaves_the_answer_shown(topic):
+    # The button carries the state it asks for, so the same click arriving twice
+    # (the second half of a double click landing after the rerun started) changes nothing.
+    twice = AppTest.from_function(_same_click_twice, kwargs={"topic": topic}).run()
+    assert not twice.exception and twice.markdown[0].value == "True"
+
+    app = _lab(**{f"lab_{topic}_step": 3})
+    assert app.button(key=f"lab_{topic}_show_answer").label == "Show answer"
+    app.button(key=f"lab_{topic}_show_answer").click().run()
+    assert app.session_state[f"lab_{topic}_answer_shown"] is True
+    assert app.button(key=f"lab_{topic}_show_answer").label == "Hide answer"
+    app.button(key=f"lab_{topic}_show_answer").click().run()
+    assert app.session_state[f"lab_{topic}_answer_shown"] is False
+    assert app.button(key=f"lab_{topic}_show_answer").label == "Show answer"
