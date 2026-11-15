@@ -113,7 +113,7 @@ def test_topic_hints_reveal_in_order_preserve_answer_and_leave_score_unchanged(u
     answer_key = f"answer_{session.session_id}_{question.id}"
     button_key = f"hint_button_{session.session_id}_{question.id}"
 
-    assert app.button(key=button_key).label == "Show a hint"
+    assert app.button(key=button_key).label == "Hint"
     assert not [item for item in app.info if item.value.startswith("Hint ")]
     app.radio(key=answer_key).set_value(question.correct_index).run()
 
@@ -128,7 +128,7 @@ def test_topic_hints_reveal_in_order_preserve_answer_and_leave_score_unchanged(u
             assert app.radio(key=answer_key).value == question.correct_index
             assert app.session_state[hint_state_key(session.session_id, question.id)] == number
             if number < len(hints):
-                assert app.button(key=button_key).label == "Show next hint"
+                assert app.button(key=button_key).label == "Next hint"
             else:
                 assert all(button.key != button_key for button in app.button)
 
@@ -185,7 +185,7 @@ def test_hint_text_shows_chinese_key_terms_only_when_toggle_is_on(bilingual):
 def test_hints_are_absent_during_practice_and_review_when_unavailable(mode, use_demo_question):
     app, _, _ = start_practice(mode, use_demo_question=use_demo_question)
 
-    assert not any(button.label in {"Show a hint", "Show next hint"} for button in app.button)
+    assert not any(button.label in {"Hint", "Next hint"} for button in app.button)
     assert not any(item.value.startswith("Hint ") for item in app.info)
 
     next(button for button in app.button if button.label == "Submit answers").click().run()

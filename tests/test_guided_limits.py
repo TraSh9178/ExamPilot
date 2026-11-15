@@ -31,7 +31,7 @@ def test_demo_launches_from_dashboard_and_keeps_answer_hints():
     assert session.mode == "topic"
     assert session.question_ids == [guided_limits_ui.QUESTION_ID]
     assert app.session_state[f"confirmed_scope_{COURSE_ID}"] == [guided_limits_ui.TOPIC_ID]
-    assert any(button.label == "Show a hint" for button in app.button)
+    assert any(button.label == "Hint" for button in app.button)
 
 
 def test_starter_does_not_replace_an_existing_scope():

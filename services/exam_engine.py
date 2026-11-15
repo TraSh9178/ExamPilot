@@ -112,10 +112,11 @@ def create_exam(
 
     warning = None
     if len(eligible_questions) < requested_count:
+        available_count = len(eligible_questions)
         warning = (
-            f"Requested {requested_count} questions, but only "
-            f"{len(eligible_questions)} are available in the confirmed topic scope; "
-            "all available questions were included."
+            "1 question available; included."
+            if available_count == 1
+            else f"{available_count} questions available; all included."
         )
 
     session = ExamSession(

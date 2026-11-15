@@ -47,7 +47,7 @@ def test_new_entry_shows_settings_instead_of_old_graded_result():
 def test_starting_new_session_preserves_unfinished_answers_confidence_and_hints():
     app,course=start_app()
     app.radio(key='answer_s_q0').set_value(0).run()
-    app.selectbox(key='confidence_s_q0').set_value('unsure').run()
+    app.button_group(key='confidence_s_q0').set_value('unsure').run()
     old=deepcopy(app.session_state['active_practice_insights'])
     replacement=deepcopy(old)
     replacement['session']=replacement['session'].model_copy(update={'session_id':'replacement'})
@@ -67,13 +67,13 @@ def test_draft_widgets_survive_registered_page_navigation():
     app.session_state['practice_history_course-1']={}
     app.switch_page('pages/2_Practice_Center.py').run()
     app.radio(key='answer_session-1_question-1').set_value(0).run()
-    app.selectbox(key='confidence_session-1_question-1').set_value('guessed').run()
+    app.button_group(key='confidence_session-1_question-1').set_value('guessed').run()
     app.switch_page('pages/3_Performance.py').run()
     assert not app.exception
     app.switch_page('pages/2_Practice_Center.py').run()
     assert not app.exception
     assert app.radio(key='answer_session-1_question-1').value==0
-    assert app.selectbox(key='confidence_session-1_question-1').value=='guessed'
+    assert app.button_group(key='confidence_session-1_question-1').value=='guessed'
     assert app.session_state['active_practice_course-1']['focus_timer']['since'] is None
 
 

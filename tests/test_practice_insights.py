@@ -133,12 +133,13 @@ def test_priority_session_preserves_order_filters_scope_pending_and_creates_new_
 def test_submission_persists_confidence_and_hint_snapshots_without_changing_grade():
     app,course=start_app()
     app.radio(key='answer_s_q0').set_value(0).run()
-    app.selectbox(key='confidence_s_q0').set_value('guessed').run()
+    app.button_group(key='confidence_s_q0').set_value('guessed').run()
     app.button(key="worksheet_next_s").click().run()
     app.radio(key='answer_s_q1').set_value(1).run()
-    app.selectbox(key='confidence_s_q1').set_value('unsure').run()
+    app.button_group(key='confidence_s_q1').set_value('unsure').run()
     app.button(key="worksheet_previous_s").click().run()
     assert app.radio(key="answer_s_q0").value == 0
+    assert app.button_group(key="confidence_s_q0").value == 'guessed'
     assert 'Review before submit' in [h.value for h in app.subheader]
     next(b for b in app.button if b.label=='Submit answers').click().run()
     assert not app.exception
@@ -147,7 +148,7 @@ def test_submission_persists_confidence_and_hint_snapshots_without_changing_grad
     assert session_insights(saved,'s')['q0']['confidence']=='guessed'
     assert session_insights(saved,'s')['q1']['confidence']=='unsure'
     assert session_insights(saved,'s')['q0']['hints_used']==0
-    assert any('correct answer(s) were marked Guessed' in i.value for i in app.info)
+    assert '1 correct answer was marked Guessed. Revisit it before treating it as secure knowledge.' in [i.value for i in app.info]
     assert all(b.label!='Submit answers' for b in app.button)
 
 
@@ -155,7 +156,10 @@ def test_reflection_saves_self_report_and_own_words_without_modifying_result(mon
     monkeypatch.delenv('ANTHROPIC_API_KEY',raising=False)
     app,course=start_app(graded=True)
     result=deepcopy(app.session_state['active_practice_insights']['result'])
-    app.selectbox(key='reason_s_q1').set_value('time_pressure')
+    reasons=app.button_group(key='reason_s_q1')
+    assert reasons.value is None
+    assert reasons.options==['Knowledge gap','Careless error','Time pressure','Misread the question','Other','Not sure yet']
+    reasons.set_value('time_pressure')
     app.text_area(key='explain_s_q1').set_value('I rushed the final comparison.')
     buttons=[b for b in app.button if b.label=='Save reflection']
     buttons[1].click().run()
@@ -165,6 +169,8 @@ def test_reflection_saves_self_report_and_own_words_without_modifying_result(mon
     assert saved['explanation']=='I rushed the final comparison.'
     assert app.session_state['active_practice_insights']['result']==result
     assert all(b.disabled for b in app.button if b.label=='Check explanation with AI')
+    assert 'Saved.' in [s.value for s in app.success]
+    assert app.button_group(key='reason_s_q1').value=='time_pressure'
 
 
 def test_ai_review_is_explicit_bounded_and_cannot_change_grade(monkeypatch):
@@ -263,13 +269,22 @@ def test_progress_review_and_time_use_selected_mode_and_latest_family():
     assert all('Tracked seconds' not in t.value.columns for t in app.dataframe)
 
 
-def test_unanswered_questions_are_not_counted_as_completed_without_hints():
+def test_answer_evidence_is_one_short_line_without_completion_claims():
     app,course=start_app(graded=True,picks=(0,None))
-    course=set_session_insights(course,'s',{'q0':{'hints_used':0},'q1':{'hints_used':0}})
+    course=set_session_insights(course,'s',{'q0':{'confidence':'sure','hints_used':1,'focus_seconds':42.4},
+                                            'q1':{'hints_used':0}})
     app.session_state['current_course']=course
     app.run()
     assert not app.exception
-    assert 'Answered questions: 1 without in-app hints · 0 hint-assisted · 0 hint use not recorded.' in [c.value for c in app.caption]
+    captions=[c.value for c in app.caption]
+    assert 'Sure · 1 hint · 42 s' in captions
+    assert 'No hints' in captions  # unanswered: no claim that it was completed without hints
+    assert not any(c.startswith(('Answered questions','Completion evidence','In-app hints shown','Tracked focus time',
+                                 'Confidence:','Hint exposure')) for c in captions)
+    course=set_session_insights(course,'s',{'q0':{'hints_used':2}})
+    app.session_state['current_course']=course
+    app.run()
+    assert '2 hints' in [c.value for c in app.caption]
 
 
 def test_oversize_reflection_is_rejected_without_overwriting_course_or_grade():
@@ -280,6 +295,8 @@ def test_oversize_reflection_is_rejected_without_overwriting_course_or_grade():
     app.text_area(key='explain_s_q0').set_value('a'*4000)
     next(b for b in app.button if b.label=='Save reflection').click().run()
     assert not app.exception
-    assert any('exceeds its storage limit' in e.value for e in app.error)
+    errors=[e.value for e in app.error]
+    assert "Couldn't save your reflection. Your score is unchanged." in errors
+    assert not any('storage limit' in e or 'metadata' in e for e in errors)
     assert not session_insights(app.session_state['current_course'],'s')
     assert app.session_state['active_practice_insights']['result']['correct_count']==1
