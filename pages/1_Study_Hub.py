@@ -278,14 +278,8 @@ else:
 if learning_radar.radar_enabled(course.course_id):
     render_most_flagged_topics(course, confirmed_key)
 
-pending_count = sum(status_for(course, q.id) == "pending" for q in course.questions)
-if pending_count:
-    st.caption(tr(
-        f"{pending_count} new question needs your check" if pending_count == 1
-        else f"{pending_count} new questions need your check"
-    ))
-    if st.button(tr("Review pending questions"), key=f"open_question_review_{course.course_id}"):
-        st.session_state[f"question_review_open_{course.course_id}"] = True
+# Question review is course maintenance, not a study step: the page does not
+# prompt for it. The tool stays under Course tools for whoever needs it.
 with st.expander(tr("Course tools"), expanded=st.session_state.get(f"question_review_open_{course.course_id}", False)):
     st.caption(tr("Manage questions, account backups and source material when needed."))
     with st.expander(tr("Review and edit questions"), expanded=st.session_state.get(f"question_review_open_{course.course_id}", False)):

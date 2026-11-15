@@ -91,7 +91,7 @@ def test_lab_default_matches_requested_topic():
     assert app.get('tab_container')[0].proto.tab_container.default_tab_index==1
 
 
-def test_review_form_is_collapsed_until_requested():
+def test_review_form_is_collapsed_and_the_page_does_not_prompt_for_it():
     course=calculus()
     app=AppTest.from_file(str(ROOT/'pages/1_Study_Hub.py'))
     app.session_state['current_course']=course
@@ -101,9 +101,11 @@ def test_review_form_is_collapsed_until_requested():
     assert not panel.proto.expanded
     assert app.button_group(key='scope_selection_calculus-i-demo') and not app.multiselect
     assert not app.checkbox
-    app.button(key='open_question_review_calculus-i-demo').click().run()
-    assert not app.exception
-    assert next(e for e in app.expander if e.label=='Review and edit questions').proto.expanded
+    # Reviewing questions is maintenance: no count, no button asking for it.
+    assert not [b for b in app.button if b.key=='open_question_review_calculus-i-demo']
+    assert not any('need your check' in c.value or 'needs your check' in c.value for c in app.caption)
+    # The tool itself is still there, inside Course tools.
+    assert app.selectbox(key='editor_question_calculus-i-demo').options
 
 
 def test_progress_groups_evidence_and_details_into_secondary_tabs():

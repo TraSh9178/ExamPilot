@@ -100,7 +100,9 @@ def test_review_list_shows_plain_status_words_instead_of_internal_codes():
     ]
     assert not any("[" in option for option in options)
     captions = [item.value for item in app.caption]
-    assert "1 new question needs your check" in captions
+    # The page no longer prompts the student to review pending questions.
+    assert not any("needs your check" in text or "need your check" in text for text in captions)
+    assert "Review pending questions" not in [button.label for button in app.button]
     assert "2 questions ready" in captions
     assert not any("legacy" in text.lower() for text in captions)
     assert (
@@ -114,7 +116,7 @@ def test_review_texts_are_translated():
 
     assert not app.exception
     captions = [item.value for item in app.caption]
-    assert "有 1 道新题需要你检查" in captions
+    assert not any("需要你检查" in text for text in captions)
     assert "2 道题可以练习" in captions
     assert app.selectbox(key="editor_question_c1").options[0] == "待检查 · Question 1?"
 

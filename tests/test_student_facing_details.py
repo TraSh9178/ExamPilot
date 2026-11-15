@@ -23,7 +23,7 @@ def test_evidence_uses_learning_details_without_internal_identifiers():
     assert 'Sure' in frames[0]['Confidence'].values
 
 
-def test_course_maintenance_is_grouped_and_opens_for_pending_review():
+def test_course_maintenance_is_grouped_and_stays_closed_with_pending_review():
     from tests.test_learning_flow_ux import calculus
     app = AppTest.from_file(str(ROOT/'pages/1_Study_Hub.py'))
     app.session_state['current_course'] = calculus()
@@ -35,10 +35,9 @@ def test_course_maintenance_is_grouped_and_opens_for_pending_review():
     assert 'Review and edit questions' not in top_labels
     assert 'Save / Restore' not in top_labels and 'Saved course material' not in top_labels
     assert not next(e for e in app.expander if e.label=='Question classification (advanced)').proto.expanded
-    app.button(key='open_question_review_calculus-i-demo').click().run()
-    assert not app.exception
-    assert next(e for e in app.expander if e.label=='Course tools').proto.expanded
-    assert next(e for e in app.expander if e.label=='Review and edit questions').proto.expanded
+    # Pending questions do not put a review prompt on the student's page.
+    assert 'Review pending questions' not in [b.label for b in app.button]
+    assert not next(e for e in app.expander if e.label=='Review and edit questions').proto.expanded
 
 
 def test_saved_session_display_is_readable_and_selection_keeps_stable_ids():
