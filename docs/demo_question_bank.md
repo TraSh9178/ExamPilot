@@ -16,7 +16,7 @@ All added questions are AI-authored drafts marked `pending` in `learning_state.q
 
 The historical Python metadata approval covers only q1–q9; an expansion entry records q10–q30 as pending. No reviewer name or approval date has been invented for the new material. These demo questions have no supplied textbook or uploaded-document page sources, so `source_pages` stays empty.
 
-Load the updated demo from the Dashboard to obtain its revised bank. Already saved account courses are not migrated automatically. Use the course card’s update button to append new content while preserving progress; Calculus also appends new topic cards and graph links. Do not replace a saved course with valuable progress without checking the app's existing course-loading behavior.
+Load the updated demo from the Dashboard to obtain its revised bank. All accounts automatically receive the latest built-in examples after login. Saved courses gain missing content while preserving progress; Calculus also gains new topic cards and graph links. Do not replace a saved course with valuable progress without checking the app's existing course-loading behavior.
 
 ## Validation
 

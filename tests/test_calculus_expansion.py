@@ -104,8 +104,6 @@ def test_dashboard_legacy_upgrade_exposes_new_topics_and_keeps_scope():
     history = {'old-exam': {'session': session, 'questions': old.questions[:1], 'result': result, 'attempts': result['attempts']}}
     app.session_state['practice_history_calculus-i-demo'] = deepcopy(history)
     app.run()
-    assert app.button(key='update_demo_calculus-i-demo').label == 'Add calculus knowledge update'
-    app.button(key='update_demo_calculus-i-demo').click().run()
     assert not app.exception
     assert len(app.session_state['current_course'].topics) == 15
     assert app.session_state['confirmed_scope_calculus-i-demo'] == ['calc_limits']
