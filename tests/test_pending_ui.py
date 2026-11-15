@@ -114,7 +114,10 @@ def test_dashboard_extracts_pdf_and_displays_actual_page_sources(monkeypatch):
     assert document["sources"] == [{"filename": "course.pdf", "page": 1}]
     assert document["pages"][0]["page"] == 1
     assert any("course.pdf · Page 1" in item.value for item in app.caption)
-    assert any("PDF pages (1)" in item.label for item in app.expander)
+    # Page and character counts of the extracted material are not shown.
+    assert not any("PDF pages" in item.label for item in app.expander)
+    assert not any("Extracted text:" in item.value for item in app.caption)
+    assert not any(" characters" in item.value for item in app.markdown)
 
 
 def test_dashboard_image_ocr_uses_image_labels_and_updated_copy(monkeypatch):
@@ -131,7 +134,7 @@ def test_dashboard_image_ocr_uses_image_labels_and_updated_copy(monkeypatch):
     click_extract(app)
 
     assert not app.exception
-    assert any("Image (1)" in item.label for item in app.expander)
+    assert not any("Image (1)" in item.label for item in app.expander)
     assert not any("PDF pages" in item.label for item in app.expander)
     assert any("scan.png · Image 1" in item.value for item in app.caption)
     assert any(
@@ -263,7 +266,7 @@ def test_dashboard_extracts_pptx_and_displays_actual_slide_sources(monkeypatch):
     assert any(
         "slides.pptx · Slide 1" == item.value for item in app.caption
     )
-    assert any("PPTX slides (1)" == item.label for item in app.expander)
+    assert not any("PPTX slides" in item.label for item in app.expander)
     assert any("50,000 characters" in item.value for item in app.caption)
     assert any(
         "UTF-8 TXT" in item.value
@@ -278,16 +281,17 @@ def test_single_scope_selector_requires_reconfirmation():
     app.session_state["current_course"] = course
     app.run()
     assert not any(item.key and item.key.startswith("topic_selected_") for item in app.checkbox)
-    app.multiselect[0].set_value(["checkbox-course-topic"]).run()
+    scope = lambda: app.button_group(key="scope_selection_checkbox-course")
+    scope().set_value(["checkbox-course-topic"]).run()
     assert not app.exception
-    assert app.multiselect[0].value == ["checkbox-course-topic"]
+    assert scope().value == ["checkbox-course-topic"]
     next(button for button in app.button if button.label == "Confirm exam scope").click().run()
     assert app.session_state["confirmed_scope_checkbox-course"] == ["checkbox-course-topic"]
-    app.multiselect[0].set_value([]).run()
+    scope().set_value([]).run()
     assert not app.exception
-    assert app.multiselect[0].value == []
+    assert scope().value == []
     assert "confirmed_scope_checkbox-course" not in app.session_state
-    app.multiselect[0].set_value(["checkbox-course-topic"]).run()
+    scope().set_value(["checkbox-course-topic"]).run()
     assert not app.exception
-    assert app.multiselect[0].value == ["checkbox-course-topic"]
+    assert scope().value == ["checkbox-course-topic"]
     assert "confirmed_scope_checkbox-course" not in app.session_state
