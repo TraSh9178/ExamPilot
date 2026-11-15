@@ -23,7 +23,7 @@ def expected_sidebar_titles() -> list[str]:
     titles = ["Home", "Study Plan", "Practice", "Progress", "Knowledge Map"]
     if RADAR_PAGE.exists():
         titles.append("Learning Radar")
-    return [*titles, "Concept Lab", "Export to Anki"]
+    return [*titles, "Concept Lab", "Flashcards"]
 
 
 def record_calls(monkeypatch, name: str) -> list[tuple[tuple, dict]]:
@@ -110,7 +110,7 @@ def test_learning_radar_is_left_out_until_its_page_file_exists(monkeypatch):
     visible, _, _ = sidebar_navigation(monkeypatch)
 
     assert "Learning Radar" not in [page.title for page in visible]
-    assert [page.title for page in visible][-2:] == ["Concept Lab", "Export to Anki"]
+    assert [page.title for page in visible][-2:] == ["Concept Lab", "Flashcards"]
 
 
 def test_sidebar_titles_follow_the_interface_language(monkeypatch):
@@ -122,7 +122,7 @@ def test_sidebar_titles_follow_the_interface_language(monkeypatch):
     (pages,), _ = calls[-1]
     titles = [page.title for page in pages if page.visibility == "visible"]
     assert titles[:3] == ["首页", "学习计划", "练习"]
-    assert titles[-1] == "导出到 Anki"
+    assert titles[-1] == "复习卡片"
 
 
 def test_brand_logo_and_responsive_sidebar_are_configured(monkeypatch):

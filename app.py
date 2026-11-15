@@ -93,8 +93,9 @@ pages += [
     ),
     st.Page(
         "pages/5_Export_Anki.py",
-        title=tr("Export to Anki"),
-        icon=":material/download:",
+        title=tr("Flashcards"),
+        icon=":material/style:",
+        url_path="Flashcards",
     ),
 ]
 
