@@ -3,20 +3,16 @@ from pathlib import Path
 
 import streamlit as st
 from components.knowledge_graph import (
-    RADAR_REASON_OPTIONS,
     concept_lab_available,
     render_knowledge_graph,
-    forget_course_radar,
     get_selected_topic_details,
     load_course_radar,
     radar_node_badges,
-    radar_reason_label,
     render_radar_panel,
-    render_reason_hint,
-    render_saved_reason,
     render_topic_details,
     render_topic_radar,
 )
+from components.radar_chart import render_stuck_buttons
 from services import learning_radar
 from services.account_sync import save_course_to_account
 from services.ai_service import generate_relationships
@@ -99,7 +95,6 @@ local_view = local_column.toggle(
     help=tr("Show only this topic and its directly connected neighbors."),
 )
 view_course = local_graph(course, focus_id) if focus_id and local_view else course
-st.caption(tr(f"Showing {len(view_course.topics)} of {len(course.topics)} topics · Connections: {len(view_course.relationships)}"))
 
 reset_key = f"graph_view_reset_{course.course_id}_{mode}"
 zoom_key = f"graph_zoom_{course.course_id}_{mode}"
@@ -152,10 +147,9 @@ except ValueError as error:
 # page, so the course radar and the user's flags are reused for a short time.
 radar = None
 radar_user = None
-radar_user_flags = {}
 if learning_radar.radar_enabled(course.course_id):
     radar_user = current_user(st.session_state)
-    radar, radar_user_flags = load_course_radar(
+    radar, _ = load_course_radar(
         st.session_state,
         course.course_id,
         radar_user.user_id if radar_user is not None else None,
@@ -202,6 +196,8 @@ with graph_column:
                     radar,
                     learning_radar.top_hard_topics(radar, limit=len(course.topics)),
                     topic_names,
+                    course=course,
+                    focus_topic_id=focus_id,
                 )
 
     if not course.relationships:
@@ -283,11 +279,13 @@ with graph_column:
                         count = len(suggestions)
                         noun = "connection" if count == 1 else "connections"
                         if sync_outcome is not None and not sync_outcome.success:
+                            # The stored reason may describe the database, so
+                            # the student sees a short notice instead.
                             st.session_state[notice_state_key] = (
                                 "warning",
                                 "Connections kept in this session but not saved "
-                                f"to your account: {sync_outcome.message} Use "
-                                "Save on the Study Plan page to retry.",
+                                "to your account. Use Save on the Study Plan "
+                                "page to retry.",
                             )
                         else:
                             st.session_state[notice_state_key] = (
@@ -339,7 +337,6 @@ with details_column:
                     st.caption(tr(label) + "：" + ", ".join(topic_names[item] for item in links[group]))
             if not any(links.values()):
                 st.caption(tr("No connections recorded for this topic."))
-            st.caption(tr("These are course-provided relationships, not a diagnosis of your understanding."))
             for linked_id in links["prerequisites"]:
                 if st.button(tr("Review ") + topic_names[linked_id], key=f"graph_prerequisite_{course.course_id}_{linked_id}"):
                     st.session_state[pending_key] = linked_id
@@ -356,6 +353,16 @@ with details_column:
             if radar is not None:
                 st.divider()
                 st.markdown(tr("**Learning Radar**"))
+                if radar_user is not None:
+                    # One click flags the topic with a reason; to change the
+                    # reason, remove the flag and flag again.
+                    render_stuck_buttons(
+                        st.session_state,
+                        course.course_id,
+                        selected_node_id,
+                        radar_user.user_id,
+                        key=f"radar_flag_{course.course_id}_{selected_node_id}",
+                    )
                 render_topic_radar(
                     radar.topics.get(selected_node_id),
                     prerequisite_names=[
@@ -363,42 +370,9 @@ with details_column:
                         for item in links["prerequisites"]
                         if item in topic_names
                     ],
+                    # The buttons above already show the count.
+                    show_count=radar_user is None,
                 )
-                if radar_user is not None:
-                    already_flagged = selected_node_id in radar_user_flags
-                    if already_flagged:
-                        # To change the reason, remove the flag and flag again.
-                        reason = radar_user_flags[selected_node_id]
-                        render_saved_reason(reason)
-                    else:
-                        reason = st.selectbox(
-                            tr("Why are you stuck?"),
-                            options=RADAR_REASON_OPTIONS,
-                            format_func=lambda value: tr(radar_reason_label(value)),
-                            key=f"radar_reason_{course.course_id}_{selected_node_id}",
-                        )
-                        render_reason_hint(reason)
-                    if st.button(
-                        tr("Not stuck anymore") if already_flagged else tr("I'm stuck here"),
-                        key=f"radar_flag_{course.course_id}_{selected_node_id}",
-                    ):
-                        if already_flagged:
-                            result = learning_radar.clear_flag(
-                                radar_user.user_id, course.course_id, selected_node_id
-                            )
-                        else:
-                            result = learning_radar.set_flag(
-                                radar_user.user_id,
-                                course.course_id,
-                                selected_node_id,
-                                reason,
-                            )
-                        if result.success:
-                            # Show the new count right away instead of waiting
-                            # for the cache to expire.
-                            forget_course_radar(st.session_state, course.course_id)
-                            st.rerun()
-                        st.warning(tr(result.message))
                 if concept_lab_available(course.course_id, selected_node_id):
                     if st.button(
                         tr("Open Concept Lab"),

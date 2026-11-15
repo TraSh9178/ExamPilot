@@ -1,4 +1,5 @@
 import json
+import re
 from contextlib import nullcontext
 from pathlib import Path
 from unittest.mock import Mock
@@ -636,7 +637,7 @@ def test_render_topic_details_displays_topic_statistics(monkeypatch):
     accuracy_column.metric.assert_called_once_with("Accuracy", "66.67%")
 
 
-def test_render_topic_details_shows_missing_pages_message(monkeypatch):
+def test_render_topic_details_shows_no_source_line_without_pages(monkeypatch):
     caption = Mock()
     monkeypatch.setattr(
         knowledge_graph.st,
@@ -658,7 +659,8 @@ def test_render_topic_details_shows_missing_pages_message(monkeypatch):
         }
     )
 
-    caption.assert_called_once_with("Source pages not provided")
+    # Storage bookkeeping is not shown to students.
+    caption.assert_not_called()
 
 
 def test_render_topic_details_prompts_when_no_topic_is_selected(monkeypatch):
@@ -945,6 +947,43 @@ def _radar_buttons(app):
     ]
 
 
+# One-click reason buttons, in display order, then the "no reason" button.
+REASON_BUTTON_LABELS = [
+    "Concept unclear",
+    "Calculation errors",
+    "Can't understand the question",
+    "Don't know where to start",
+    "Just stuck",
+]
+GENERIC_FAILURE = "Couldn't update Learning Radar. Try again in a moment."
+
+
+def _flag_key(topic_id, course_id=CALCULUS_ID):
+    return f"radar_flag_{course_id}_{topic_id}"
+
+
+def _reason_button(app, topic_id, reason=None):
+    suffix = "no_reason" if reason is None else reason
+    return app.button(key=f"{_flag_key(topic_id)}_{suffix}")
+
+
+def _clear_button(app, topic_id):
+    return app.button(key=f"{_flag_key(topic_id)}_clear")
+
+
+def _reason_button_labels(app, topic_id):
+    prefix = f"{_flag_key(topic_id)}_"
+    return [
+        button.label for button in app.button
+        if button.key and button.key.startswith(prefix)
+        and not button.key.endswith("_clear")
+    ]
+
+
+def _has_clear_button(app, topic_id):
+    return any(button.key == f"{_flag_key(topic_id)}_clear" for button in app.button)
+
+
 def test_radar_panel_lists_flagged_topics_most_flagged_first(monkeypatch):
     radar = RadarFake(
         monkeypatch,
@@ -1040,13 +1079,14 @@ def test_non_demo_course_shows_no_radar_ui_and_fetches_nothing(monkeypatch):
 
 
 @pytest.mark.parametrize("live", [True, False])
-def test_radar_panel_reports_when_live_flags_are_unavailable(monkeypatch, live):
+def test_radar_panel_never_mentions_the_database(monkeypatch, live):
     RadarFake(monkeypatch, [_topic("calc_derivatives", sample=8)], live=live)
 
     app = _graph_page(_calculus_course())
 
     assert not app.exception
-    assert ("Live flags are unavailable right now." in _captions(app)) is (not live)
+    assert "Live flags are unavailable right now." not in _captions(app)
+    assert "1. **Derivatives** — 8 students are stuck here" in _markdown(app)
 
 
 @pytest.mark.parametrize("has_sample", [True, False])
@@ -1116,12 +1156,14 @@ def test_signed_in_user_can_flag_topic_and_sees_new_count(monkeypatch):
     app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
 
     assert not app.exception
-    button = app.button(key=f"radar_flag_{CALCULUS_ID}_calc_derivatives")
-    assert button.label == "I'm stuck here"
-    assert "4 students are stuck here" in _markdown(app)
+    assert _reason_button_labels(app, "calc_derivatives") == REASON_BUTTON_LABELS
+    assert "I'm stuck here because…" in _captions(app)
+    assert not _has_clear_button(app, "calc_derivatives")
+    # The count appears once, above the buttons.
+    assert _markdown(app).count("4 students are stuck here") == 1
     assert radar.calls["get_user_flags"] == [(TEST_USER.user_id, CALCULUS_ID)]
 
-    button.click().run()
+    _reason_button(app, "calc_derivatives").click().run()
 
     assert not app.exception
     assert radar.calls["set_flag"] == [
@@ -1131,9 +1173,9 @@ def test_signed_in_user_can_flag_topic_and_sees_new_count(monkeypatch):
     assert len(radar.calls["get_course_radar"]) == 2
     assert len(radar.calls["get_user_flags"]) == 2
     assert "5 students are stuck here" in _markdown(app)
-    assert app.button(
-        key=f"radar_flag_{CALCULUS_ID}_calc_derivatives"
-    ).label == "Not stuck anymore"
+    assert "You marked this topic." in _markdown(app)
+    assert _clear_button(app, "calc_derivatives").label == "Not stuck anymore"
+    assert _reason_button_labels(app, "calc_derivatives") == []
     assert app.warning == []
 
 
@@ -1147,7 +1189,9 @@ def test_flagged_topic_offers_not_stuck_anymore(monkeypatch):
     app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
 
     assert not app.exception
-    button = app.button(key=f"radar_flag_{CALCULUS_ID}_calc_derivatives")
+    assert "You marked this topic." in _markdown(app)
+    assert _reason_button_labels(app, "calc_derivatives") == []
+    button = _clear_button(app, "calc_derivatives")
     assert button.label == "Not stuck anymore"
 
     button.click().run()
@@ -1159,32 +1203,37 @@ def test_flagged_topic_offers_not_stuck_anymore(monkeypatch):
     assert radar.calls["set_flag"] == []
     assert len(radar.calls["get_course_radar"]) == 2
     assert "3 students are stuck here" in _markdown(app)
-    assert app.button(
-        key=f"radar_flag_{CALCULUS_ID}_calc_derivatives"
-    ).label == "I'm stuck here"
+    assert "You marked this topic." not in _markdown(app)
+    assert _reason_button_labels(app, "calc_derivatives") == REASON_BUTTON_LABELS
 
 
-def test_failed_flag_shows_message_and_does_not_raise(monkeypatch):
-    message = "Live flags are unavailable right now. Please try again later."
+@pytest.mark.parametrize("flagged", [False, True])
+def test_failed_write_shows_a_generic_message_and_does_not_raise(monkeypatch, flagged):
+    message = "Learning Radar is not set up in the database yet; your flag was not saved."
     radar = RadarFake(
         monkeypatch,
         [_topic("calc_derivatives", real=4)],
+        user_flags={"calc_derivatives": "concept"} if flagged else None,
         write_result=PersistenceResult(success=False, message=message),
     )
 
     app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
-    app.button(key=f"radar_flag_{CALCULUS_ID}_calc_derivatives").click().run()
+    if flagged:
+        _clear_button(app, "calc_derivatives").click().run()
+    else:
+        _reason_button(app, "calc_derivatives", "calculation").click().run()
 
     assert not app.exception
-    assert radar.calls["set_flag"] == [
+    write = "clear_flag" if flagged else "set_flag"
+    assert radar.calls[write] == [
         (TEST_USER.user_id, CALCULUS_ID, "calc_derivatives")
     ]
-    assert [item.value for item in app.warning] == [message]
+    assert [item.value for item in app.warning] == [GENERIC_FAILURE]
+    shown = _markdown(app) + _captions(app) + _infos(app)
+    assert not any("database" in value for value in shown)
     assert len(radar.calls["get_course_radar"]) == 1
     assert "4 students are stuck here" in _markdown(app)
-    assert app.button(
-        key=f"radar_flag_{CALCULUS_ID}_calc_derivatives"
-    ).label == "I'm stuck here"
+    assert _has_clear_button(app, "calc_derivatives") is flagged
 
 
 def test_no_flag_button_without_signed_in_user(monkeypatch):
@@ -1225,13 +1274,6 @@ WORDING_HINT_TEXT = (
     "Turn on Accessibility in the sidebar for simpler wording and Chinese key terms."
 )
 LIMITS_HINT_TEXT = "Many students are stuck here. Reviewing Limits first may help."
-REASON_DISPLAY_LABELS = [
-    "No specific reason",
-    "Concept unclear",
-    "Calculation errors",
-    "Can't understand the question",
-    "Don't know where to start",
-]
 _NOT_PASSED = object()
 
 
@@ -1279,21 +1321,6 @@ def _econ_course():
     )
 
 
-def _reason_picker(app, topic_id, course_id=CALCULUS_ID):
-    return app.selectbox(key=f"radar_reason_{course_id}_{topic_id}")
-
-
-def _reason_picker_keys(app):
-    return [
-        box.key for box in app.selectbox
-        if box.key and box.key.startswith("radar_reason_")
-    ]
-
-
-def _flag_button(app, topic_id):
-    return app.button(key=f"radar_flag_{CALCULUS_ID}_{topic_id}")
-
-
 def _infos(app):
     return [item.value for item in app.info]
 
@@ -1312,14 +1339,14 @@ def _record_graph_nodes(monkeypatch):
     return rendered
 
 
-def test_reason_options_list_no_reason_first_then_every_code():
+def test_reason_options_list_every_code_then_just_stuck():
     assert knowledge_graph.RADAR_REASON_OPTIONS == (
-        None, "concept", "calculation", "wording", "start",
+        "concept", "calculation", "wording", "start", None,
     )
     assert [
         knowledge_graph.radar_reason_label(option)
         for option in knowledge_graph.RADAR_REASON_OPTIONS
-    ] == REASON_DISPLAY_LABELS
+    ] == REASON_BUTTON_LABELS
 
 
 @pytest.mark.parametrize(
@@ -1390,20 +1417,29 @@ def test_concept_lab_available_only_for_the_two_calculus_topics(
     assert knowledge_graph.concept_lab_available(course_id, topic_id) is available
 
 
+def test_reason_selectbox_is_gone(monkeypatch):
+    RadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
+
+    app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
+
+    assert not app.exception
+    assert not any(
+        box.key and box.key.startswith("radar_reason_") for box in app.selectbox
+    )
+    assert not any(box.label == "Why are you stuck?" for box in app.selectbox)
+
+
 @pytest.mark.parametrize("reason", ["concept", "calculation", "wording", "start"])
-def test_chosen_reason_reaches_set_flag_and_is_shown_once_flagged(monkeypatch, reason):
+def test_one_click_reason_reaches_set_flag_and_is_shown_once_flagged(monkeypatch, reason):
     radar = ReasonRadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
 
     app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
 
     assert not app.exception
-    picker = _reason_picker(app, "calc_derivatives")
-    assert picker.label == "Why are you stuck?"
-    assert picker.options == REASON_DISPLAY_LABELS
-    assert picker.value is None
+    button = _reason_button(app, "calc_derivatives", reason)
+    assert button.label == learning_radar.REASON_LABELS[reason]
 
-    picker.set_value(reason).run()
-    _flag_button(app, "calc_derivatives").click().run()
+    button.click().run()
 
     assert not app.exception
     assert radar.flag_reasons == [reason]
@@ -1411,31 +1447,30 @@ def test_chosen_reason_reaches_set_flag_and_is_shown_once_flagged(monkeypatch, r
         (TEST_USER.user_id, CALCULUS_ID, "calc_derivatives")
     ]
     assert f"Your reason: {learning_radar.REASON_LABELS[reason]}" in _captions(app)
-    assert _flag_button(app, "calc_derivatives").label == "Not stuck anymore"
-    assert _reason_picker_keys(app) == []
+    assert _clear_button(app, "calc_derivatives").label == "Not stuck anymore"
+    assert _reason_button_labels(app, "calc_derivatives") == []
 
 
-@pytest.mark.parametrize("pick_another_first", [False, True])
-def test_no_specific_reason_sends_none(monkeypatch, pick_another_first):
+def test_just_stuck_sends_none(monkeypatch):
     radar = ReasonRadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
 
     app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
-    if pick_another_first:
-        _reason_picker(app, "calc_derivatives").set_value("concept").run()
-        _reason_picker(app, "calc_derivatives").set_value(None).run()
-    _flag_button(app, "calc_derivatives").click().run()
+    button = _reason_button(app, "calc_derivatives")
+    assert button.label == "Just stuck"
+    button.click().run()
 
     assert not app.exception
     assert radar.flag_reasons == [None]
     assert radar.user_flags == {"calc_derivatives": None}
-    assert "Your reason: No specific reason" in _captions(app)
+    assert "You marked this topic." in _markdown(app)
+    assert not any(value.startswith("Your reason:") for value in _captions(app))
 
 
 @pytest.mark.parametrize(
-    ("saved", "label"),
-    [("calculation", "Calculation errors"), (None, "No specific reason")],
+    ("saved", "caption"),
+    [("calculation", "Your reason: Calculation errors"), (None, None)],
 )
-def test_saved_reason_is_shown_and_changed_by_flagging_again(monkeypatch, saved, label):
+def test_saved_reason_is_shown_and_changed_by_flagging_again(monkeypatch, saved, caption):
     radar = ReasonRadarFake(
         monkeypatch,
         [_topic("calc_derivatives", real=4)],
@@ -1445,31 +1480,31 @@ def test_saved_reason_is_shown_and_changed_by_flagging_again(monkeypatch, saved,
     app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
 
     assert not app.exception
-    assert f"Your reason: {label}" in _captions(app)
-    assert _flag_button(app, "calc_derivatives").label == "Not stuck anymore"
-    assert _reason_picker_keys(app) == []
+    reason_captions = [value for value in _captions(app) if value.startswith("Your reason:")]
+    assert reason_captions == ([caption] if caption else [])
+    assert _clear_button(app, "calc_derivatives").label == "Not stuck anymore"
+    assert _reason_button_labels(app, "calc_derivatives") == []
 
     # Changing the reason: remove the flag, then flag again with a new one.
-    _flag_button(app, "calc_derivatives").click().run()
+    _clear_button(app, "calc_derivatives").click().run()
 
     assert not app.exception
     assert radar.calls["clear_flag"] == [
         (TEST_USER.user_id, CALCULUS_ID, "calc_derivatives")
     ]
     assert not any(value.startswith("Your reason:") for value in _captions(app))
-    assert _reason_picker(app, "calc_derivatives").value is None
+    assert _reason_button_labels(app, "calc_derivatives") == REASON_BUTTON_LABELS
 
-    _reason_picker(app, "calc_derivatives").set_value("start").run()
-    _flag_button(app, "calc_derivatives").click().run()
+    _reason_button(app, "calc_derivatives", "start").click().run()
 
     assert not app.exception
     assert radar.flag_reasons == ["start"]
     assert "Your reason: Don't know where to start" in _captions(app)
-    assert f"Your reason: {label}" not in _captions(app)
+    assert _has_clear_button(app, "calc_derivatives")
 
 
 @pytest.mark.parametrize(
-    ("picked", "shown"),
+    ("clicked", "shown"),
     [
         ("wording", True),
         ("concept", False),
@@ -1478,26 +1513,26 @@ def test_saved_reason_is_shown_and_changed_by_flagging_again(monkeypatch, saved,
         (None, False),
     ],
 )
-def test_accessibility_pointer_follows_picked_reason(monkeypatch, picked, shown):
+def test_accessibility_pointer_follows_clicked_reason(monkeypatch, clicked, shown):
     ReasonRadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
 
     app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
     assert WORDING_HINT_TEXT not in _infos(app)
 
-    _reason_picker(app, "calc_derivatives").set_value(picked).run()
+    _reason_button(app, "calc_derivatives", clicked).click().run()
 
     assert not app.exception
     assert _infos(app).count(WORDING_HINT_TEXT) == (1 if shown else 0)
 
 
-def test_accessibility_pointer_disappears_when_another_reason_is_picked(monkeypatch):
+def test_accessibility_pointer_disappears_after_unflagging(monkeypatch):
     ReasonRadarFake(monkeypatch, [_topic("calc_derivatives", real=4)])
 
     app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
-    _reason_picker(app, "calc_derivatives").set_value("wording").run()
+    _reason_button(app, "calc_derivatives", "wording").click().run()
     assert WORDING_HINT_TEXT in _infos(app)
 
-    _reason_picker(app, "calc_derivatives").set_value("concept").run()
+    _clear_button(app, "calc_derivatives").click().run()
 
     assert not app.exception
     assert WORDING_HINT_TEXT not in _infos(app)
@@ -1517,7 +1552,7 @@ def test_accessibility_pointer_follows_saved_reason(monkeypatch, saved, shown):
     app = _graph_page(_calculus_course(), signed_in=True, focus="calc_derivatives")
 
     assert not app.exception
-    assert _flag_button(app, "calc_derivatives").label == "Not stuck anymore"
+    assert _clear_button(app, "calc_derivatives").label == "Not stuck anymore"
     assert _infos(app).count(WORDING_HINT_TEXT) == (1 if shown else 0)
 
 
@@ -1531,8 +1566,8 @@ def test_signed_out_user_sees_no_reason_controls(monkeypatch):
 
     assert not app.exception
     assert "4 students are stuck here" in _markdown(app)
-    assert _reason_picker_keys(app) == []
     assert _radar_buttons(app) == []
+    assert "I'm stuck here because…" not in _captions(app)
     assert not any(value.startswith("Your reason:") for value in _captions(app))
     assert WORDING_HINT_TEXT not in _infos(app)
     assert radar.calls["get_user_flags"] == []
@@ -1778,7 +1813,114 @@ def test_non_demo_course_shows_no_reason_hint_or_concept_lab_controls(monkeypatc
     assert all(
         calls == [] for name, calls in radar.calls.items() if name != "radar_enabled"
     )
-    assert _reason_picker_keys(app) == []
+    assert _radar_buttons(app) == []
     assert _concept_lab_buttons(app) == []
     assert not any(value.startswith("Your reason:") for value in _captions(app))
     assert _infos(app) == []
+    assert not any("<svg" in value for value in _markdown(app))
+
+
+# --- Learning Radar chart and clean-up on the Knowledge Map ----------------
+
+
+def _svgs(app):
+    return [value for value in _markdown(app) if "<svg" in value]
+
+
+@pytest.mark.parametrize(
+    ("focus", "highlighted"),
+    [(None, None), ("calc_limits", "Limits")],
+)
+def test_radar_panel_draws_the_chart_above_the_ranking(monkeypatch, focus, highlighted):
+    RadarFake(
+        monkeypatch,
+        [_topic("calc_derivatives", real=8), _topic("calc_limits", real=2, display=None)],
+        ranked=["calc_derivatives", "calc_limits"],
+        has_sample=True,
+    )
+
+    app = _graph_page(_calculus_course(), focus=focus)
+
+    assert not app.exception
+    markdown = _markdown(app)
+    (svg,) = _svgs(app)
+    ranking = next(value for value in markdown if value.startswith("1. "))
+    assert markdown.index(svg) < markdown.index(ranking)
+    # The demo slice has three topics; the hidden count is drawn as 0.
+    assert 'aria-label="Limits: 0, Derivatives: 8, Applications of Derivatives: 0"' in svg
+    focus_labels = re.findall(
+        r'<text class="radar-label radar-label-focus"[^>]*><title>([^<]*)</title>', svg
+    )
+    assert focus_labels == ([highlighted] if highlighted else [])
+    assert "Students stuck per topic" in _captions(app)
+    # The panel keeps one sample note and draws no second one for the chart.
+    assert _captions(app).count("Includes sample data") == 1
+
+
+def test_radar_panel_chart_shows_only_the_grid_when_nothing_is_flagged(monkeypatch):
+    RadarFake(monkeypatch, [])
+
+    app = _graph_page(_calculus_course())
+
+    assert not app.exception
+    (svg,) = _svgs(app)
+    assert "radar-shape" not in svg
+    assert "radar-point" not in svg
+    assert _captions(app).count("No topics have been flagged yet.") == 1
+
+
+def test_knowledge_map_hides_storage_and_bookkeeping_captions(monkeypatch):
+    RadarFake(monkeypatch, [_topic("calc_derivatives", real=4)], live=False)
+    course = _calculus_course().model_copy(
+        update={
+            "topics": [
+                topic.model_copy(update={"source_pages": []})
+                for topic in _calculus_course().topics
+            ]
+        }
+    )
+
+    app = _graph_page(course, signed_in=True, focus="calc_derivatives")
+    app.toggle(key=f"graph_local_{CALCULUS_ID}").set_value(True).run()
+
+    assert not app.exception
+    captions = _captions(app)
+    assert not any(value.startswith("Showing ") for value in captions)
+    assert "Source pages not provided" not in captions
+    assert (
+        "These are course-provided relationships, not a diagnosis of your understanding."
+        not in captions
+    )
+    assert "Live flags are unavailable right now." not in captions
+    # The rest of the selected topic's radar section stays.
+    assert "4 students are stuck here" in _markdown(app)
+    assert "**Connected topics**" in _markdown(app)
+
+
+def test_failed_account_save_shows_no_database_reason(monkeypatch):
+    from services import account_sync
+    from services.relationship_suggestions import suggestions_key
+
+    reason = "connection to server at db.internal (10.0.0.5) failed"
+    monkeypatch.setattr(
+        account_sync,
+        "save_course_to_account",
+        lambda state, course: account_sync.SyncOutcome(False, reason),
+    )
+    course = _custom_course("course-1", [("topic-1", "Limits"), ("topic-2", "Series")])
+    app = AppTest.from_file(str(PAGE_PATH))
+    app.session_state["current_course"] = course
+    app.session_state["course_document_course-1"] = {"ok": True, "text": "Notes."}
+    app.session_state[suggestions_key("course-1")] = [
+        {"from_topic": "topic-1", "to_topic": "topic-2", "type": "related"}
+    ]
+    app.run()
+
+    app.button(key="apply_relationships_course-1").click().run()
+
+    assert not app.exception
+    assert [item.value for item in app.warning] == [
+        "Connections kept in this session but not saved to your account. "
+        "Use Save on the Study Plan page to retry."
+    ]
+    assert not any(reason in item.value for item in app.warning)
