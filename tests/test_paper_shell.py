@@ -285,6 +285,40 @@ def test_stacked_blocks_keep_a_gap_between_them():
     assert "margin-bottom: .5rem;" in css_rule(shell, card_row)
 
 
+def test_loading_shows_the_brand_plane_instead_of_a_round_spinner():
+    shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
+
+    # The inlined plane is the brand mark: same polygons, same colours.
+    plane = re.search(r'--paper-plane: url\("data:image/svg\+xml,([^"]+)"\);', shell)
+    assert plane
+    brand = (ASSETS / "brand-plane.svg").read_text(encoding="utf-8")
+    polygons = re.findall(r'<polygon points="([^"]+)" fill="#([0-9A-F]{6})"/>', brand)
+    assert len(polygons) == 3
+    for points, fill in polygons:
+        assert f"points='{points}' fill='%23{fill}'" in plane.group(1)
+
+    # st.spinner: no ring, the plane flies on a short track.
+    ring = css_rule(shell, '[data-testid="stSpinner"] [data-testid="stSpinnerIcon"]')
+    assert "border: 0;" in ring and "animation: none;" in ring
+    flying = css_rule(shell, '[data-testid="stSpinner"] [data-testid="stSpinnerIcon"]::after')
+    assert "var(--paper-plane)" in flying and "paper-plane-patrol" in flying
+
+    # App running: Streamlit's figure is hidden and one plane crosses the window,
+    # unless a spinner on the page already shows one.
+    assert "display: none;" in css_rule(shell, '[data-testid="stStatusWidgetRunningIcon"]')
+    crossing = css_rule(
+        shell,
+        '[data-testid="stApp"]:has([data-testid="stStatusWidgetRunningIcon"])'
+        ':not(:has([data-testid="stSpinner"])) [data-testid="stHeader"]::after',
+    )
+    assert "var(--paper-plane)" in crossing and "paper-plane-crossing" in crossing
+    assert "pointer-events: none;" in crossing
+    for name in ("paper-plane-patrol", "paper-plane-crossing"):
+        assert f"@keyframes {name} {{" in shell
+    reduced = shell[shell.index("@media (prefers-reduced-motion: reduce)"):]
+    assert reduced.count("animation: none;") == 2
+
+
 def test_sidebar_hills_move_to_the_window_corner_when_the_sidebar_is_collapsed():
     shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
     main = '[data-testid="stMain"]'

@@ -730,3 +730,94 @@ label[data-baseweb="radio"]:focus-within {
   background: var(--paper-panel) !important;
   border-color: #D9CFC2 !important;
 }
+
+/* ---- Loading: a paper plane instead of a spinner --------------------------- */
+/* The brand plane (assets/brand-plane.svg), inlined so the sheet stays one file. */
+:root {
+  --paper-plane: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 348'%3E%3Cpolygon points='28,158 436,34 140,212' fill='%23F4B45B'/%3E%3Cpolygon points='436,34 238,302 150,224' fill='%235F849F'/%3E%3Cpolygon points='126,230 170,256 130,296' fill='%235F849F'/%3E%3C/svg%3E");
+}
+
+/* Out and back along a short track, turning round at each end. */
+@keyframes paper-plane-patrol {
+  0% { transform: translate(0, 0) scaleX(1); }
+  22% { transform: translate(1.4rem, -.25rem) scaleX(1); }
+  45% { transform: translate(2.8rem, 0) scaleX(1); }
+  50% { transform: translate(2.8rem, 0) scaleX(-1); }
+  72% { transform: translate(1.4rem, -.25rem) scaleX(-1); }
+  95% { transform: translate(0, 0) scaleX(-1); }
+  100% { transform: translate(0, 0) scaleX(1); }
+}
+
+/* The same trip across the whole window. */
+@keyframes paper-plane-crossing {
+  0% { transform: translate(8vw, 0) scaleX(1); }
+  24% { transform: translate(46vw, -.25rem) scaleX(1); }
+  47% { transform: translate(calc(92vw - 1.6rem), 0) scaleX(1); }
+  50% { transform: translate(calc(92vw - 1.6rem), 0) scaleX(-1); }
+  74% { transform: translate(46vw, -.25rem) scaleX(-1); }
+  97% { transform: translate(8vw, 0) scaleX(-1); }
+  100% { transform: translate(8vw, 0) scaleX(1); }
+}
+
+/* st.spinner: the round spinner gives way to the plane on its track. The
+   icon's holder is widened to the track, so the message starts after it. */
+[data-testid="stSpinner"] span:has(> [data-testid="stSpinnerIcon"]) {
+  flex-shrink: 0;
+  justify-content: flex-start;
+  width: 4.9rem;
+  height: 1.5rem;
+}
+
+[data-testid="stSpinner"] [data-testid="stSpinnerIcon"] {
+  position: relative;
+  flex-shrink: 0;
+  width: 4.9rem;
+  height: 1.5rem;
+  border: 0;
+  border-radius: 0;
+  animation: none;
+}
+
+[data-testid="stSpinner"] [data-testid="stSpinnerIcon"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2.1rem;
+  height: 1.5rem;
+  background: var(--paper-plane) center / contain no-repeat;
+  animation: paper-plane-patrol 2s ease-in-out infinite;
+}
+
+/* While the app is working, the plane crosses the window just under the
+   header controls, and Streamlit's own running figure (which would sit
+   behind the avatar) is hidden. Streamlit shows that state only after half
+   a second, so quick updates do not flash it. A spinner on the page already
+   has its own plane, so this one stays away then. */
+[data-testid="stStatusWidgetRunningIcon"] {
+  display: none;
+}
+
+[data-testid="stApp"]:has([data-testid="stStatusWidgetRunningIcon"]):not(:has([data-testid="stSpinner"])) [data-testid="stHeader"]::after {
+  content: "";
+  position: absolute;
+  top: 3.2rem;
+  left: 0;
+  width: 1.6rem;
+  height: 1.15rem;
+  background: var(--paper-plane) center / contain no-repeat;
+  pointer-events: none;
+  animation: paper-plane-crossing 3.6s ease-in-out infinite;
+}
+
+/* Reduced motion: the plane is shown, parked. */
+@media (prefers-reduced-motion: reduce) {
+  [data-testid="stSpinner"] [data-testid="stSpinnerIcon"]::after {
+    animation: none;
+  }
+
+  [data-testid="stApp"]:has([data-testid="stStatusWidgetRunningIcon"]):not(:has([data-testid="stSpinner"])) [data-testid="stHeader"]::after {
+    left: calc(50vw - .8rem);
+    animation: none;
+  }
+}
