@@ -1,0 +1,43 @@
+/* Shared primitives -> semantic roles -> component aliases. Also loaded in Pilot's shadow root. */
+:root, :host {
+  --ep-cream-50: #FEF7EF;
+  --ep-cream-100: #FAF3E9;
+  --ep-cream-white: #FFFCF7;
+  --ep-navy-900: #13224F;
+  --ep-slate-700: #586475;
+  --ep-blue-700: #4A6C8A;
+  --ep-blue-800: #3F607C;
+  --ep-rust-700: #9A5426;
+  --ep-line-200: #DED6CA;
+  --ep-space-1: 4px;
+  --ep-space-2: 8px;
+  --ep-space-3: 12px;
+  --ep-space-4: 16px;
+  --ep-space-6: 24px;
+  --ep-space-8: 32px;
+  --ep-radius-control: 10px;
+  --ep-radius-panel: 16px;
+  --ep-font-heading: Georgia, "Times New Roman", serif;
+  --ep-motion-fast: 140ms;
+  --ep-surface-page: var(--ep-cream-50);
+  --ep-surface-panel: var(--ep-cream-white);
+  --ep-surface-subtle: var(--ep-cream-100);
+  --ep-text-primary: var(--ep-navy-900);
+  --ep-text-secondary: var(--ep-slate-700);
+  --ep-action: var(--ep-blue-700);
+  --ep-action-hover: var(--ep-blue-800);
+  --ep-focus: var(--ep-blue-700);
+  --ep-border: var(--ep-line-200);
+  --ep-error-text: #824426;
+  --ep-error-background: #FFF5EE;
+  --ep-error-border: #F4D4C6;
+  --ep-control-border: #948A7D;
+  --ep-focus-subtle: #ADC8F2;
+  --ep-disabled-surface: #F6F8FB;
+  --ep-shadow-entry: 0 3px 12px rgb(19 34 79 / 8%);
+  --ep-shadow-entry-hover: 0 4px 16px rgb(19 34 79 / 12%);
+  --ep-shadow-panel: 0 12px 36px rgb(19 34 79 / 12%);
+  --ep-control-height: 44px;
+  --ep-button-background: var(--ep-action);
+  --ep-panel-background: var(--ep-surface-panel);
+}

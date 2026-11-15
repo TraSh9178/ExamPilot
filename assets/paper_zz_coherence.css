@@ -1,0 +1,47 @@
+/* Quiet shared affordances across the existing paper pages. */
+[data-testid="stApp"] {
+  --exam-muted: var(--ep-text-secondary);
+  --exam-blue: var(--ep-action);
+  --exam-blue-dark: var(--ep-action-hover);
+}
+[data-testid="stMain"] :is(button, input, textarea, [role="tab"]):focus-visible,
+[data-testid="stSidebarNav"] a:focus-visible {
+  outline: 2px solid var(--ep-focus);
+  outline-offset: 3px;
+}
+.st-key-flight_course_context {
+  padding: var(--ep-space-2) 0 var(--ep-space-3);
+  border-bottom: 1px solid var(--ep-border);
+  margin-bottom: var(--ep-space-4);
+}
+.st-key-flight_course_context [data-testid="stCaptionContainer"] { margin: 0; }
+.st-key-study_return_action button { min-height: var(--ep-control-height); }
+.st-key-practice_paused_notice {
+  border-left: 3px solid var(--ep-rust-700);
+  background: var(--ep-surface-subtle);
+  border-radius: var(--ep-radius-control);
+  padding: var(--ep-space-3) var(--ep-space-4);
+  margin-block: var(--ep-space-2) var(--ep-space-4);
+}
+.st-key-practice_paused_notice p { margin: 0; color: var(--ep-text-primary); }
+.flight-clock.is-paused { border-color: var(--ep-rust-700); background: var(--ep-surface-subtle); }
+.flight-waypoint.is-current { display: grid; place-items: center; background: transparent; }
+.flight-waypoint.is-current svg { display: block; width: 26px; height: 22px; }
+[data-testid="stMain"] .st-key-study_return_action button { white-space: normal; }
+@media (max-width: 640px) {
+  .st-key-flight_course_context [data-testid="stHorizontalBlock"] { flex-wrap: wrap; gap: var(--ep-space-2); }
+  .st-key-study_return_action { margin-left: 0; max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flight-waypoint, .tutor-bubble { animation: none !important; transition: none !important; }
+}
+/* On phones the open sidebar owns the screen. Do not cover its collapse
+   control or accessibility menu with fixed account/Pilot controls. */
+@media (max-width: 760px) {
+  [data-testid="stApp"]:has(section[data-testid="stSidebar"][aria-expanded="true"]) :is(.st-key-account_menu, .st-key-floating_tutor) {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  [data-testid="stSidebarCollapseButton"] button,
+  button[data-testid="stExpandSidebarButton"] { min-width: 44px; min-height: 44px; }
+}

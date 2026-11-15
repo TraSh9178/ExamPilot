@@ -601,6 +601,11 @@ _TRANSLATIONS.update({
     "Hide original wording": "收起原始表述",
 })
 
+_TRANSLATIONS.update({
+    "Return to practice": "回到当前练习",
+    "Timer paused. Your answers are kept. Resume above when you are ready.": "计时已暂停，当前答案会保留。准备好后，点击上方“继续”即可。",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),

@@ -1,5 +1,6 @@
 from services.i18n import tr
 from html import escape
+from services.ui_style import BRAND_PLANE
 import time
 
 import streamlit as st
@@ -451,7 +452,7 @@ def render_question_screen(course, active, topic_names):
                     stops = min(len(questions), 12)
                     current_stop = index * (stops - 1) // max(1, len(questions) - 1)
                     markers = "".join(
-                        '<span class="flight-waypoint is-current">✈</span>' if step == current_stop
+                        '<span class="flight-waypoint is-current">' + BRAND_PLANE.read_text(encoding='utf-8') + '</span>' if step == current_stop
                         else '<span class="flight-waypoint"></span>'
                         for step in range(stops)
                     )
@@ -464,6 +465,10 @@ def render_question_screen(course, active, topic_names):
                     gap="xsmall",
                 ):
                     start_focus_controls(active)
+
+            if active.get("focus_timer", {}).get("since") is None:
+                with st.container(key="practice_paused_notice"):
+                    st.markdown('<p role="status">' + escape(tr("Timer paused. Your answers are kept. Resume above when you are ready.")) + '</p>', unsafe_allow_html=True)
 
             if active.get("warning") and index == 0:
                 st.caption(tr(active["warning"]))

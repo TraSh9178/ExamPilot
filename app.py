@@ -13,6 +13,7 @@ from services.auth_ui import render_auth_page
 from services.account_ui import render_account_menu, render_account_page
 from services.accessibility import render_accessibility_controls
 from services.page_registry import existing_focus_pages
+from services.study_navigation import render_study_context
 from services.ui_style import BRAND_LOGO, BRAND_PLANE, apply_app_styles
 from services.tutor_assistant_ui import clear_tutor_browser_state, render_tutor_assistant
 
@@ -145,8 +146,7 @@ with st.sidebar:
 render_account_menu(account_page)
 
 if selected_course := st.session_state.get("current_course"):
-    with st.container(key="flight_course_context"):
-        st.caption(f"{selected_course.course_name}  /  {navigation.title}")
+    render_study_context(selected_course, navigation.url_path, navigation.title)
 
 render_tutor_assistant()
 navigation.run()
