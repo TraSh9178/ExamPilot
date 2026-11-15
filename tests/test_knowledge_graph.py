@@ -933,7 +933,10 @@ def _graph_page(course, *, signed_in=False, focus=None):
 
 
 def _markdown(app):
-    return [item.value for item in app.markdown]
+    # The injected stylesheet is a markdown element too; it is not page content.
+    return [
+        item.value for item in app.markdown if not item.value.lstrip().startswith("<style")
+    ]
 
 
 def _captions(app):
