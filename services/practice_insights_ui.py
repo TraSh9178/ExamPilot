@@ -3,11 +3,13 @@
 from services.i18n import tr
 import time
 from copy import deepcopy
+from html import escape
 
 import streamlit as st
 
 from services.practice_insights import (CONFIDENCE, REASONS, ResponseInsight, analytics,
-    before_submit, focus_question, session_insights, set_session_insights, settle_focus, transfer_session, priority_session)
+    before_submit, clock_text, focus_question, session_insights, session_seconds, set_session_insights,
+    settle_focus, transfer_session, priority_session)
 from services.hints import hint_state_key
 from services.course_state import save_course
 from services.account_sync import save_course_with_history
@@ -35,15 +37,49 @@ def save_rows(course, sid, rows):
     return updated
 
 
+CLOCK_ICON = (
+    '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"'
+    ' stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.25"></circle>'
+    '<path d="M8 4.75V8l2.25 1.5"></path></svg>'
+)
+# paper_practice.css holds this many copies of the clock's keyframes, flight-clock-run-0 and up.
+CLOCK_RESTARTS = 4
+CLOCK_RESTART_KEY = 'practice_clock_restart'
+
+
+def clock_markup(seconds, running, restart=0):
+    """Session clock box. The text is the server value; CSS counts on from --clock-base while running.
+
+    The page keeps the same DOM node across reruns, so its CSS animation would keep its old
+    start time. Each render switches to the next keyframes name, which starts it from zero.
+    """
+    base = int(max(0, seconds))
+    text = clock_text(base)
+    classes = ['flight-clock', 'is-running' if running else 'is-paused', f'restart-{restart % CLOCK_RESTARTS}']
+    if base >= 3600:
+        classes.append('has-hours')
+    return (
+        f'<div class="{" ".join(classes)}" role="timer" aria-label="{escape(tr(f"Session time {text}"))}"'
+        f' style="--clock-base: {base}">'
+        f'<span class="flight-clock-icon" aria-hidden="true">{CLOCK_ICON}</span>'
+        f'<span class="flight-clock-label">{escape(tr("Session"))}</span>'
+        f'<span class="flight-clock-time"><span class="flight-clock-static">{text}</span></span></div>'
+    )
+
+
 def start_focus_controls(active):
+    """Session clock and its one-click pause, in the header above the question."""
     now = time.monotonic()
     if 'focus_timer' not in active:
         focus_question(active, active['questions'][0].id, now)
     settle_focus(active, now)
-    with st.expander(tr('About focus time')):
-        st.caption(tr('Focus time is an estimate for the selected question, capped at 120 seconds between interactions. Pause when taking a break; it does not measure attention.'))
     timer = active['focus_timer']
-    if st.button(tr('Resume focus timer') if timer['since'] is None else tr('Pause focus timer'), key=f"focus_pause_{active['session'].session_id}"):
+    running = timer['since'] is not None
+    restart = (st.session_state.get(CLOCK_RESTART_KEY, 0) + 1) % CLOCK_RESTARTS
+    st.session_state[CLOCK_RESTART_KEY] = restart
+    st.markdown(clock_markup(session_seconds(active), running, restart), unsafe_allow_html=True, width='content')
+    if st.button(tr('Pause') if running else tr('Resume'), key=f"focus_pause_{active['session'].session_id}",
+                 help=tr('Pause when you take a break.')):
         if timer['since'] is None:
             timer['since'] = now
         else:

@@ -489,6 +489,14 @@ _TRANSLATIONS.update({
     "Illustration of a university campus": "大学校园插画",
 })
 
+# practice clock
+_TRANSLATIONS.update({
+    "Session": "本次用时",
+    "Pause": "暂停",
+    "Resume": "继续",
+    "Pause when you take a break.": "休息时可以暂停。",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
@@ -561,6 +569,8 @@ _DYNAMIC = [
     (r"^(\d+) correct answers were marked Guessed\. Revisit them before treating them as secure knowledge\.$", r"有 \1 道答对的题被标记为猜测；请复习后再认为自己已掌握。"),
     (r"^(\d+) hints$", r"\1 条提示"),
     (r"^(\d+) s$", r"\1 秒"),
+    # practice clock
+    (r"^Session time (.+)$", r"本次用时 \1"),
 ]
 
 

@@ -44,14 +44,18 @@ def test_focus_estimates_switch_pause_idle_cap_and_clock_regression():
     focus_question(active,'q1',110)
     settle_focus(active,115)
     assert active['focus_seconds']=={'q0':10,'q1':5}
+    assert active['session_seconds']==15
     active['focus_timer']['since']=None
     settle_focus(active,1000)
     assert active['focus_seconds']['q1']==5
+    assert active['session_seconds']==15  # paused: the session clock stops too
     focus_question(active,'q1',1000)
     settle_focus(active,2000)
     assert active['focus_seconds']['q1']==125
+    assert active['session_seconds']==1015  # the clock counts the whole 1000 s gap
     settle_focus(active,1999)
     assert active['focus_seconds']['q1']==125
+    assert active['session_seconds']==1015
     with pytest.raises(ValueError):focus_question(active,'other',2001)
 
 

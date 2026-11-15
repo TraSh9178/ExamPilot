@@ -64,6 +64,111 @@
   color: var(--ink-body, #2A2F33);
 }
 
+/* Header above the question, one row: counter · progress · session clock.
+   Streamlit wraps the row, so on a phone the clock moves to a second line. */
+.st-key-flight_practice_progress > [data-testid="stLayoutWrapper"]:has(> .st-key-flight_progress_track) {
+  /* Wide enough for twelve waypoints; below that the clock wraps instead. */
+  flex: 1 1 9rem;
+  min-width: 0;
+}
+/* Markdown pulls the next block up by 1rem; these hold no paragraph, so keep them centred. */
+.st-key-flight_practice_progress [data-testid="stMarkdownContainer"]:has(> :is(.flight-clock, .flight-waypoints)) {
+  margin-bottom: 0;
+}
+
+/* Session clock: a small paper box. The text is the server value; where the
+   browser can, CSS counts on from it every second while the clock runs. */
+.flight-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  padding: .3rem .8rem;
+  border: 1px solid var(--paper-line, #EEE7DF);
+  border-radius: .6rem;
+  background: var(--paper-card, #FFFCF7);
+  color: var(--ink, #13224F);
+  line-height: 1.2;
+  white-space: nowrap;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.flight-clock-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  color: var(--accent-rust, #B5622E);
+}
+.flight-clock-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.flight-clock-label {
+  color: var(--ink-muted, #6B7280);
+  font-size: .85rem;
+}
+.flight-clock-time {
+  color: var(--ink, #13224F);
+  font-family: var(--font-title, Georgia, "Times New Roman", serif);
+  font-size: 1.15rem;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+/* Paused: a dashed outline and muted time; the clock does not move. */
+.flight-clock.is-paused {
+  border-style: dashed;
+  border-color: var(--ink-muted, #6B7280);
+}
+.flight-clock.is-paused :is(.flight-clock-icon, .flight-clock-time) {
+  color: var(--ink-muted, #6B7280);
+}
+
+/* Ticking without script: --flight-clock-run counts whole seconds from 0
+   (steps of one second), and counters print base + run as mm:ss. */
+@property --flight-clock-run {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+/* The page keeps the clock's DOM node across reruns, and a running animation
+   keeps its start time. Each render names the next copy (restart-0 to -3), so
+   the count starts again from the new server value. */
+@keyframes flight-clock-run-0 { from { --flight-clock-run: 0; } to { --flight-clock-run: 360000; } }
+@keyframes flight-clock-run-1 { from { --flight-clock-run: 0; } to { --flight-clock-run: 360000; } }
+@keyframes flight-clock-run-2 { from { --flight-clock-run: 0; } to { --flight-clock-run: 360000; } }
+@keyframes flight-clock-run-3 { from { --flight-clock-run: 0; } to { --flight-clock-run: 360000; } }
+
+/* Only where round() and mod() work in counters; elsewhere the server text stays. */
+@supports (width: round(down, 5px, 2px)) and (counter-reset: flight-clock-s mod(7, 2)) {
+  .flight-clock-static {
+    display: none;
+  }
+  .flight-clock-time {
+    counter-reset:
+      flight-clock-m round(down, (var(--clock-base, 0) + var(--flight-clock-run, 0)) / 60, 1)
+      flight-clock-s mod(var(--clock-base, 0) + var(--flight-clock-run, 0), 60);
+    animation: flight-clock-run-0 360000s steps(360000, end) forwards;
+  }
+  .flight-clock-time::after {
+    content: counter(flight-clock-m, decimal-leading-zero) ":" counter(flight-clock-s, decimal-leading-zero);
+  }
+  /* From one hour, as h:mm:ss like the server text. */
+  .flight-clock.has-hours .flight-clock-time {
+    counter-reset:
+      flight-clock-h round(down, (var(--clock-base, 0) + var(--flight-clock-run, 0)) / 3600, 1)
+      flight-clock-m mod(round(down, (var(--clock-base, 0) + var(--flight-clock-run, 0)) / 60, 1), 60)
+      flight-clock-s mod(var(--clock-base, 0) + var(--flight-clock-run, 0), 60);
+  }
+  .flight-clock.has-hours .flight-clock-time::after {
+    content: counter(flight-clock-h) ":" counter(flight-clock-m, decimal-leading-zero) ":" counter(flight-clock-s, decimal-leading-zero);
+  }
+  .flight-clock.restart-1 .flight-clock-time { animation-name: flight-clock-run-1; }
+  .flight-clock.restart-2 .flight-clock-time { animation-name: flight-clock-run-2; }
+  .flight-clock.restart-3 .flight-clock-time { animation-name: flight-clock-run-3; }
+  /* Last, so it wins over the restart names: a paused clock does not tick. */
+  .flight-clock.is-paused .flight-clock-time { animation: none; }
+}
+
 @media (max-width: 640px) {
   .paper-question { gap: .6rem; }
   .paper-question-badge {
