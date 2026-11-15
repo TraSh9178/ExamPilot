@@ -130,7 +130,8 @@
   transform-origin: right center;
   animation: flashcard-prev-b .45s cubic-bezier(.2, .7, .3, 1) backwards;
 }
-/* The flip turns about the horizontal axis, so it only moves up and down. */
+/* The flip is a flat turn about the horizontal axis (no perspective), so the
+   card only gets shorter while it turns and never wider than its column. */
 [data-testid="stMain"] [class*="st-key-flashcard_flip_a_"] {
   transform-origin: center center;
   animation: flashcard-flip-a .4s cubic-bezier(.2, .7, .3, 1) backwards;
@@ -157,12 +158,12 @@
   to { opacity: 1; transform: perspective(1200px) rotateY(0deg); }
 }
 @keyframes flashcard-flip-a {
-  from { opacity: .35; transform: perspective(1200px) rotateX(80deg); }
-  to { opacity: 1; transform: perspective(1200px) rotateX(0deg); }
+  from { opacity: .35; transform: rotateX(80deg); }
+  to { opacity: 1; transform: rotateX(0deg); }
 }
 @keyframes flashcard-flip-b {
-  from { opacity: .35; transform: perspective(1200px) rotateX(80deg); }
-  to { opacity: 1; transform: perspective(1200px) rotateX(0deg); }
+  from { opacity: .35; transform: rotateX(80deg); }
+  to { opacity: 1; transform: rotateX(0deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {

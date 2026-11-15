@@ -492,14 +492,15 @@ _TRANSLATIONS.update({
 # flashcards
 _TRANSLATIONS.update({
     "Flashcards": "复习卡片",
-    "One card at a time, from your mistakes, weak topics and key ideas.": "一次一张卡片，复习你的错题、薄弱知识点和知识点。",
+    "One card at a time, from your mistakes, weak topics and key ideas.": "一次一张卡片，复习你的错题、薄弱知识点和知识要点。",
+    "Previous card": "上一张", "Next card": "下一张",
     "This course has no questions to review yet.": "此课程还没有可复习的题目。",
     "Cards to review": "要复习的卡片",
-    "My mistakes": "我的错题", "Weak topics": "薄弱知识点", "Key ideas": "知识点", "All questions": "全部题目",
+    "My mistakes": "我的错题", "Weak topics": "薄弱知识点", "Key ideas": "知识要点", "All questions": "全部题目",
     "After some practice, your mistakes will appear here as their own deck.": "练习之后，你的错题会单独成组，出现在这里。",
     "Think of your answer first, then flip the card.": "先想好答案，再翻开卡片。",
     "Recall what you know about this idea, then flip the card.": "先回想你对这个知识点的了解，再翻开卡片。",
-    "Key idea": "知识点", "Answer": "答案",
+    "Key idea": "知识要点", "Answer": "答案",
     "Last time you left this blank.": "上次你没有作答。",
     "Show answer": "看答案", "Show question": "看题目", "Start over": "从头再来",
 })

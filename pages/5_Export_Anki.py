@@ -234,11 +234,13 @@ card_key = (
     else f"flashcard_{move}_{'ab'[state['step'] % 2]}_{course.course_id}"
 )
 with st.container(border=True, key=card_key):
+    position = f"Card {index + 1} of {len(cards)}"
     if card.kind == "idea":
-        st.caption(tr(f"Card {index + 1} of {len(cards)}"))
+        st.caption(tr(position))
         _render_idea(card, side)
     else:
-        st.caption(tr(f"Card {index + 1} of {len(cards)} · {card.topic_name}"))
+        # A question whose topic has no name gets the plain position line.
+        st.caption(tr(f"{position} · {card.topic_name}" if card.topic_name else position))
         _render_question(card, side)
 
 last = index == len(cards) - 1
@@ -249,7 +251,7 @@ with st.container(
     key=f"flashcards_actions_{course.course_id}",
 ):
     st.button(
-        tr("Previous"),
+        tr("Previous card"),
         icon=":material/arrow_back:",
         disabled=index == 0,
         key=f"flashcards_previous_{course.course_id}",
@@ -265,7 +267,7 @@ with st.container(
         args=(state_key,),
     )
     st.button(
-        tr("Start over") if last else tr("Next"),
+        tr("Start over") if last else tr("Next card"),
         icon=":material/restart_alt:" if last else ":material/arrow_forward:",
         icon_position="left" if last else "right",
         key=f"flashcards_next_{course.course_id}",

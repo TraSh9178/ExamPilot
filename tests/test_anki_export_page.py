@@ -226,7 +226,7 @@ def test_page_is_flashcards_with_one_card_and_the_export_collapsed_at_the_bottom
     assert question.explanation not in front
 
     assert [(item.label, item.disabled) for item in app.button] == [
-        ("Previous", True), ("Show answer", False), ("Next", False),
+        ("Previous card", True), ("Show answer", False), ("Next card", False),
     ]
     assert _button(app, "flip").proto.type == "primary"
 
@@ -261,12 +261,12 @@ def test_next_and_previous_move_one_card_and_extra_clicks_never_raise():
         assert not app.exception
         assert _card_caption(app).startswith(f"Card {number} of 9")
     assert _button(app, "next").label == "Start over"
-    assert [item.label for item in app.button].count("Next") == 0
+    assert [item.label for item in app.button].count("Next card") == 0
 
     _button(app, "next").click().run()
     assert not app.exception
     assert _card_caption(app).startswith("Card 1 of 9")
-    assert _button(app, "next").label == "Next"
+    assert _button(app, "next").label == "Next card"
     assert _button(app, "previous").disabled
     assert len(_cards(app)) == 1
 
@@ -516,7 +516,10 @@ def test_stylesheet_animates_moves_with_distinct_keyframes_and_respects_reduced_
             for name in names
         ]
         assert frames[0] == frames[1]
-        assert "perspective(" in frames[0] and "rotate" in frames[0]
+        assert "rotate" in frames[0]
+        # The page turn has depth; the flip is flat, so the card never gets
+        # wider than its column on a phone while it turns.
+        assert ("perspective(" in frames[0]) == (move != "flip")
     assert "flashcard_none_" not in re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
 
     reduced = css[css.index("@media (prefers-reduced-motion: reduce)"):]
@@ -642,7 +645,7 @@ def test_no_weak_topics_message_stays_in_the_export_and_the_card_still_shows():
     ]
     assert len(app.get("download_button")) == 0
     assert len(_cards(app)) == 1
-    assert [item.label for item in app.button] == ["Previous", "Show answer", "Next"]
+    assert [item.label for item in app.button] == ["Previous card", "Show answer", "Next card"]
 
 
 def test_weak_topic_without_course_questions_shows_no_matching_state():
@@ -727,7 +730,7 @@ def _walk_every_card(app: AppTest) -> list[str]:
 def _deck_values(app: AppTest) -> list[str]:
     labels = {
         "My mistakes": "mistakes", "Weak topics": "weak", "Key ideas": "ideas", "All questions": "all",
-        "我的错题": "mistakes", "薄弱知识点": "weak", "知识点": "ideas", "全部题目": "all",
+        "我的错题": "mistakes", "薄弱知识点": "weak", "知识要点": "ideas", "全部题目": "all",
     }
     return [labels[option.rsplit(" · ", 1)[0]] for option in _decks(app).options]
 
@@ -756,8 +759,8 @@ def test_no_internal_ids_tags_or_status_words_are_visible():
 
 
 @pytest.mark.parametrize("chinese,expected", [
-    (False, ["Flashcards", "Previous", "Show answer", "Next", "Export to Anki"]),
-    (True, ["复习卡片", "上一题", "看答案", "下一题", "导出到 Anki"]),
+    (False, ["Flashcards", "Previous card", "Show answer", "Next card", "Export to Anki"]),
+    (True, ["复习卡片", "上一张", "看答案", "下一张", "导出到 Anki"]),
 ])
 def test_main_labels_follow_the_interface_language(chinese, expected):
     app = _app_with_course(_python_basics_course(), chinese=chinese)
@@ -774,8 +777,8 @@ def test_chinese_interface_translates_every_flashcard_string():
 
     assert not app.exception
     assert app.title[0].value == "复习卡片"
-    assert app.caption[0].value == "一次一张卡片，复习你的错题、薄弱知识点和知识点。"
-    assert _decks(app).options == ["我的错题 · 2", "薄弱知识点 · 3", "知识点 · 3", "全部题目 · 9"]
+    assert app.caption[0].value == "一次一张卡片，复习你的错题、薄弱知识点和知识要点。"
+    assert _decks(app).options == ["我的错题 · 2", "薄弱知识点 · 3", "知识要点 · 3", "全部题目 · 9"]
     assert _card_caption(app) == "第 1 / 2 张 · Variables and Expressions"
     assert "先想好答案，再翻开卡片。" in _card_text(app)
     _button(app, "flip").click().run()
@@ -788,7 +791,7 @@ def test_chinese_interface_translates_every_flashcard_string():
     assert "上次你没有作答。" in _card_text(app)
     _decks(app).set_value("ideas").run()
     assert _card_caption(app) == "第 1 / 3 张"
-    assert "知识点" in _card_text(app)
+    assert "知识要点" in _card_text(app)
     assert "先回想你对这个知识点的了解，再翻开卡片。" in _card_text(app)
 
     empty = _app_with_course(_python_basics_course(), chinese=True)
@@ -820,3 +823,17 @@ def test_chinese_interface_shows_no_english_interface_text():
             text = text.replace(piece, " ")
         leftovers |= set(re.findall(r"[A-Za-z]{2,}", text)) - allowed
     assert not leftovers
+
+
+def test_question_card_without_a_topic_name_has_no_dangling_separator():
+    course = _python_basics_course()
+    nameless = course.model_copy(update={
+        "topics": [topic.model_copy(update={"name": ""}) for topic in course.topics],
+    })
+
+    app = _app_with_course(nameless)
+
+    assert not app.exception
+    assert _card_caption(app) == "Card 1 of 9"
+    chinese = _app_with_course(nameless, chinese=True)
+    assert _card_caption(chinese) == "第 1 / 9 张"
