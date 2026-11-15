@@ -800,3 +800,18 @@ def test_top_hard_topics_ranks_hidden_counts_by_their_real_total() -> None:
     )
 
     assert [topic.topic_id for topic in radar.top_hard_topics(course)] == ["hidden", "shown"]
+
+
+def test_every_topic_of_the_built_in_courses_has_sample_flags():
+    sample = radar._parse_sample(json.loads(radar.SAMPLE_PATH.read_text(encoding="utf-8")))
+
+    # A demo map with sparks on only a few topics looks unfinished, so every
+    # built-in topic carries a sample count.
+    for course_id, topic_ids in DEMO_TOPICS.items():
+        assert set(sample[course_id]) == set(topic_ids)
+        assert all(count >= 1 for count, _ in sample[course_id].values())
+    # The three most-flagged calculus topics stay the ones other pages show first.
+    calculus = sample["calculus-i-demo"]
+    ranked = sorted(calculus, key=lambda topic_id: -calculus[topic_id][0])
+    assert ranked[:3] == ["calc_derivatives", "calc_derivative_applications", "calc_limits"]
+    assert calculus[ranked[3]][0] < calculus["calc_limits"][0]

@@ -25,6 +25,54 @@
     "calc_derivative_applications": {
       "count": 6,
       "reasons": {"start": 3, "wording": 2}
+    },
+    "calc_limit_laws": {
+      "count": 2,
+      "reasons": {"calculation": 1}
+    },
+    "calc_continuity": {
+      "count": 3,
+      "reasons": {"concept": 2}
+    },
+    "calc_trig_limits": {
+      "count": 3,
+      "reasons": {"start": 2, "calculation": 1}
+    },
+    "calc_differentiation_rules": {
+      "count": 2,
+      "reasons": {"calculation": 2}
+    },
+    "calc_chain_rule": {
+      "count": 4,
+      "reasons": {"calculation": 2, "start": 1}
+    },
+    "calc_implicit_differentiation": {
+      "count": 4,
+      "reasons": {"start": 2, "concept": 1}
+    },
+    "calc_related_rates": {
+      "count": 4,
+      "reasons": {"wording": 2, "start": 2}
+    },
+    "calc_mean_value_theorem": {
+      "count": 3,
+      "reasons": {"concept": 2, "wording": 1}
+    },
+    "calc_curve_sketching": {
+      "count": 3,
+      "reasons": {"start": 1, "concept": 1}
+    },
+    "calc_antiderivatives": {
+      "count": 2,
+      "reasons": {"calculation": 1, "concept": 1}
+    },
+    "calc_definite_integrals": {
+      "count": 3,
+      "reasons": {"calculation": 2}
+    },
+    "calc_fundamental_theorem": {
+      "count": 4,
+      "reasons": {"concept": 3}
     }
   },
   "python-basics-demo": {
