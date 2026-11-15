@@ -1,63 +1,46 @@
 # ExamPilot
 
-Turn course materials into focused exam practice.
+**Turn course material into a practice plan, then study the exact step that stopped you.**
 
-ExamPilot is a Streamlit learning platform that combines document extraction, AI-assisted course preparation, practice exams, progress tracking, and an interactive knowledge map.
+ExamPilot is a Streamlit app for exam preparation. Students can practise one question at a time, reveal hints when they need them, and use their results to decide what to study next. Built at HackRU Fall 2026 and extended for STEMergent Hacks.
 
-Built for HackRU Fall 2026 and extended in November 2026 for STEMergent Hacks.
+[**Open the live demo**](https://exampilot-jl9eqsvbgoyedczbroxrzu.streamlit.app/) · [Three-minute walkthrough](#three-minute-walkthrough) · [Run locally](#quick-start)
 
-**Live demo:** https://exampilot-jl9eqsvbgoyedczbroxrzu.streamlit.app/ — register any account and try the built-in demo courses. AI generation is turned off on the public demo.
+## Three-minute walkthrough
 
-## Added for STEMergent Hacks (November 2026)
+1. **Start practising.** Create a demo account or log in. On **Home**, choose **Try a demo question** to open a Calculus I limits problem. Reveal a step hint and pick an answer.
+2. **See how ExamPilot handles a mistake.** Choose an incorrect answer and finish the practice. The result offers **Redo the step that stopped you**, which helps you diagnose why the original limit gave you trouble, walks through the algebra, and checks your understanding with a new question.
+3. **Explore two kinds of feedback.** Open **Learning Radar** to see which topics students flag and the reasons they give. Open **Progress → Learning DNA** to see how your own conceptual and computation evidence is tracked. Home also offers a sample Learning DNA view.
 
-- **Step hints:** In Topic Practice, a question can reveal up to three hints, one at a time. The number of hints shown is saved with the result and appears in answer review. The 15 original demo questions have hints, and Claude is asked to write them for generated questions.
-- **Concept Lab:** Interactive Calculus I experiments for limits, derivatives (secant to tangent), and the corner of |x| at 0, where the function is continuous but not differentiable. Each follows predict, explore, and explain steps; predictions never create grades or mastery evidence. See [Guided Concept Lab](docs/guided_concept_lab.md).
-- **Learning Radar:** On the Knowledge Map of the three demo courses, a student can mark a topic "I'm stuck here", optionally with a reason (concept unclear, calculation errors, can't understand the question, or don't know where to start). The Knowledge Map shows how many students are stuck on each flagged topic, and Study Plan lists the three most-flagged topics with a practice shortcut. Counts add real flags to sample data from `data/radar_sample.json`; where sample data is included, the count is labelled "Includes sample data". A topic with no sample data shows "Some students flagged this" instead of a number until it has at least three real flags.
-- **Accessibility and language:** A Simplified English toggle shows plainer wording for the 15 original demo questions. A Chinese interface toggle translates most interface text and adds Chinese translations after key terms in practice questions; uploaded material and AI-generated answers keep their original language.
-- **Learning DNA and practice insights:** During practice, students can record their confidence and see a review-before-submit check. After grading, results show estimated focus time and hint use, accept a written reflection on any question, with an optional reason for each missed one, and offer a smart review list. Learning DNA separates each topic's computation and conceptual evidence. See [Learning DNA](docs/learning_dna.md) and [Practice insights and reflection](docs/practice_insights.md).
-- **Guided Limits review:** After a student misses the Calculus I demo's factorisation limit question in Topic Practice, the result page asks where they got stuck, walks through the factoring step, and checks a new follow-up limit question. If they pick one of the two specific reasons, they can also share it anonymously with Learning Radar. The Dashboard's Try one question card can start this question.
-- **Larger demo question banks:** Each demo now has at least 30 questions, and Calculus I grows to 15 topics, 66 questions and 20 relationships. The added questions are drafts pending review (see [Demo Courses](#demo-courses)). See [Calculus knowledge expansion](docs/calculus_knowledge_expansion.md) and [Demo question bank expansion](docs/demo_question_bank.md).
+The public demo uses built-in courses and explanations. Claude-powered generation and AI follow-up are available in deployments configured with an API key.
+
+## What to look for
+
+| Feature | What students can do |
+|---|---|
+| **Practice worksheet and step hints** | Work on one question at a time with a paper-plane progress trail. In Topic Practice, reveal up to three hints where available, record confidence, and review answers before submitting. Results show hint use, estimated focus time, and review suggestions. |
+| **Answer Review and transfer practice** | Reopen individual questions, see worked explanations, reflect on mistakes, and practise a different question structure on the same topic when a match is available. With Claude configured, ask a follow-up about the specific explanation from the review page. |
+| **Learning Radar** | Flag where they are stuck on the three built-in courses, optionally give a reason, and explore a radar chart and topic ranking. Sample counts are labelled. Study Plan surfaces the most flagged topics alongside a practice shortcut for topics in the confirmed scope. |
+| **Knowledge Map and topic lessons** | Explore prerequisites and related topics. Open **Detailed explanation & examples** for topic guidance. Built-in Calculus I lessons include worked examples and common mistakes. |
+| **Concept Lab** | Predict, explore, and explain limits, derivatives, and the corner of `abs(x)`. Changing the interactive model lets students compare their prediction with what actually happens. |
+| **Learning DNA and flashcards** | Track conceptual and computation evidence separately. Preview flashcards and export Anki-compatible TSV files for review. |
+
+Students can also switch to the Chinese interface and use Simplified English for supported practice questions. Local deployments can turn uploaded notes, slides, and images into draft topics and questions for review.
+
+## Demo courses
+
+| Course | Topics | Question bank | Ready to practise |
+|---|---:|---:|---:|
+| Introduction to Microeconomics | 3 | 30 | 6 |
+| Calculus I | 15 | 66 | 30 |
+| Python Basics | 3 | 30 | 12 |
+| **Total** | **21** | **126** | **48** |
+
+These counts describe the built-in course data in this repository. Additional questions can be approved from **Study Plan → Course tools**. Practice uses questions eligible for the selected topic or confirmed exam scope.
 
 ## Screenshots
 
-| Dashboard | Study Plan |
-|---|---|
-| ![Dashboard with the three demo courses](docs/screenshots/dashboard.png) | ![Study Plan with the exam scope confirmed](docs/screenshots/study_plan.png) |
-
-| Practice result | Knowledge Map |
-|---|---|
-| ![Graded mock exam with explanations](docs/screenshots/practice_result.png) | ![Knowledge map with mastery colours](docs/screenshots/knowledge_map.png) |
-
-## Features
-
-- **Course materials:** Extract text from UTF-8 TXT, text-based PDF and PPTX, and PNG/JPG/JPEG images.
-- **AI-assisted preparation:** Generate candidate topics and multiple-choice questions with Claude, then confirm the topics to practise.
-- **Practice:** Take Mock Exams or Topic Practice sessions with scoring, answer review, and explanations. Topic Practice offers step hints; results add practice insights, a smart review list, and written reflections.
-- **Progress:** Track results and topic mastery separately for each course and practice mode, with a Learning DNA profile of computation and conceptual evidence.
-- **Knowledge Map:** Explore topic relationships, inspect topic details, view mastery colours, and ask Claude to suggest connections from your saved material (applied only after you review them). On the demo courses, Learning Radar shows where students are stuck.
-- **Concept Lab:** Explore limits, derivatives, and differentiability in interactive Calculus I experiments.
-- **Accessibility and language:** Simplified English wording for the original demo questions, and a Chinese interface that also translates key terms in questions.
-- **Anki export:** Preview cards and download all questions or questions from weak/developing topics as UTF-8 TSV.
-- **Accounts and persistence:** Register, log in, and save or restore courses and graded practice records through PostgreSQL.
-- **Pilot assistant:** Ask course-related questions through a draggable floating assistant.
-
-The features added in November 2026 are described in more detail under [Added for STEMergent Hacks](#added-for-stemergent-hacks-november-2026).
-
-AI-generated topics, questions, answers, explanations, and relationships require human review.
-
-## Demo Courses
-
-Three built-in courses provide practice content without requiring AI generation:
-
-| Course | Topics | Questions | Relationships |
-|---|---:|---:|---:|
-| Introduction to Microeconomics | 3 | 30 | 2 |
-| Calculus I | 15 | 66 | 20 |
-| Python Basics | 3 | 30 | 0 |
-
-The questions added in November 2026 (27, 63, and 21 respectively) are drafts marked pending review. They are excluded from practice until approved in Study Plan, so the questions available for practice out of the box are 3, 3, and 9.
-
-Demo content does not require a Claude API key. The normal application still requires a working account database to register or log in.
+The repository includes earlier screenshots of the [dashboard](docs/screenshots/dashboard.png), [study plan](docs/screenshots/study_plan.png), [practice results](docs/screenshots/practice_result.png), and [knowledge map](docs/screenshots/knowledge_map.png). The [live demo](https://exampilot-jl9eqsvbgoyedczbroxrzu.streamlit.app/) shows the current deployed interface.
 
 ## Quick Start
 
@@ -202,15 +185,15 @@ Confirm that `eng` is available for English OCR. Other platforms require their o
 
 See [document processing and Claude usage](docs/claude_usage.md) for supported formats, source structures, and error handling.
 
-## Typical Workflow
+## Build a course from your own material
 
 1. Register or log in.
 2. Open a built-in Demo or create a course from uploaded materials.
 3. Extract and review the text.
-4. Generate candidate topics when using your own materials.
-5. Review the topics and explicitly confirm the exam scope. Approve any pending questions you want to practise.
+4. Generate candidate topics and review them in Study Plan.
+5. Confirm the exam scope in Study Plan. Open Course tools to approve draft questions for practice.
 6. Generate questions if needed, then start Mock Exam or Topic Practice. In Topic Practice, reveal hints one at a time if you get stuck.
-7. Submit answers and review the score, explanations, practice insights, and smart review list; reflect on missed questions.
+7. Submit your work. Use Review answers to see explanations, record a reflection, and choose what to practise next.
 8. Try the Calculus I limits, derivatives, and corner experiments in Concept Lab.
 9. Inspect Progress (including Learning DNA) and Knowledge Map. On a demo course, mark a topic "I'm stuck here" if it is giving you trouble.
 10. Preview or download Anki cards for further review.
