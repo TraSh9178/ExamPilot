@@ -105,6 +105,13 @@
   font-size: 1.08rem;
 }
 
+/* st.markdown pulls the next element up by 1rem to cancel a paragraph's
+   bottom margin. The card's blocks end in a div, not a paragraph, so without
+   this the hint under the options sat on top of the last option. */
+[data-testid="stMain"] [class*="st-key-flashcard_"] [data-testid="stMarkdownContainer"]:has(> div:last-child) {
+  margin-bottom: 0;
+}
+
 /* ---- Buttons under the card ------------------------------------------------- */
 [data-testid="stMain"] [class*="st-key-flashcards_actions_"] {
   margin-top: .35rem;
