@@ -1,15 +1,18 @@
 """Paper practice page: question card, one-click choices, Learning Radar and clean wording."""
 import ast
+from base64 import b64decode
 import re
 import sys
 from pathlib import Path
 from types import ModuleType
+from xml.etree import ElementTree
 
 import pytest
 import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 import components
+from components.flight_path import practice_route
 from components.knowledge_graph import radar_count_text
 from models.schemas import ExamSession, Question
 from services import practice_insights_ui
@@ -108,6 +111,47 @@ def test_badge_is_translated_with_the_interface():
     app.session_state[LANGUAGE_KEY] = True
     app.run()
     assert badges(app) == ["第 1 题"]
+
+
+def route_svg(markup):
+    source = re.search(r"data:image/svg\+xml;base64,([A-Za-z0-9+/=]+)", markup)
+    assert source
+    return ElementTree.fromstring(b64decode(source.group(1)))
+
+
+def test_paper_plane_follows_the_same_dotted_route_forward_and_back():
+    app, _ = start_app()
+
+    def current_route():
+        return route_svg(next(value for value in page_markdown(app) if 'class="flight-route"' in value))
+
+    svg = "{http://www.w3.org/2000/svg}"
+    assert current_route().find(f".//{svg}animateMotion") is None
+    app.button(key="worksheet_next_s").click().run()
+    route = current_route()
+    dots = route.findall(f"{svg}circle")
+    left = f"{dots[0].get('cx')} {dots[0].get('cy')}"
+    right = f"{dots[1].get('cx')} {dots[1].get('cy')}"
+    forward = route.find(f".//{svg}animateMotion").get("path")
+    assert forward.startswith(f"M {left} C ") and forward.endswith(right)
+    trail = route.find(f".//{svg}path")
+    assert trail.get("d").startswith(forward)
+    assert trail.get("stroke-dasharray")
+    assert route.find(f".//{svg}polygon").get("fill") == "#F4B45B"
+
+    app.button(key="worksheet_previous_s").click().run()
+    back = current_route().find(f".//{svg}animateMotion").get("path")
+    assert back.startswith(f"M {right} C ") and back.endswith(left)
+    app.run()
+    assert current_route().find(f".//{svg}animateMotion") is None
+
+
+def test_the_paper_route_has_one_stop_per_question():
+    svg = "{http://www.w3.org/2000/svg}"
+    for count in (1, 50):
+        route = route_svg(practice_route(count, count - 1))
+        assert len(route.findall(f"{svg}circle")) == count
+        assert route.find(f".//{svg}animateMotion") is None
 
 
 # 2 · Confidence in one click ---------------------------------------------
