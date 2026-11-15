@@ -556,6 +556,14 @@ _TRANSLATIONS.update({
     "This question duplicates a different question family.": "这道题与另一道已有题目重复。",
 })
 
+# learning evidence page
+_TRANSLATIONS.update({
+    "Back to Progress": "返回学习进度",
+    "View answers": "查看作答",
+    "Your latest answer to each question behind your Learning DNA, topic by topic.": "学习画像所依据的每道题的最近一次作答，按知识点列出。",
+    "No answers behind Learning DNA in this mode yet.": "此模式下还没有学习画像所依据的作答。",
+})
+
 _DYNAMIC = [
     (r"^(\d+) questions could benefit from another look\.$", r"有 \1 道题值得再看一遍。"),
     (r"^Different questions: (\d+)$", r"不同题目数：\1"),
@@ -640,6 +648,8 @@ _DYNAMIC = [
     (r"^Session (\d+): (\d+)%$", r"第 \1 次练习：\2%"),
     (r"^Latest session: (\d+)%$", r"最近一次练习：\1%"),
     (r"^(\d+) min (\d+) s$", r"\1 分 \2 秒"),
+    # learning evidence page: the practice result's time bars keep one decimal place
+    (r"^(\d+\.\d) s$", r"\1 秒"),
 ]
 
 

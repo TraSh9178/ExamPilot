@@ -351,9 +351,11 @@ def test_page_has_no_tabs_and_nothing_analytical_behind_a_click():
     app = progress_app(course, history, mode="Topic Practice")
     assert not app.exception
     assert not app.tabs and not app.get("tab_container")
-    # The only expanders left are the per-topic evidence tables.
-    labels = [expander.label for expander in app.expander]
-    assert labels and all(label.startswith("View evidence: ") for label in labels)
+    # No expander at all: the answers behind each topic open on their own page.
+    assert not app.expander
+    assert [b.key for b in app.button if b.label == "View answers"] == [
+        "learning_evidence_open_rates", "learning_evidence_open_limits",
+    ]
     for element, ancestors in elements_with_ancestors(app.main):
         if element.type == "markdown" and "progress-chart" in element.value:
             assert "expander" not in ancestors and "tab" not in ancestors
@@ -583,7 +585,7 @@ def test_chinese_real_progress_shows_no_english_interface_text():
         assert english == []
     assert any("各知识点掌握情况" == s.value for s in app.subheader)
     assert any(s.value == "各知识点用时" for s in app.subheader)
-    assert any(frame.value.columns[0] == "能力维度" for frame in app.dataframe)
+    assert app.button(key="learning_evidence_open_rates").label == "查看作答"
 
 
 def test_chinese_empty_progress_shows_no_english_interface_text():

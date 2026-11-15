@@ -9,7 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_evidence_uses_learning_details_without_internal_identifiers():
     course, history = course_and_history()
     course.learning_state['practice_insights'] = {'s': {'q0': {'confidence': 'sure'}}}
-    app = AppTest.from_file(str(ROOT/'pages/3_Performance.py'))
+    # The evidence tables are on their own page, opened from Progress.
+    app = AppTest.from_file(str(ROOT/'pages/12_Learning_Evidence.py'))
     app.session_state['current_course'] = course
     app.session_state['performance_mode_test-dna'] = 'Topic Practice'
     app.session_state['practice_history_test-dna'] = history
