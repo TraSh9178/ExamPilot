@@ -534,11 +534,28 @@ label[data-baseweb="radio"]:focus-within {
   pointer-events: none;
 }
 
+/* Main area: the mountains on the right, plus the sidebar's hills on the left
+   whenever the sidebar is not showing them (the two rules below). */
 [data-testid="stMain"] {
-  background-image: var(--paper-landscape-right, none);
+  --paper-main-left: none;
+  background-image: var(--paper-main-left), var(--paper-landscape-right, none);
   background-repeat: no-repeat;
-  background-position: right bottom;
-  background-size: 354px auto;
+  background-position: left bottom, right bottom;
+  background-size: 228px auto, 354px auto;
+}
+
+/* The hills stay in the lower-left corner of the window while the sidebar is
+   collapsed... */
+[data-testid="stAppViewContainer"]:has(section[data-testid="stSidebar"][aria-expanded="false"]) [data-testid="stMain"] {
+  --paper-main-left: var(--paper-landscape-left, none);
+}
+
+/* ...and on a window too short for the open sidebar to hold them: below
+   872px its free space is under the 6rem the picture needs. */
+@media (max-height: 871.98px) {
+  [data-testid="stMain"] {
+    --paper-main-left: var(--paper-landscape-left, none);
+  }
 }
 
 /* The pinned accessibility block brings its own bottom spacing. */

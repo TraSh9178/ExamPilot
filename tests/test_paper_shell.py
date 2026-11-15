@@ -224,6 +224,31 @@ def test_accessibility_settings_rest_on_the_bottom_edge_below_the_sidebar_waterc
     assert "padding-bottom: 0;" in css_rule(shell, '[data-testid="stSidebarUserContent"]')
 
 
+def test_sidebar_hills_move_to_the_window_corner_when_the_sidebar_is_collapsed():
+    shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
+    main = '[data-testid="stMain"]'
+
+    # The main area always paints two layers; the left one is empty by default.
+    base = css_rule(shell, main)
+    assert "--paper-main-left: none;" in base
+    assert "background-image: var(--paper-main-left), var(--paper-landscape-right, none);" in base
+    assert "background-position: left bottom, right bottom;" in base
+    collapsed = css_rule(
+        shell,
+        '[data-testid="stAppViewContainer"]'
+        ':has(section[data-testid="stSidebar"][aria-expanded="false"]) ' + main,
+    )
+    assert "--paper-main-left: var(--paper-landscape-left, none);" in collapsed
+    # The sign-in page and narrow screens still clear the whole background.
+    assert "background-image: none;" in css_rule(
+        shell, f'[data-testid="stApp"]:has(.st-key-auth_forms) {main}'
+    )
+    narrow = re.search(r"@media \(max-width: 759\.98px\) \{\n(.*?)\n\}\n", shell, re.DOTALL)
+    assert narrow and re.search(
+        r"\[data-testid=\"stMain\"\] \{\n\s+background-image: none;", narrow.group(1)
+    )
+
+
 def test_injected_styles_include_paper_shell_and_landscape_illustrations():
     styles = injected_styles()
     shell = (ASSETS / "paper_shell.css").read_text(encoding="utf-8")
