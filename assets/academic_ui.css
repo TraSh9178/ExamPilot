@@ -235,3 +235,79 @@ div.st-key-create_course_button button > div > span { justify-content: flex-star
 
 .st-key-knowledge_graph_canvas { padding: .75rem !important; }
 .st-key-knowledge_graph_canvas iframe { border-radius: .65rem; }
+
+/* Use warmer paper surfaces and reserve gold for guidance within the study flow. */
+:root {
+  --exam-blue: #24456E;
+  --exam-blue-dark: #192F4D;
+  --exam-ink: #192C47;
+  --exam-muted: #536176;
+  --exam-border: #E1D8C9;
+  --exam-panel: #FFFCF6;
+}
+
+[data-testid="stAppViewContainer"] {
+  background: #F5F0E6;
+}
+
+[data-testid="stHeader"],
+[data-testid="stSidebar"] {
+  background: #FDF9F1;
+}
+
+.st-key-dashboard_demo_start {
+  background: radial-gradient(ellipse at 95% 20%, #4B6490 0, transparent 48%), #1E3659;
+  border-color: #1E3659 !important;
+  padding: clamp(1rem, 4vw, 2rem) !important;
+}
+
+[data-testid="stMain"] .st-key-dashboard_demo_start :is(h3, p) {
+  color: #FFF9EB;
+}
+
+[data-testid="stMain"] .st-key-dashboard_demo_start h3 {
+  font-family: Georgia, serif;
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  line-height: 1.15;
+}
+
+.st-key-dashboard_demo_start button[data-testid="stBaseButton-primary"] {
+  background: #F4D59D;
+  border-color: #F4D59D;
+}
+
+[data-testid="stMain"] .st-key-dashboard_demo_start button p {
+  color: #192F4D;
+}
+
+.st-key-guided_limits_review {
+  background: #FFF7E7;
+  border-color: #DEC194 !important;
+  border-left: 4px solid #A46B31 !important;
+  padding: clamp(.9rem, 3vw, 1.5rem) !important;
+}
+
+[class*="st-key-practice_question_"],
+.st-key-guided_limits_review {
+  max-width: 48rem;
+}
+
+:is(.st-key-dashboard_demo_start, .st-key-guided_limits_review, [class*="st-key-practice_question_"]) button {
+  min-height: 44px;
+}
+
+:is(.st-key-guided_limits_review, [class*="st-key-practice_question_"]) [role="radiogroup"] label {
+  min-height: 44px;
+  padding-block: .35rem;
+}
+
+@media (max-width: 640px) {
+  .st-key-guided_limits_review [data-testid="stHorizontalBlock"] {
+    flex-direction: column;
+    gap: .5rem;
+  }
+  .st-key-guided_limits_review [data-testid="stColumn"] {
+    width: 100% !important;
+    flex: 0 1 auto !important;
+  }
+}

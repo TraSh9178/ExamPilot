@@ -6,6 +6,7 @@ from services.account_sync import render_last_save_status, save_exam_to_account
 from services.accessibility import display_question, display_text
 from services.question_editor import available_questions
 from services.exam_engine import create_exam, grade_exam
+from services.guided_limits_ui import render_guided_review
 from services.hints import hint_state_key, hints_for
 from services.question_review import create_mistake_review, mistake_questions, question_sources
 from services.practice_insights_ui import (
@@ -290,6 +291,7 @@ if active_practice is not None:
 
         summary_tab, answers_tab = st.tabs(["Summary & next steps", "Review answers"])
         with summary_tab:
+            guided_review_available = render_guided_review(course, session, questions, result)
             result_overview(course, session, questions, result)
 
         questions_by_id = {
@@ -313,7 +315,8 @@ if active_practice is not None:
                         key=f"mistake_topic_{course.course_id}_{session.session_id}",
                     )
                     st.button(
-                        "Practise missed questions", type="primary", key=f"review_mistakes_{session.session_id}",
+                        "Practise missed questions", type="secondary" if guided_review_available else "primary",
+                        key=f"review_mistakes_{session.session_id}",
                         on_click=begin_mistake_review,
                         args=(practice_key, course, session, questions, confirmed_topic_ids, review_topic),
                     )

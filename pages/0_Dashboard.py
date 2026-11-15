@@ -16,6 +16,7 @@ from services.document_service import extract_document
 from services.ai_service import generate_topics, generation_available
 from services.course_icons import course_icon_svg
 from services.demo_updates import demo_update
+from services.guided_limits_ui import starter_question, start_demo
 from services.learning_flow import stage_practice
 from services.ui_style import apply_app_styles
 
@@ -96,6 +97,21 @@ with st.container(key="dashboard_actions"):
         st.rerun()
 
 selected_course = st.session_state.get("current_course")
+if selected_course is None:
+    for course in st.session_state["courses"]:
+        question = starter_question(course)
+        if question is None:
+            continue
+        saved_scope = st.session_state.get(f"confirmed_scope_{course.course_id}")
+        if not saved_scope or question.topic_id in saved_scope:
+            with st.container(border=True, key="dashboard_demo_start"):
+                st.caption("Calculus I demo · Limits")
+                st.subheader("Try one question")
+                st.write("Start with a short practice question. Use hints if you get stuck, then see what to work on next.")
+                if st.button("Try a demo question", type="primary", key="try_limits_demo"):
+                    start_demo(st.session_state, course, question)
+                    st.switch_page("pages/2_Practice_Center.py")
+        break
 if selected_course is not None:
     with st.container(border=True, key="dashboard_continue"):
         st.caption("CONTINUE LEARNING")
