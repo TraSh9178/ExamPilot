@@ -317,8 +317,9 @@ def test_loading_centers_the_brand_plane_for_app_runs_and_spinners():
     assert "top: calc(50% - 28px);" in flight and "anchor(--paper-loading-main center, 50%)" in flight
     assert "var(--paper-plane)" in flight and "paper-loading-flight" in flight
     assert "pointer-events: none;" in veil and "pointer-events: none;" in flight
-    trail = re.search(r"<path d='([^']+)'", shell).group(1)
-    assert f'offset-path: path("{trail}");' in flight
+    track = next(line for line in shell.splitlines() if "--paper-loading-trail:" in line)
+    trail = re.search(r"%3Cpath d='([^']+)'", track)
+    assert trail and f'offset-path: path("{trail.group(1)}");' in flight
     assert "stroke-dasharray=" in shell
     reduced = shell[shell.rindex("@media (prefers-reduced-motion: reduce)"):]
     assert "offset-distance: 50%;" in reduced
